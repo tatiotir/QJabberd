@@ -4,7 +4,7 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
                      RosterManager *rosterManager, VCardManager *vcardManager,
                      LastActivityManager *lastActivityManager, EntityTimeManager *entityTimeManager,
                      PrivateStorageManager *privateStorageManager,
-                     ServiceDiscoveryManager *serviceDiscoveryManager, OfflineMessageManager *offlineMessageManager)
+                     ServiceDiscoveryManager *serviceDiscoveryManager, OfflineMessageManager *offlineMessageManager, StreamNegotiationManager *streamNegotiationManager)
 {
     m_serverConfigMap = serverConfigMap;
     m_userManager = userManager;
@@ -16,9 +16,83 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
     m_privateStorageManager = privateStorageManager;
     m_serviceDiscoveryManager = serviceDiscoveryManager;
     m_offlineMessageManager = offlineMessageManager;
+    m_streamNegotiationManager = streamNegotiationManager;
 }
 
-QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host)
+QByteArray IQManager::authenticate(QString streamId, QString id, QString username, QString password,
+                                     QString resource, QString digest, QString host)
+{
+    if (username.isEmpty() || resource.isEmpty())
+    {
+        return Error::generateError("iq", "modify", "not-acceptable", "", "", id, QDomElement());
+    }
+
+    if (!digest.isEmpty())
+    {
+        QString jid = username + '@' + host;
+        QString password = m_userManager->getPassword(jid);
+
+        QString userDigest = Utils::digestCalculator(id, password);
+        if ((userDigest != digest))
+        {
+            Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
+        }
+        else
+        {
+            emit sigNonSaslAuthentification(streamId, jid + "/" + resource, id);
+            return QByteArray();
+        }
+    }
+    else
+    {
+        QString jid = username + '@' + host;
+        QString userPassword = m_userManager->getPassword(jid);
+
+        if (userPassword != password)
+        {
+            return Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
+        }
+        else
+        {
+            emit sigNonSaslAuthentification(streamId, jid + "/" + resource, id);
+            return QByteArray();
+        }
+    }
+    return QByteArray();
+}
+
+
+/*
+ * This function send to client the fields required for authentification in the server.
+ */
+QByteArray IQManager::authentificationFields(QString id)
+{
+    QDomDocument document;
+
+    QDomElement iq = document.createElement("iq");
+    iq.setAttribute("type", "result");
+
+    if (id != "")
+    {
+        iq.setAttribute("id", id);
+    }
+
+    QDomElement query = document.createElement("query");
+    query.setAttribute("xmlns", "jabber:iq:auth");
+
+    query.appendChild(document.createElement("username"));
+    query.appendChild(document.createElement("password"));
+    query.appendChild(document.createElement("digest"));
+    query.appendChild(document.createElement("ressouces"));
+
+    iq.appendChild(query);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+
+QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QString streamId)
 {
     QDomDocument document;
     document.setContent(iqXML);
@@ -28,11 +102,6 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host)
     QString iqFrom = iq.attribute("from", from);
     QString id = iq.attribute("id", Utils::generateId());
 
-//    if (!m_userManager->userExists(Utils::getBareJid(iqTo)))
-//    {
-//        return Error::generateServiceUnavailableError("iq", iqFrom, iqTo, id);
-//    }
-
     if (iq.attribute("type") == "set")
     {
         QDomElement firstChild = iq.firstChild().toElement();
@@ -40,11 +109,43 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host)
 
         if (firstChildTagName == "session")
         {
-            return generateIqSessionReply(id);
+            return generateIqSessionReply(id, Utils::getHost(iqFrom));
+        }
+        // Resource binding
+        else if (firstChildTagName == "bind")
+        {
+            QDomElement bindChild = document.documentElement().firstChild().toElement();
+            QString fullJid;
+            QString resource;
+
+            // Empty resource binding
+            if (bindChild.text().isEmpty())
+            {
+                resource = Utils::generateResource();
+                fullJid = m_streamNegotiationManager->getUserJid(streamId) + "/" + resource;
+            }
+            else
+            {
+                resource = bindChild.firstChild().toElement().text();
+                fullJid = m_streamNegotiationManager->getUserJid(streamId) + "/" + resource;
+            }
+
+            emit sigResourceBinding(streamId, fullJid, id);
+            return QByteArray();
         }
         else if (firstChildTagName == "query")
         {
             QString xmlns = firstChild.attribute("xmlns");
+
+            if (xmlns == "jabber:iq:auth")
+            {
+                return authenticate(streamId, id,
+                                    document.documentElement().elementsByTagName("username").item(0).toElement().text(),
+                                    document.documentElement().elementsByTagName("password").item(0).toElement().text(),
+                                    document.documentElement().elementsByTagName("resource").item(0).toElement().text(),
+                                    document.documentElement().elementsByTagName("digest").item(0).toElement().text(),
+                                    document.documentElement().attribute("to"));
+            }
 
             if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
             {
@@ -204,7 +305,7 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host)
                     }
                     else
                     {
-                        //
+
                     }
                 }
                 else
@@ -292,7 +393,16 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host)
         if (firstChildTagName == "query")
         {
             QString xmlns = firstChild.attribute("xmlns");
-            if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
+            if (xmlns == "jabber:iq:auth")
+            {
+                if (m_serverConfigMap->value("virtualHost").toList().contains(document.documentElement().attribute("to")))
+                {
+                    emit sigStreamNegotiationError(streamId);
+                    return Error::generateStreamError("host-unknown");
+                }
+                return authentificationFields(id);
+            }
+            else if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
             {
                 if (firstChild.text().isEmpty())
                 {
@@ -409,17 +519,16 @@ QByteArray IQManager::generateRosterGetResultReply(QString to, QString id,
     }
 }
 
-QByteArray IQManager::generateIqSessionReply(QString id)
+QByteArray IQManager::generateIqSessionReply(QString id, QString from)
 {
     QDomDocument document;
     QDomElement iqResult = document.createElement("iq");
 
-    iqResult.setAttribute("type", QString("result"));
+    iqResult.setAttribute("type", "result");
     iqResult.setAttribute("id", id);
-    iqResult.setAttribute("from", "localhost");
+    iqResult.setAttribute("from", from);
 
     document.appendChild(iqResult);
-
     return document.toByteArray();
 }
 

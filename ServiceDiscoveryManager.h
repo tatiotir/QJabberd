@@ -7,12 +7,14 @@
 #include "Utils.h"
 #include "Error.h"
 #include "UserManager.h"
+#include "StreamNegotiationManager.h"
 
 class ServiceDiscoveryManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit ServiceDiscoveryManager(UserManager *userManager = 0);
+    explicit ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap = 0,
+                                     UserManager *userManager = 0);
 
     QByteArray serviceDiscoveryManagerReply(QByteArray iqXML, QString iqFrom);
 
@@ -35,6 +37,7 @@ private:
     QMultiHash<QString, QString> getChatRoomList(QString room);
 
     UserManager *m_userManager;
+    QMap<QString, QVariant> *m_serverConfigMap, ;
 };
 
 #endif // SERVICEDISCOVERYMANAGER_H

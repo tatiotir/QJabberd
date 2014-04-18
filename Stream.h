@@ -27,7 +27,6 @@ class Stream : public QThread
 
     Q_OBJECT
 public:
-    Stream();
     explicit Stream(QObject *parent = 0, QString streamId = QString(),
                     Connection *connection = 0,
                     IQManager *iqManager = 0, PresenceManager *presenceManager = 0,

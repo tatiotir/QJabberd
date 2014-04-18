@@ -10,9 +10,9 @@ class User
 {
 public:
 
-    User();
     User(Connection *connection = 0, QString smId = QString(), int presencePriority = 0,
          int inboundStanzaCount = 0, QByteArray currentPresence = QByteArray());
+    //User();
 
     Connection *getConnection();
     QString getSmId();

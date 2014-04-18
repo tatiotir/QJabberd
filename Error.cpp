@@ -54,7 +54,7 @@ QByteArray Error::generateSmError(QString childName)
     return document.toByteArray();
 }
 
-QByteArray Error::generateSaslFailureError(QString childName)
+QByteArray Error::generateSaslError(QString childName)
 {
     QDomDocument document;
     QDomElement failure = document.createElement("failure");
@@ -66,3 +66,16 @@ QByteArray Error::generateSaslFailureError(QString childName)
     return document.toByteArray();
 }
 
+QByteArray Error::generateStreamError(QString errorCause)
+{
+    QDomDocument errorDocument;
+    QDomElement errorElement = errorDocument.createElement("stream:error");
+
+    QDomElement errorCauseElement = errorDocument.createElement(errorCause);
+    errorCauseElement.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-streams");
+
+    errorElement.appendChild(errorCauseElement);
+    errorDocument.appendChild(errorElement);
+
+    return errorDocument.toByteArray();
+}

@@ -13,13 +13,40 @@ StreamNegotiationManager::StreamNegotiationManager(QMap<QString, QVariant> *serv
     m_streamNegotiationVariableMap = new QMultiHash<QString, StreamNegotiationData* >();
 }
 
+void StreamNegotiationManager::resourceBind(QString streamId)
+{
+    // Delete stream negotiation data
+    m_streamNegotiationVariableMap->value(streamId)->setClientFirstResponseDataMap(QMultiHash<QString, QByteArray>());
+    m_streamNegotiationVariableMap->value(streamId)->setHost("");
+    m_streamNegotiationVariableMap->value(streamId)->setBindFeatureProceed(true);
+}
+
 QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamId)
 {
     QDomDocument document;
     document.setContent(clientXML);
 
+    QString xmlTagname = document.documentElement().tagName();
+    if ((xmlTagname == "iq") || (xmlTagname == "message") || (xmlTagname == "presence"))
+    {
+        emit sigStreamNegotiationError(streamId);
+        return Error::generateStreamError("not-authorized");
+    }
+
     if (document.documentElement().tagName() == "stream:stream")
     {
+        if (!m_serverConfigMap->value("virtualHost").toList().contains(document.documentElement().attribute("to")))
+        {
+            emit sigStreamNegotiationError(streamId);
+            return Error::generateStreamError("host-unknown");
+        }
+
+        if (document.documentElement().attribute("xmlns:stream") != "http://etherx.jabber.org/streams")
+        {
+            emit sigStreamNegotiationError(streamId);
+            return Error::generateStreamError("invalid-namespace");
+        }
+
         if (m_streamNegotiationVariableMap->value(streamId, new StreamNegotiationData())->getHost().isEmpty())
         {
             m_streamNegotiationVariableMap->insert(streamId, new StreamNegotiationData());
@@ -36,13 +63,13 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
         if (mechanism.isEmpty() /*|| ((mechanism != "PLAIN") && (mechanism != "EXTERNAL")*/
                 && (mechanism != "DIGEST-MD5"))
         {
-            return Error::generateSaslFailureError("invalid-mechanism");
+            return Error::generateSaslError("invalid-mechanism");
         }
         return generateFirstChallengeReply(clientXML, streamId);
     }
     else if (document.documentElement().tagName() == "abort")
     {
-        return Error::generateSaslFailureError("aborted");
+        return Error::generateSaslError("aborted");
     }
     else if (document.documentElement().tagName() == "response")
     {
@@ -59,7 +86,7 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
             else
             {
                 emit sigStreamNegotiationError(streamId);
-                return Error::generateSaslFailureError("account-disabled");
+                return Error::generateSaslError("account-disabled");
             }
         }
         else
@@ -75,120 +102,18 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
             }
         }
     }
-    // Resource binding
-    else if (document.documentElement().firstChildElement().tagName() == "bind")
-    {
-        QDomElement bindChild = document.documentElement().firstChild().toElement();
-        QString fullJid;
-        QString resource;
-
-        // Empty resource binding
-        if (bindChild.text().isEmpty())
-        {
-            resource = Utils::generateResource();
-            fullJid = getUserJid(streamId) + "/" + resource;
-        }
-        else
-        {
-            resource = bindChild.firstChild().toElement().text();
-            fullJid = getUserJid(streamId) + "/" + resource;
-        }
-        // Delete stream negotiation data
-        m_streamNegotiationVariableMap->value(streamId)->setClientFirstResponseDataMap(QMultiHash<QString, QByteArray>());
-        m_streamNegotiationVariableMap->value(streamId)->setHost("");
-        m_streamNegotiationVariableMap->value(streamId)->setBindFeatureProceed(true);
-
-        emit sigResourceBinding(streamId, fullJid, document.documentElement().attribute("id"));
-        return QByteArray();
-    }
     else if (document.documentElement().attribute("type") == "get")
     {
         if (document.documentElement().firstChildElement().attribute("xmlns") == "jabber:iq:auth")
         {
-            return authentificationFields(document.documentElement().attribute("id"));
+
         }
     }
     else if (document.documentElement().attribute("type") == "set")
     {
-        return authenticate(streamId, document.documentElement().attribute("id"),
-                            document.documentElement().elementsByTagName("username").item(0).toElement().text(),
-                            document.documentElement().elementsByTagName("password").item(0).toElement().text(),
-                            document.documentElement().elementsByTagName("resource").item(0).toElement().text(),
-                            document.documentElement().elementsByTagName("digest").item(0).toElement().text(),
-                            document.documentElement().attribute("to"));
-    }
-}
 
-QByteArray StreamNegotiationManager::authenticate(QString streamId, QString id, QString username, QString password,
-                                     QString resource, QString digest, QString host)
-{
-    if (username.isEmpty() || resource.isEmpty())
-    {
-        return Error::generateError("iq", "modify", "not-acceptable", "", "", id, QDomElement());
-    }
-
-    if (!digest.isEmpty())
-    {
-        QString jid = username + '@' + host;
-        QString password = m_userManager->getPassword(jid);
-
-        QString userDigest = Utils::digestCalculator(id, password);
-        if ((userDigest != digest))
-        {
-            Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
-        }
-        else
-        {
-            emit sigNonSaslAuthentification(streamId, jid + "/" + resource, id);
-            return QByteArray();
-        }
-    }
-    else
-    {
-        QString jid = username + '@' + host;
-        QString userPassword = m_userManager->getPassword(jid);
-
-        if (userPassword != password)
-        {
-            return Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
-        }
-        else
-        {
-            emit sigNonSaslAuthentification(streamId, jid + "/" + resource, id);
-            return QByteArray();
-        }
     }
     return QByteArray();
-}
-
-
-/*
- * This function send to client the fields required for authentification in the server.
- */
-QByteArray StreamNegotiationManager::authentificationFields(QString id)
-{
-    QDomDocument document;
-
-    QDomElement iq = document.createElement("iq");
-    iq.setAttribute("type", "result");
-
-    if (id != "")
-    {
-        iq.setAttribute("id", id);
-    }
-
-    QDomElement query = document.createElement("query");
-    query.setAttribute("xmlns", "jabber:iq:auth");
-
-    query.appendChild(document.createElement("username"));
-    query.appendChild(document.createElement("password"));
-    query.appendChild(document.createElement("digest"));
-    query.appendChild(document.createElement("ressouces"));
-
-    iq.appendChild(query);
-    document.appendChild(iq);
-
-    return document.toByteArray();
 }
 
 QByteArray StreamNegotiationManager::firstFeatures()
@@ -294,6 +219,16 @@ bool StreamNegotiationManager::bindFeatureProceed(QString streamId)
     return m_streamNegotiationVariableMap->value(streamId, new StreamNegotiationData())->bindFeatureProceed();
 }
 
+bool StreamNegotiationManager::firstFeatureProceed(QString streamId)
+{
+    return m_streamNegotiationVariableMap->value(streamId, new StreamNegotiationData())->firstFeatureProceed();
+}
+
+bool StreamNegotiationManager::secondFeatureProceed(QString streamId)
+{
+    return m_streamNegotiationVariableMap->value(streamId, new StreamNegotiationData())->secondFeatureProceed();
+}
+
 QByteArray StreamNegotiationManager::generateFirstStreamReply(QByteArray clientXml, QString streamId)
 {
     QDomDocument document;
@@ -305,7 +240,7 @@ QByteArray StreamNegotiationManager::generateFirstStreamReply(QByteArray clientX
     QString to = xmlElement.attribute("to");
 
     m_streamNegotiationVariableMap->value(streamId)->setHost(to);
-    //emit sigHost(m_host);
+    emit sigHost(streamId, to);
 
     QString xmlVersion = xmlElement.attribute("version", "1.0");
     QString xmlLang = xmlElement.attribute("xml:lang", "en");
@@ -351,8 +286,8 @@ QByteArray StreamNegotiationManager::generateStartTlsReply()
     proceed.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-tls");
     document.appendChild(proceed);
 
-    QByteArray reply = document.toByteArray() + QByteArray(",") +
-            m_serverConfigMap->value("ssl").toMap().value("certificate").toByteArray() + QByteArray(",") +
+    QByteArray reply = document.toByteArray() + QByteArray("#") +
+            m_serverConfigMap->value("ssl").toMap().value("certificate").toByteArray() + QByteArray("#") +
             m_serverConfigMap->value("ssl").toMap().value("key").toByteArray();
     return reply;
 }

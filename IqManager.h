@@ -16,6 +16,7 @@
 #include "RosterManager.h"
 #include "PrivateStorageManager.h"
 #include "OfflineMessageManager.h"
+#include "StreamNegotiationManager.h"
 
 class IQManager : public QObject
 {
@@ -26,13 +27,14 @@ public:
               LastActivityManager *lastActivityManager = 0, EntityTimeManager *entityTimeManager = 0,
               PrivateStorageManager *privateStorageManager = 0,
               ServiceDiscoveryManager *serviceDiscoveryManager = 0,
-              OfflineMessageManager *offlineMessageManager = 0);
+              OfflineMessageManager *offlineMessageManager = 0,
+              StreamNegotiationManager *streamNegotiationManager = 0);
 
 public slots:
-    QByteArray parseIQ(QByteArray iqXML, QString from, QString host);
+    QByteArray parseIQ(QByteArray iqXML, QString from, QString host, QString streamId);
     QByteArray generateIQResult(QString to, QString id);
     QByteArray generateRosterGetResultReply(QString to, QString id, QList<Contact> rosterList);
-    QByteArray generateIqSessionReply(QString id);
+    QByteArray generateIqSessionReply(QString id, QString from);
     QByteArray generateRegistrationFieldsReply(QString id);
     QByteArray generateAlreadyRegisterReply(QString username, QString password, QString id);
     QByteArray generatePongReply(QString from, QString to, QString id);
@@ -43,8 +45,14 @@ signals:
     void sigLastActivityQuery(QString from, QString to, QString id, QString lastStatus);
     void sigServerLastActivityQuery(QString from, QString to, QString id);
     void sigSendReceiptRequest(QString to, QByteArray data);
+    void sigResourceBinding(QString streamId, QString fullJid, QString id);
+    void sigNonSaslAuthentification(QString streamId, QString fullJid, QString id);
+    void sigStreamNegotiationError(QString streamId);
 
 private:
+    QByteArray authentificationFields(QString id);
+    QByteArray authenticate(QString streamId, QString id, QString username, QString password, QString resource, QString digest, QString host);
+
     UserManager *m_userManager;
     PrivacyListManager *m_privacyListManager;
     VCardManager *m_vCardManager;
@@ -54,6 +62,7 @@ private:
     PrivateStorageManager *m_privateStorageManager;
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     OfflineMessageManager *m_offlineMessageManager;
+    StreamNegotiationManager *m_streamNegotiationManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };
 

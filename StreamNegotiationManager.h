@@ -21,6 +21,8 @@ public:
     QByteArray firstFeatures();
     QByteArray secondFeatures();
     QByteArray bindFeature();
+    bool secondFeatureProceed(QString streamId);
+    bool firstFeatureProceed(QString streamId);
     bool bindFeatureProceed(QString streamId);
     QByteArray generateFirstStreamReply(QByteArray clientXml, QString streamId);
     QByteArray generateStartTlsReply();
@@ -29,16 +31,14 @@ public:
     QByteArray generateSaslSuccessReply(QString streamId);
     void firstNegotiationSuccess(QString streamId);
     QString getUserJid(QString streamId);
+    void resourceBind(QString streamId);
 
 signals:
-    void sigNonSaslAuthentification(QString streamId, QString fullJid, QString id);
-    void sigResourceBinding(QString streamId, QString fullJid, QString id);
     void sigStreamNegotiationError(QString streamId);
+    void sigHost(QString streamId, QString host);
 
 private:
     bool parse(QByteArray clientResponse, QString streamId);
-    QByteArray authentificationFields(QString id);
-    QByteArray authenticate(QString streamId, QString id, QString username, QString password, QString resource, QString digest, QString host);
 
     UserManager *m_userManager;
     QMultiHash<QString, StreamNegotiationData* > *m_streamNegotiationVariableMap;

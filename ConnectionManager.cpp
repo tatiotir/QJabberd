@@ -19,7 +19,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     m_lastActivityManager= new LastActivityManager(m_userManager, m_rosterManager, m_storageManager);
     m_iqManager = new IQManager(m_serverConfigMap, m_userManager, m_privacyListManager, m_rosterManager, m_vCardManager,
                                 m_lastActivityManager, m_entityTimeManager, m_privateStorageManager,
-                                m_serviceDiscoveryManager, m_offlineMessageManager);
+                                m_serviceDiscoveryManager, m_offlineMessageManager, m_streamNegotiationManager);
     m_messageManager = new MessageManager(m_userManager, m_privacyListManager);
     m_presenceManager = new PresenceManager( m_userManager, m_rosterManager, m_lastActivityManager,
                                             m_privacyListManager);
@@ -34,13 +34,13 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
             m_streamManager, SLOT(newConnection(Connection*,IQManager*,PresenceManager*,
                                                 MessageManager*,RosterManager*,StreamNegotiationManager*)));
 
-    connect(m_streamNegotiationManager, SIGNAL(sigResourceBinding(QString,QString,QString)), m_streamManager,
-            SLOT(resourceBindingReply(QString,QString,QString)));
+    connect(m_streamNegotiationManager, SIGNAL(sigHost(QString,QString)), m_streamManager,
+            SLOT(streamHost(QString,QString)));
 
     connect(m_streamNegotiationManager, SIGNAL(sigStreamNegotiationError(QString)), m_streamManager,
             SLOT(streamNegotiationError(QString)));
 
-    connect(m_streamNegotiationManager, SIGNAL(sigNonSaslAuthentification(QString,QString,QString)),
+    connect(m_iqManager, SIGNAL(sigNonSaslAuthentification(QString,QString,QString)),
             m_streamManager, SLOT(nonSaslAuthentification(QString,QString,QString)));
 
     connect(m_presenceManager, SIGNAL(sigPresenceBroadCast(QString,QByteArray)),
@@ -73,8 +73,14 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     connect(m_privacyListManager, SIGNAL(sigSetDefaultListName(QString,QString,QString,QString)), m_streamManager,
             SLOT(defaultListNameSetReply(QString,QString,QString,QString)));
 
+    connect(m_iqManager, SIGNAL(sigStreamNegotiationError(QString)), m_streamManager,
+            SLOT(streamNegotiationError(QString)));
+
     connect(m_privacyListManager, SIGNAL(sigSendReceiptRequest(QString,QByteArray)), m_streamManager,
             SLOT(slotSendReceiptRequest(QString,QByteArray)));
+
+    connect(m_iqManager, SIGNAL(sigResourceBinding(QString,QString,QString)), m_streamManager,
+            SLOT(resourceBindingReply(QString,QString,QString)));
 
     connect(m_iqManager, SIGNAL(sigRosterPush(QString,QByteArray)), m_streamManager,
             SLOT(rosterPush(QString,QByteArray)));

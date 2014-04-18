@@ -1,7 +1,9 @@
 #include "ServiceDiscoveryManager.h"
 
-ServiceDiscoveryManager::ServiceDiscoveryManager(UserManager *userManager)
+ServiceDiscoveryManager::ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap,
+                                                 UserManager *userManager)
 {
+    m_serverConfigMap = streamNegotiationManager;
     m_userManager = userManager;
 }
 
@@ -46,7 +48,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QByteArray iqXM
 QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QString from, QString to, QString id,
                                                                            QDomElement request)
 {
-    if (to == "localhost")
+    if (m_serverConfigMap->value("virtualHost").toList().contains(to))
     {
         QDomDocument document;
 
@@ -64,51 +66,91 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         identity1.setAttribute("type", "im");
         identity1.setAttribute("name", "Qjabber");
 
-        QDomElement feature1 = document.createElement("feature");
-        feature1.setAttribute("var", "http://jabber.org/protocol/disco#info");
-
-        QDomElement feature2 = document.createElement("feature");
-        feature2.setAttribute("var", "jabber:iq:register");
-
-        QDomElement feature3 = document.createElement("feature");
-        feature3.setAttribute("var", "urn:xmpp:ping");
-
-        QDomElement feature4 = document.createElement("feature");
-        feature4.setAttribute("var", "vcard-temp");
-
-        QDomElement feature5 = document.createElement("feature");
-        feature5.setAttribute("var", "jabber:iq:private");
-
-        QDomElement feature6 = document.createElement("feature");
-        feature6.setAttribute("var", "jabber:iq:last");
-
-        QDomElement feature7 = document.createElement("feature");
-        feature7.setAttribute("var", "jabber:iq:roster");
-
-        QDomElement feature8 = document.createElement("feature");
-        feature8.setAttribute("var", "urn:xmpp:time");
-
-        QDomElement feature9 = document.createElement("feature");
-        feature9.setAttribute("var", "http://jabber.org/protocol/offline");
-
-        QDomElement feature10 = document.createElement("feature");
-        feature10.setAttribute("var", "msgoffline");
-
-        QDomElement feature11 = document.createElement("feature");
-        feature11.setAttribute("var", "http://jabber.org/protocol/disco#items");
-
         query.appendChild(identity1);
-        query.appendChild(feature1);
-        query.appendChild(feature2);
-        query.appendChild(feature3);
-        query.appendChild(feature4);
-        query.appendChild(feature5);
-        query.appendChild(feature6);
-        query.appendChild(feature7);
-        query.appendChild(feature8);
-        query.appendChild(feature9);
-        query.appendChild(feature10);
-        query.appendChild(feature11);
+
+        if (m_serverConfigMap->value("modules").toMap().value("disco").toBool())
+        {
+            QDomElement feature1 = document.createElement("feature");
+            feature1.setAttribute("var", "http://jabber.org/protocol/disco#info");
+
+            QDomElement feature2 = document.createElement("feature");
+            feature2.setAttribute("var", "http://jabber.org/protocol/disco#items");
+
+            query.appendChild(feature1);
+            query.appendChild(feature2);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("register").toBool())
+        {
+            QDomElement feature3 = document.createElement("feature");
+            feature3.setAttribute("var", "jabber:iq:register");
+
+            query.appendChild(feature3);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("ping").toBool())
+        {
+            QDomElement feature4 = document.createElement("feature");
+            feature4.setAttribute("var", "urn:xmpp:ping");
+
+            query.appendChild(feature4);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("vcard-temp").toBool())
+        {
+            QDomElement feature5 = document.createElement("feature");
+            feature5.setAttribute("var", "vcard-temp");
+
+            query.appendChild(feature5);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("private").toBool())
+        {
+            QDomElement feature6 = document.createElement("feature");
+            feature6.setAttribute("var", "jabber:iq:private");
+
+            query.appendChild(feature6);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("lastActivity").toBool())
+        {
+            QDomElement feature7 = document.createElement("feature");
+            feature7.setAttribute("var", "jabber:iq:last");
+
+            query.appendChild(feature7);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("roster").toBool())
+        {
+            QDomElement feature8 = document.createElement("feature");
+            feature8.setAttribute("var", "jabber:iq:roster");
+
+            query.appendChild(feature8);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("time").toBool())
+        {
+            QDomElement feature9 = document.createElement("feature");
+            feature9.setAttribute("var", "urn:xmpp:time");
+
+            query.appendChild(feature9);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("offline").toBool())
+        {
+            QDomElement feature10 = document.createElement("feature");
+            feature10.setAttribute("var", "http://jabber.org/protocol/offline");
+
+            query.appendChild(feature10);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("msgoffline").toBool())
+        {
+            QDomElement feature11 = document.createElement("feature");
+            feature11.setAttribute("var", "msgoffline");
+
+            query.appendChild(feature11);
+        }
 
         iq.appendChild(query);
         document.appendChild(iq);
@@ -153,7 +195,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
 
     }
     // disco#info to an account of virtual host entity
-    else if (Utils::getHost(to) == "localhost")
+    else if (m_serverConfigMap->value("virtualHost").toList().contains(Utils::getHost(to)))
     {
         if (m_userManager->userExists(Utils::getBareJid(to)))
         {
@@ -191,7 +233,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
 QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
                                                                             QDomElement request)
 {
-    if (to == "localhost")
+    if (m_serverConfigMap->value("virtualHost").toList().contains(to))
     {
         QDomDocument document;
 

@@ -11,6 +11,7 @@ Server::Server()
     {
         QJsonDocument configDocument = QJsonDocument::fromJson(configFile.readAll());
         m_configMap = new QMap<QString, QVariant>(configDocument.toVariant().toMap());
+        qDebug() << m_configMap->value("virtualHost").toList().contains("localhost");
         configFile.close();
     }
 }

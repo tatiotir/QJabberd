@@ -28,6 +28,7 @@ public slots:
     void sendReceiptRequest(QString to, QByteArray data);
     void slotSendReceiptRequest(QString to, QByteArray data);
     void saveStream(QString fullJid, Connection *connection);
+    void streamHost(QString streamId, QString host);
     void rosterPush(QString to, QByteArray data);
     void presenceBroadCast(QString to, QByteArray data);
     void presenceBroadCastFromContact(QString to, QString contactJid);
@@ -51,8 +52,10 @@ public slots:
     void resumeStream(Connection *connection, QString prevId, int h);
     void clientServiceDiscoveryQuery(QString to, QByteArray request);
 
+
 signals:
     void sigPresenceSubscribedSended();
+    void sigResourceBind(QString streamId);
     //void sigOfflineUser(QString jid);
     //void sigSetDefaultListName(QString jid, QString to, QString defaultListName, QString id);
 

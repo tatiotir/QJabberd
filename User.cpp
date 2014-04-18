@@ -13,16 +13,16 @@ User::User(Connection *connection, QString smId, int presencePriority, int inbou
     m_connectedTime.start();
 }
 
-User::User()
-{
-    m_connection = new Connection(0);
-    m_inboundStanzaReceivedCount = 0;
-    m_presencePriority = 0;
-    m_currentPresence = QByteArray();
-    m_smId = "";
-    m_connectedTime = QTime();
-    m_connectedTime.start();
-}
+//User::User()
+//{
+//    m_connection = new Connection(0);
+//    m_inboundStanzaReceivedCount = 0;
+//    m_presencePriority = 0;
+//    m_currentPresence = QByteArray();
+//    m_smId = "";
+//    m_connectedTime = QTime();
+//    m_connectedTime.start();
+//}
 
 Connection* User::getConnection()
 {

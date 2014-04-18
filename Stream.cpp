@@ -31,10 +31,10 @@ Stream::Stream(QObject *parent, QString streamId, Connection *connection,
     //connect(m_connection, SIGNAL(disconnected()), this, SLOT(closeStream()));
 }
 
-Stream::Stream()
-{
-    m_connection = new Connection(0);
-}
+//Stream::Stream()
+//{
+//    m_connection = new Connection(0);
+//}
 
 void Stream::run()
 {
@@ -105,41 +105,31 @@ void Stream::requestTreatment(QByteArray xmlRequest)
     QDomDocument document;
     document.setContent(xmlRequest);
 
-    if (document.documentElement().tagName() == "stream:stream")
+    if (!m_streamNegotiationManager->bindFeatureProceed(m_streamId) &&
+            (document.documentElement().firstChildElement().attribute("xmlns") != "jabber:iq:register") &&
+            (document.documentElement().firstChildElement().tagName() != "bind") &&
+            (document.documentElement().firstChildElement().tagName() != "session"))
     {
-        streamReply(m_streamNegotiationManager->reply(xmlRequest, m_streamId));
-    }
-    else if (document.documentElement().tagName() == "starttls")
-    {
-        QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
+        if ((document.documentElement().tagName() == "starttls")
+                && !m_streamNegotiationManager->firstFeatureProceed(m_streamId))
+        {
+            qDebug() << "xmlrequest : " << xmlRequest;
+            QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
 
-        QList<QByteArray> answerList = answer.split(',');
-        // Send <proceed/> reply to client
-        streamReply(answerList.value(0));
+            QList<QByteArray> answerList = answer.split('#');
+            qDebug() << answer << answerList;
+            // Send <proceed/> reply to client
+            streamReply(answerList.value(0));
 
-        // We begin handshake
-        m_connection->setLocalCertificate(answerList.value(1));
-        m_connection->setPrivateKey(answerList.value(2));
-        m_connection->startServerEncryption();
-    }
-    else if (document.documentElement().tagName() == "auth")
-    {
-        QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
-
-        // Send first <challenge/> or error to client.
-        streamReply(answer);
-    }
-    else if (document.documentElement().tagName() == "response")
-    {
-        QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
-
-        // We send other <challenge/> or <success/> xml.
-        streamReply(answer);
-    }
-    else if (document.documentElement().tagName() == "abort")
-    {
-        QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
-        streamReply(answer);
+            // We begin handshake
+            m_connection->setLocalCertificate(answerList.value(1));
+            m_connection->setPrivateKey(answerList.value(2));
+            m_connection->startServerEncryption();
+        }
+        else
+        {
+            streamReply(m_streamNegotiationManager->reply(xmlRequest, m_streamId));
+        }
     }
     else if (document.documentElement().tagName() == "enable")
     {
@@ -167,16 +157,8 @@ void Stream::requestTreatment(QByteArray xmlRequest)
     // Simple user authentification method of xmpp protocol which use jabber:iq:auth as namespace
     else if (document.documentElement().tagName() == "iq")
     {
-        QByteArray answer;
-        if (document.documentElement().firstChild().toElement().tagName() == "bind")
-        {
-            answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
-        }
-        else
-        {
-            emit sigInboundStanzaReceived(m_fullJid);
-            answer = m_iqManager->parseIQ(xmlRequest, m_fullJid, m_host);
-        }
+        emit sigInboundStanzaReceived(m_fullJid);
+        QByteArray answer = m_iqManager->parseIQ(xmlRequest, m_fullJid, m_host, m_streamId);
 
         // We send iq reply
         streamReply(answer);
@@ -202,7 +184,6 @@ void Stream::requestTreatment(QByteArray xmlRequest)
     else if (document.documentElement().tagName() == "r")
     {
         emit sigQueryInboundStanzaReceived(m_fullJid);
-
         streamReply(QByteArray());
     }
     else if (document.documentElement().tagName() == "a")
@@ -255,8 +236,6 @@ void Stream::bindFeatureNegotiated(QString fullJid)
 {
     m_fullJid = fullJid;
     emit sigBindFeatureNegotiated(fullJid, m_connection);
-
-    //delete m_streamNegotiationManager;
 }
 
 void Stream::setHost(QString host)

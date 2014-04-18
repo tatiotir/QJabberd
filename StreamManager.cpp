@@ -55,6 +55,11 @@ void StreamManager::newConnection(Connection *connection, IQManager *iqManager,
     stream->start();
 }
 
+void StreamManager::streamHost(QString streamId, QString host)
+{
+    m_notNegotiatedStream->value(streamId)->setHost(host);
+}
+
 void StreamManager::resourceBindingReply(QString streamId, QString fullJid, QString id)
 {
     QString jid = fullJid;
@@ -79,11 +84,13 @@ void StreamManager::resourceBindingReply(QString streamId, QString fullJid, QStr
     document.appendChild(iqResult);
 
     m_notNegotiatedStream->value(streamId)->streamReply(document.toByteArray());
-    m_notNegotiatedStream->value(streamId)->setHost(Utils::getHost(fullJid));
     m_notNegotiatedStream->value(streamId)->bindFeatureNegotiated(jid);
 
     // Delete this stream in non negotiated stream map
     m_notNegotiatedStream->remove(streamId);
+
+    // Resource bind to the streamNegotiationManager
+    emit sigResourceBind(streamId);
 }
 
 void StreamManager::streamNegotiationError(QString streamId)
@@ -130,8 +137,8 @@ void StreamManager::enableStreamManagement(QString fullJid, QString smId)
 
 void StreamManager::clientServiceDiscoveryQuery(QString to, QByteArray request)
 {
-    m_userMap->value(to)->getConnection()->write(request);
-    m_userMap->value(to)->getConnection()->flush();
+    m_userMap->value(to, new User())->getConnection()->write(request);
+    m_userMap->value(to, new User())->getConnection()->flush();
 }
 
 void StreamManager::currentPresence(QString fullJid, QByteArray presenceData)
@@ -205,7 +212,7 @@ void StreamManager::sendUndeliveredPresence(QString to)
     }
 
 //    // Request acknowledgment receipt
-//    if (m_userMap->value(to)->getSmId().isEmpty())
+//    if (m_userMap->value(to, new User())->getSmId().isEmpty())
 //    {
 //        int count = listSubscribe.count() + listSubscribed.count() + listUnsubscribe.count()
 //                + listUnsubscribed.count();
@@ -227,11 +234,11 @@ void StreamManager::rosterPush(QString to, QByteArray data)
     foreach (QString toResource, toResourceList)
     {
         iq.setAttribute("to", toResource);
-        m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-        m_userMap->value(toResource)->getConnection()->flush();
+        m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+        m_userMap->value(toResource, new User())->getConnection()->flush();
 
         // Request acknowledgment of receipt
-        if (!m_userMap->value(toResource)->getSmId().isEmpty())
+        if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
         {
             sendReceiptRequest(toResource, document.toByteArray());
         }
@@ -272,11 +279,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
             qDebug() << "presence broadcast data : " << document.toByteArray();
             foreach (QString toResource, toResourceList)
             {
-                m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                m_userMap->value(toResource)->getConnection()->flush();
+                m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                m_userMap->value(toResource, new User())->getConnection()->flush();
 
                 // Request acknowledgment of receipt
-                if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                 {
                     sendReceiptRequest(toResource, document.toByteArray());
                 }
@@ -288,11 +295,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                 foreach (QString fromResource, fromResourceList)
                 {
                     presenceElement.setAttribute("to", fromResource);
-                    m_userMap->value(fromResource)->getConnection()->write(document.toByteArray());
-                    m_userMap->value(fromResource)->getConnection()->flush();
+                    m_userMap->value(fromResource, new User())->getConnection()->write(document.toByteArray());
+                    m_userMap->value(fromResource, new User())->getConnection()->flush();
 
                     // Request acknowledgment of receipt
-                    if (!m_userMap->value(fromResource)->getSmId().isEmpty())
+                    if (!m_userMap->value(fromResource, new User())->getSmId().isEmpty())
                     {
                         sendReceiptRequest(fromResource, document.toByteArray());
                     }
@@ -318,11 +325,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     {
                         foreach (QString fromResource, fromResourceList)
                         {
-                            m_userMap->value(fromResource)->getConnection()->write(presenceData);
-                            m_userMap->value(fromResource)->getConnection()->flush();
+                            m_userMap->value(fromResource, new User())->getConnection()->write(presenceData);
+                            m_userMap->value(fromResource, new User())->getConnection()->flush();
 
                             // Request acknowledgment of receipt
-                            if (!m_userMap->value(fromResource)->getSmId().isEmpty())
+                            if (!m_userMap->value(fromResource, new User())->getSmId().isEmpty())
                             {
                                 sendReceiptRequest(fromResource, presenceData);
                             }
@@ -372,11 +379,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
-                        m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                        m_userMap->value(toResource)->getConnection()->flush();
+                        m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                        m_userMap->value(toResource, new User())->getConnection()->flush();
 
                         // Request acknowledgment of receipt
-                        if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                        if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                         {
                             sendReceiptRequest(toResource, document.toByteArray());
                         }
@@ -392,11 +399,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     QStringList fromResourceList = keyList.filter(from, Qt::CaseInsensitive);
                     foreach (QString fromResource, fromResourceList)
                     {
-                        m_userMap->value(fromResource)->getConnection()->write(document.toByteArray());
-                        m_userMap->value(fromResource)->getConnection()->flush();
+                        m_userMap->value(fromResource, new User())->getConnection()->write(document.toByteArray());
+                        m_userMap->value(fromResource, new User())->getConnection()->flush();
 
                         // Request acknowledgment of receipt
-                        if (!m_userMap->value(fromResource)->getSmId().isEmpty())
+                        if (!m_userMap->value(fromResource, new User())->getSmId().isEmpty())
                         {
                             sendReceiptRequest(fromResource, document.toByteArray());
                         }
@@ -412,11 +419,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                 qDebug() << "presence broadcast data : " << document.toByteArray();
                 foreach (QString toResource, toResourceList)
                 {
-                    m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                    m_userMap->value(toResource)->getConnection()->flush();
+                    m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                    m_userMap->value(toResource, new User())->getConnection()->flush();
 
                     // Request acknowledgment of receipt
-                    if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                    if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                     {
                         sendReceiptRequest(toResource, document.toByteArray());
                     }
@@ -432,11 +439,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                 QStringList fromResourceList = keyList.filter(from, Qt::CaseInsensitive);
                 foreach (QString fromResource, fromResourceList)
                 {
-                    m_userMap->value(fromResource)->getConnection()->write(document.toByteArray());
-                    m_userMap->value(fromResource)->getConnection()->flush();
+                    m_userMap->value(fromResource, new User())->getConnection()->write(document.toByteArray());
+                    m_userMap->value(fromResource, new User())->getConnection()->flush();
 
                     // Request acknowledgment of receipt
-                    if (!m_userMap->value(fromResource)->getSmId().isEmpty())
+                    if (!m_userMap->value(fromResource, new User())->getSmId().isEmpty())
                     {
                         sendReceiptRequest(fromResource, document.toByteArray());
                     }
@@ -453,11 +460,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
-                        m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                        m_userMap->value(toResource)->getConnection()->flush();
+                        m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                        m_userMap->value(toResource, new User())->getConnection()->flush();
 
                         // Request acknowledgment of receipt
-                        if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                        if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                         {
                             sendReceiptRequest(toResource, document.toByteArray());
                         }
@@ -499,11 +506,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
-                        m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                        m_userMap->value(toResource)->getConnection()->flush();
+                        m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                        m_userMap->value(toResource, new User())->getConnection()->flush();
 
                         // Request acknowledgment of receipt
-                        if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                        if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                         {
                             sendReceiptRequest(toResource, document.toByteArray());
                         }
@@ -540,11 +547,11 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
                     qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
-                        m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                        m_userMap->value(toResource)->getConnection()->flush();
+                        m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                        m_userMap->value(toResource, new User())->getConnection()->flush();
 
                         // Request acknowledgment of receipt
-                        if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                        if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                         {
                             sendReceiptRequest(toResource, document.toByteArray());
                         }
@@ -593,18 +600,18 @@ void StreamManager::presenceBroadCastFromContact(QString to, QString contactJid)
     foreach (QString fromResource, contactResourceList)
     {
         QDomDocument document;
-        document.setContent(m_userMap->value(fromResource)->getCurrentPresence());
+        document.setContent(m_userMap->value(fromResource, new User())->getCurrentPresence());
 
         QDomElement presenceElement = document.documentElement();
         presenceElement.setAttribute("from", fromResource);
         foreach (QString toResource, toResourceList)
         {
             presenceElement.setAttribute("to", to);
-            m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-            m_userMap->value(toResource)->getConnection()->flush();
+            m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+            m_userMap->value(toResource, new User())->getConnection()->flush();
 
             // Request acknowledgment of receipt
-            if (!m_userMap->value(toResource)->getSmId().isEmpty())
+            if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
             {
                 sendReceiptRequest(toResource, document.toByteArray());
             }
@@ -619,10 +626,10 @@ void StreamManager::sendMessage(QString to, QByteArray message)
 
     if (to.contains("/"))
     {
-        if (m_userMap->value(to)->getPresencePriority() >= 0)
+        if (m_userMap->value(to, new User())->getPresencePriority() >= 0)
         {
-            m_userMap->value(to)->getConnection()->write(message);
-            m_userMap->value(to)->getConnection()->flush();
+            m_userMap->value(to, new User())->getConnection()->write(message);
+            m_userMap->value(to, new User())->getConnection()->flush();
             offlineUser = false;
         }
         else
@@ -632,15 +639,15 @@ void StreamManager::sendMessage(QString to, QByteArray message)
             {
                 foreach (QString toResource, toResourceList)
                 {
-                    if ((m_userMap->value(toResource)->getPresencePriority() >= 0))
+                    if ((m_userMap->value(toResource, new User())->getPresencePriority() >= 0))
                     {
                         offlineUser = false;
-                        m_userMap->value(toResource)->getConnection()->write(message);
-                        m_userMap->value(toResource)->getConnection()->flush();
+                        m_userMap->value(toResource, new User())->getConnection()->write(message);
+                        m_userMap->value(toResource, new User())->getConnection()->flush();
                     }
 
                     // Request acknowledgment of receipt
-                    if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                    if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                     {
                         sendReceiptRequest(toResource, message);
                     }
@@ -653,15 +660,15 @@ void StreamManager::sendMessage(QString to, QByteArray message)
         QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
         foreach (QString toResource, toResourceList)
         {
-            if ((m_userMap->value(toResource)->getPresencePriority() >= 0))
+            if ((m_userMap->value(toResource, new User())->getPresencePriority() >= 0))
             {
                 offlineUser = false;
-                m_userMap->value(toResource)->getConnection()->write(message);
-                m_userMap->value(toResource)->getConnection()->flush();
+                m_userMap->value(toResource, new User())->getConnection()->write(message);
+                m_userMap->value(toResource, new User())->getConnection()->flush();
             }
 
             // Request acknowledgment of receipt
-            if (!m_userMap->value(toResource)->getSmId().isEmpty())
+            if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
             {
                 sendReceiptRequest(toResource, message);
             }
@@ -711,11 +718,11 @@ void StreamManager::presenceProbeReply(QString to, QString from,
                 presenceElement.setAttribute("to", to);
 
                 qDebug() << "presence probe reply  : " << document.toByteArray();
-                m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-                m_userMap->value(toResource)->getConnection()->flush();
+                m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+                m_userMap->value(toResource, new User())->getConnection()->flush();
 
                 // Request acknowledgment of receipt
-                if (!m_userMap->value(toResource)->getSmId().isEmpty())
+                if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
                 {
                     sendReceiptRequest(toResource, document.toByteArray());
                 }
@@ -742,8 +749,8 @@ void StreamManager::presenceProbeReply(QString to, QString from,
 //                    presenceElement.setAttribute("to", to);
 
 //                    qDebug() << "presence probe reply  : " << document.toByteArray();
-//                    m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-//                    m_userMap->value(toResource)->getConnection()->flush();
+//                    m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+//                    m_userMap->value(toResource, new User())->getConnection()->flush();
 //                }
 //            }
         offlineContact = false;
@@ -757,11 +764,11 @@ void StreamManager::presenceProbeReply(QString to, QString from,
         foreach (QString toResource, toResourceList)
         {
             qDebug() << "offline contact's of user probe sender reply : " << data;
-            m_userMap->value(toResource)->getConnection()->write(data);
-            m_userMap->value(toResource)->getConnection()->flush();
+            m_userMap->value(toResource, new User())->getConnection()->write(data);
+            m_userMap->value(toResource, new User())->getConnection()->flush();
 
             // Request acknowledgment of receipt
-            if (!m_userMap->value(toResource)->getSmId().isEmpty())
+            if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
             {
                 sendReceiptRequest(toResource, data);
             }
@@ -771,7 +778,7 @@ void StreamManager::presenceProbeReply(QString to, QString from,
 
 void StreamManager::presenceProbeToContact(QString to, QString from, bool directedPresenceProbe)
 {
-    if (m_userMap->value(from)->getCurrentPresence().isEmpty())
+    if (m_userMap->value(from, new User())->getCurrentPresence().isEmpty())
     {
         qDebug() << "presence probe to : " << to;
         presenceProbeReply(Utils::getBareJid(from), to, directedPresenceProbe);
@@ -787,11 +794,11 @@ void StreamManager::directedPresence(QString from, QString to, QByteArray data)
     {
         foreach (QString toResource, toResourceList)
         {
-            m_userMap->value(toResource)->getConnection()->write(data);
-            m_userMap->value(toResource)->getConnection()->flush();
+            m_userMap->value(toResource, new User())->getConnection()->write(data);
+            m_userMap->value(toResource, new User())->getConnection()->flush();
 
             // Request acknowledgment of receipt
-            if (!m_userMap->value(toResource)->getSmId().isEmpty())
+            if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
             {
                 sendReceiptRequest(toResource, data);
             }
@@ -813,11 +820,11 @@ void StreamManager::defaultListNameSetReply(QString jid, QString to, QString def
 
         QByteArray errorData = Error::generateError("iq", "cancel", "conflict", "", "", id, defaultElement);
 
-        m_userMap->value(to)->getConnection()->write(errorData);
-        m_userMap->value(to)->getConnection()->flush();
+        m_userMap->value(to, new User())->getConnection()->write(errorData);
+        m_userMap->value(to, new User())->getConnection()->flush();
 
         // Request acknowledgment of receipt
-        if (!m_userMap->value(to)->getSmId().isEmpty())
+        if (!m_userMap->value(to, new User())->getSmId().isEmpty())
         {
             sendReceiptRequest(to, errorData);
         }
@@ -832,11 +839,11 @@ void StreamManager::defaultListNameSetReply(QString jid, QString to, QString def
         iq.setAttribute("id", id);
         document.appendChild(iq);
 
-        m_userMap->value(to)->getConnection()->write(document.toByteArray());
-        m_userMap->value(to)->getConnection()->flush();
+        m_userMap->value(to, new User())->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getConnection()->flush();
 
         // Request acknowledgment of receipt
-        if (!m_userMap->value(to)->getSmId().isEmpty())
+        if (!m_userMap->value(to, new User())->getSmId().isEmpty())
         {
             sendReceiptRequest(to, document.toByteArray());
         }
@@ -858,11 +865,11 @@ void StreamManager::presenceUnavailableBroadCast(QString to, QString from)
         presenceElement.setAttribute("from", fromResource);
         foreach (QString toResource,toResourceList)
         {
-            m_userMap->value(toResource)->getConnection()->write(document.toByteArray());
-            m_userMap->value(toResource)->getConnection()->flush();
+            m_userMap->value(toResource, new User())->getConnection()->write(document.toByteArray());
+            m_userMap->value(toResource, new User())->getConnection()->flush();
 
             // Request acknowledgment of receipt
-            if (!m_userMap->value(toResource)->getSmId().isEmpty())
+            if (!m_userMap->value(toResource, new User())->getSmId().isEmpty())
             {
                 sendReceiptRequest(toResource, document.toByteArray());
             }
@@ -879,11 +886,11 @@ void StreamManager::lastActivityQuery(QString from, QString to, QString id, QStr
     {
         QByteArray errorData = Error::generateError("iq", "auth", "forbidden", Utils::getBareJid(to),
                                                              from, id, QDomElement());
-        m_userMap->value(from)->getConnection()->write(errorData);
-        m_userMap->value(from)->getConnection()->flush();
+        m_userMap->value(from, new User())->getConnection()->write(errorData);
+        m_userMap->value(from, new User())->getConnection()->flush();
 
         // Request acknowledgment of receipt
-        if (!m_userMap->value(from)->getSmId().isEmpty())
+        if (!m_userMap->value(from, new User())->getSmId().isEmpty())
         {
             sendReceiptRequest(from, errorData);
         }
@@ -900,7 +907,7 @@ void StreamManager::lastActivityQuery(QString from, QString to, QString id, QStr
 
         QDomElement query = document.createElement("query");
         query.setAttribute("xmlns", "jabber:iq:last");
-        query.setAttribute("seconds", (int)(m_userMap->value(to)->getConnectedTime()/1000));
+        query.setAttribute("seconds", (int)(m_userMap->value(to, new User())->getConnectedTime()/1000));
 
         if (!lastStatus.isEmpty())
         {
@@ -909,11 +916,11 @@ void StreamManager::lastActivityQuery(QString from, QString to, QString id, QStr
         iq.appendChild(query);
         document.appendChild(iq);
 
-        m_userMap->value(from)->getConnection()->write(document.toByteArray());
-        m_userMap->value(from)->getConnection()->flush();
+        m_userMap->value(from, new User())->getConnection()->write(document.toByteArray());
+        m_userMap->value(from, new User())->getConnection()->flush();
 
         // Request acknowledgment of receipt
-        if (!m_userMap->value(from)->getSmId().isEmpty())
+        if (!m_userMap->value(from, new User())->getSmId().isEmpty())
         {
             sendReceiptRequest(from, document.toByteArray());
         }
@@ -936,11 +943,11 @@ void StreamManager::serverLastActivityQuery(QString from, QString to, QString id
     iq.appendChild(query);
     document.appendChild(iq);
 
-    m_userMap->value(from)->getConnection()->write(document.toByteArray());
-    m_userMap->value(from)->getConnection()->flush();
+    m_userMap->value(from, new User())->getConnection()->write(document.toByteArray());
+    m_userMap->value(from, new User())->getConnection()->flush();
 
     // Request acknowledgment of receipt
-    if (!m_userMap->value(from)->getSmId().isEmpty())
+    if (!m_userMap->value(from, new User())->getSmId().isEmpty())
     {
         sendReceiptRequest(from, document.toByteArray());
     }
@@ -979,8 +986,11 @@ void StreamManager::accountAvailableResourceQuery(QString from, QString accountJ
 
 void StreamManager::inboundStanzaReceived(QString from)
 {
-    m_userMap->value(from)->setInboundStanzaReceivedCount(
-                m_userMap->value(from)->getInboundStanzaReceivedCount() + 1);
+    if (!m_userMap->value(from, new User())->getSmId().isEmpty())
+    {
+        m_userMap->value(from, new User())->setInboundStanzaReceivedCount(
+                    m_userMap->value(from, new User())->getInboundStanzaReceivedCount() + 1);
+    }
 }
 
 void StreamManager::queryInboundStanzaReceived(QString from)
@@ -988,37 +998,37 @@ void StreamManager::queryInboundStanzaReceived(QString from)
     QDomDocument document;
     QDomElement a = document.createElement("a");
     a.setAttribute("xmlns", "urn:xmpp:sm:3");
-    a.setAttribute("h", m_userMap->value(from)->getInboundStanzaReceivedCount());
+    a.setAttribute("h", m_userMap->value(from, new User())->getInboundStanzaReceivedCount());
     document.appendChild(a);
 
-    m_userMap->value(from)->getConnection()->write(document.toByteArray());
-    m_userMap->value(from)->getConnection()->flush();
+    m_userMap->value(from, new User())->getConnection()->write(document.toByteArray());
+    m_userMap->value(from, new User())->getConnection()->flush();
 }
 
 void StreamManager::sendReceiptRequest(QString to, QByteArray data)
 {
     // save stream data
-    saveStreamData(m_userMap->value(to)->getSmId(), data);
+    saveStreamData(m_userMap->value(to, new User())->getSmId(), data);
 
     QDomDocument document;
     QDomElement r = document.createElement("r");
     r.setAttribute("xmlns", "urn:xmpp:sm:3");
     document.appendChild(r);
 
-    m_userMap->value(to)->getConnection()->write(document.toByteArray());
-    m_userMap->value(to)->getConnection()->flush();
+    m_userMap->value(to, new User())->getConnection()->write(document.toByteArray());
+    m_userMap->value(to, new User())->getConnection()->flush();
 }
 
 void StreamManager::slotSendReceiptRequest(QString to, QByteArray data)
 {
-    if (!m_userMap->value(to)->getSmId().isEmpty())
+    if (!m_userMap->value(to, new User())->getSmId().isEmpty())
         sendReceiptRequest(to, data);
 }
 
 void StreamManager::acknowledgeReceiptServerStanza(QString from, int h)
 {
     // delete this stanza in the stream temp file
-    deleteStreamData(m_userMap->value(from)->getSmId(), h);
+    deleteStreamData(m_userMap->value(from, new User())->getSmId(), h);
 }
 
 bool StreamManager::saveStreamData(QString smId, QByteArray data)
