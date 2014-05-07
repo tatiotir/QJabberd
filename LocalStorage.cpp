@@ -102,15 +102,12 @@ QList<Contact> LocalStorage::getContactsList(QString jid)
 
 bool LocalStorage::addContactToRoster(QString jid, Contact contact)
 {
-    QString contactsDirPath = "roster/" + jid.replace("@", "_") + "/";
-    QDir dir(contactsDirPath);
-    if (!dir.exists())
-    {
-        QDir dir("roster/");
-        dir.mkdir(jid.replace("@", "_"));
-    }
+    QDir dir;
+    dir.mkdir("roster");
+    dir.setPath("roster/");
+    dir.mkdir(jid.replace("@", "_"));
 
-    QString filename = contactsDirPath + contact.getJid().replace("@", "_") + ".qjc";
+    QString filename = "roster/" + jid + "/" + contact.getJid().replace("@", "_") + ".qjc";
 
     QFile contactFile(filename);
     if (!contactFile.open(QIODevice::ReadWrite))

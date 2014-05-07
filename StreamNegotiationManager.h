@@ -17,6 +17,7 @@ class StreamNegotiationManager : public QObject
 public:
     StreamNegotiationManager(QMap<QString, QVariant> *serverConfigMap = 0, UserManager *userManager = 0);
 
+public slots:
     QByteArray reply(QByteArray clientXML, QString streamId);
     QByteArray firstFeatures();
     QByteArray secondFeatures();

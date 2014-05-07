@@ -37,7 +37,7 @@ private:
     QMultiHash<QString, QString> getChatRoomList(QString room);
 
     UserManager *m_userManager;
-    QMap<QString, QVariant> *m_serverConfigMap, ;
+    QMap<QString, QVariant> *m_serverConfigMap;
 };
 
 #endif // SERVICEDISCOVERYMANAGER_H

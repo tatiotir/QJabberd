@@ -14,7 +14,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     m_vCardManager = new VCardManager(m_storageManager);
     m_privateStorageManager = new PrivateStorageManager(m_storageManager);
     m_entityTimeManager = new EntityTimeManager();
-    m_serviceDiscoveryManager = new ServiceDiscoveryManager(m_userManager);
+    m_serviceDiscoveryManager = new ServiceDiscoveryManager(m_serverConfigMap, m_userManager);
     m_privacyListManager = new PrivacyListManager(m_storageManager);
     m_lastActivityManager= new LastActivityManager(m_userManager, m_rosterManager, m_storageManager);
     m_iqManager = new IQManager(m_serverConfigMap, m_userManager, m_privacyListManager, m_rosterManager, m_vCardManager,
@@ -34,6 +34,8 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
             m_streamManager, SLOT(newConnection(Connection*,IQManager*,PresenceManager*,
                                                 MessageManager*,RosterManager*,StreamNegotiationManager*)));
 
+    connect(m_streamManager, SIGNAL(sigResourceBind(QString)), m_streamNegotiationManager,
+            SLOT(resourceBind(QString)));
     connect(m_streamNegotiationManager, SIGNAL(sigHost(QString,QString)), m_streamManager,
             SLOT(streamHost(QString,QString)));
 

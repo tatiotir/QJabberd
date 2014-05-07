@@ -3,7 +3,7 @@
 ServiceDiscoveryManager::ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap,
                                                  UserManager *userManager)
 {
-    m_serverConfigMap = streamNegotiationManager;
+    m_serverConfigMap = serverConfigMap;
     m_userManager = userManager;
 }
 
