@@ -1,11 +1,26 @@
 #include "MessageManager.h"
 
+/**
+ * Constructor of the message manager
+ *
+ * @brief MessageManager::MessageManager
+ * @param userManager
+ * @param privacyListManager
+ */
 MessageManager::MessageManager(UserManager *userManager, PrivacyListManager *privacyListManager)
 {
     m_userManager = userManager;
     m_privacyListManager = privacyListManager;
 }
 
+/**
+ * Parse a message request from XMPP client
+ *
+ * @brief MessageManager::parseMessage
+ * @param messageXML
+ * @param messageFrom
+ * @return QByteArray
+ */
 QByteArray MessageManager::parseMessage(QByteArray messageXML, QString messageFrom)
 {
     QDomDocument document;

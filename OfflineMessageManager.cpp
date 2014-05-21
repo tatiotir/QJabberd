@@ -5,6 +5,14 @@ OfflineMessageManager::OfflineMessageManager(StorageManager *storageManager)
     m_storageManager = storageManager;
 }
 
+/**
+ * Offline message reply
+ *
+ * @brief OfflineMessageManager::offlineMessageManagerReply
+ * @param iqXML
+ * @param iqFrom
+ * @return QByteArray
+ */
 QByteArray OfflineMessageManager::offlineMessageManagerReply(QByteArray iqXML, QString iqFrom)
 {
     QDomDocument document;
@@ -112,6 +120,15 @@ QByteArray OfflineMessageManager::offlineMessageManagerReply(QByteArray iqXML, Q
     }
 }
 
+/**
+ * Offline message retrival result
+ *
+ * @brief OfflineMessageManager::offlineMessageManagerResult
+ * @param to
+ * @param id
+ * @param messageList
+ * @return QByteArray
+ */
 QByteArray OfflineMessageManager::offlineMessageManagerResult(QString to, QString id, QByteArray messageList)
 {
     QDomDocument document;
@@ -123,21 +140,51 @@ QByteArray OfflineMessageManager::offlineMessageManagerResult(QString to, QStrin
     return (messageList.isEmpty() ? (document.toByteArray()) : (messageList + document.toByteArray()));
 }
 
+/**
+ * Get offline message from a user
+ *
+ * @brief OfflineMessageManager::getOfflineMessageFrom
+ * @param jid
+ * @param from
+ * @return QMultiHash<QString, QByteArray>
+ */
 QMultiHash<QString, QByteArray> OfflineMessageManager::getOfflineMessageFrom(QString jid, QString from)
 {
     return m_storageManager->getStorage()->getOfflineMessageFrom(jid, from);
 }
 
+/**
+ * Get offline message using the time stamp at which the message has been sent
+ *
+ * @brief OfflineMessageManager::getOfflineMessage
+ * @param jid
+ * @param stamp
+ * @return QByteArray
+ */
 QByteArray OfflineMessageManager::getOfflineMessage(QString jid, QString stamp)
 {
     return m_storageManager->getStorage()->getOfflineMessage(jid, stamp);
 }
 
+/**
+ * Get all offline message for a user
+ *
+ * @brief OfflineMessageManager::getAllOfflineMessage
+ * @param jid
+ * @return QMultiHash<QString, QByteArray>
+ */
 QMultiHash<QString, QByteArray> OfflineMessageManager::getAllOfflineMessage(QString jid)
 {
     return m_storageManager->getStorage()->getAllOfflineMessage(jid);
 }
 
+/**
+ * Delete offline message using the key
+ *
+ * @brief OfflineMessageManager::deleteOfflineMessage
+ * @param jid
+ * @param key
+ */
 void OfflineMessageManager::deleteOfflineMessage(QString jid, QString key)
 {
     m_storageManager->getStorage()->deleteOfflineMessage(jid, key);

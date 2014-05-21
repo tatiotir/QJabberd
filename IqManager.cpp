@@ -1,5 +1,21 @@
 #include "IqManager.h"
 
+/**
+ * Constructor of the iq manager
+ *
+ * @brief IQManager::IQManager
+ * @param serverConfigMap
+ * @param userManager
+ * @param privacyListManager
+ * @param rosterManager
+ * @param vcardManager
+ * @param lastActivityManager
+ * @param entityTimeManager
+ * @param privateStorageManager
+ * @param serviceDiscoveryManager
+ * @param offlineMessageManager
+ * @param streamNegotiationManager
+ */
 IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *userManager, PrivacyListManager *privacyListManager,
                      RosterManager *rosterManager, VCardManager *vcardManager,
                      LastActivityManager *lastActivityManager, EntityTimeManager *entityTimeManager,
@@ -19,6 +35,19 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
     m_streamNegotiationManager = streamNegotiationManager;
 }
 
+/**
+ * Authenticate an user using the old jabber:iq:auth mechanism
+ *
+ * @brief IQManager::authenticate
+ * @param streamId
+ * @param id
+ * @param username
+ * @param password
+ * @param resource
+ * @param digest
+ * @param host
+ * @return QByteArray
+ */
 QByteArray IQManager::authenticate(QString streamId, QString id, QString username, QString password,
                                      QString resource, QString digest, QString host)
 {
@@ -62,8 +91,12 @@ QByteArray IQManager::authenticate(QString streamId, QString id, QString usernam
 }
 
 
-/*
- * This function send to client the fields required for authentification in the server.
+/**
+ * Return the authentification fields to an user which want to use the old jabber authentification mechanism (v1.0)
+ *
+ * @brief IQManager::authentificationFields
+ * @param id
+ * @return QByteArray
  */
 QByteArray IQManager::authentificationFields(QString id)
 {
@@ -91,7 +124,16 @@ QByteArray IQManager::authentificationFields(QString id)
     return document.toByteArray();
 }
 
-
+/**
+ * Parse an iq xml request and output the result in a byte array
+ *
+ * @brief IQManager::parseIQ
+ * @param iqXML
+ * @param from
+ * @param host
+ * @param streamId
+ * @return QByteArray
+ */
 QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QString streamId)
 {
     QDomDocument document;
@@ -468,6 +510,15 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
     return QByteArray();
 }
 
+/**
+ * Generate the roster get result from an iq get with the namespace "jabber:iq:roster"
+ *
+ * @brief IQManager::generateRosterGetResultReply
+ * @param to
+ * @param id
+ * @param rosterList
+ * @return QByteArray
+ */
 QByteArray IQManager::generateRosterGetResultReply(QString to, QString id,
                                                    QList<Contact> rosterList)
 {
@@ -519,6 +570,14 @@ QByteArray IQManager::generateRosterGetResultReply(QString to, QString id,
     }
 }
 
+/**
+ * Generate an iq response from an iq
+ *
+ * @brief IQManager::generateIqSessionReply
+ * @param id
+ * @param from
+ * @return QByteArray
+ */
 QByteArray IQManager::generateIqSessionReply(QString id, QString from)
 {
     QDomDocument document;
@@ -532,6 +591,14 @@ QByteArray IQManager::generateIqSessionReply(QString id, QString from)
     return document.toByteArray();
 }
 
+/**
+ * Generate an iq result as result from an iq request
+ *
+ * @brief IQManager::generateIQResult
+ * @param to
+ * @param id
+ * @return QByteArray
+ */
 QByteArray IQManager::generateIQResult(QString to, QString id)
 {
     QDomDocument document;
@@ -551,6 +618,13 @@ QByteArray IQManager::generateIQResult(QString to, QString id)
     return document.toByteArray();
 }
 
+/**
+ * Generate the registration fields to an user for account registration
+ *
+ * @brief IQManager::generateRegistrationFieldsReply
+ * @param id
+ * @return QByteArray
+ */
 QByteArray IQManager::generateRegistrationFieldsReply(QString id)
 {
     QDomDocument document;
@@ -571,6 +645,15 @@ QByteArray IQManager::generateRegistrationFieldsReply(QString id)
     return document.toByteArray();
 }
 
+/**
+ * Return iq result when an XMPP client want to register an account which is already created
+ *
+ * @brief IQManager::generateAlreadyRegisterReply
+ * @param username
+ * @param password
+ * @param id
+ * @return QByteArray
+ */
 QByteArray IQManager::generateAlreadyRegisterReply(QString username, QString password, QString id)
 {
     QDomDocument document;
@@ -597,6 +680,15 @@ QByteArray IQManager::generateAlreadyRegisterReply(QString username, QString pas
     return document.toByteArray();
 }
 
+/**
+ * Generate pong reply to an iq ping request from an XMPP client
+ *
+ * @brief IQManager::generatePongReply
+ * @param from
+ * @param to
+ * @param id
+ * @return QByteArray
+ */
 QByteArray IQManager::generatePongReply(QString from, QString to, QString id)
 {
     QDomDocument document;

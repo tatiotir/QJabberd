@@ -4,6 +4,19 @@ Error::Error()
 {
 }
 
+/**
+ * Generate stanza error function to the stanza type according to the XMPP core
+ *
+ * @brief Error::generateError
+ * @param stanzaType
+ * @param errorType
+ * @param errorCause
+ * @param from
+ * @param to
+ * @param id
+ * @param request
+ * @return QByteArray
+ */
 QByteArray Error::generateError(QString stanzaType, QString errorType, QString errorCause,
                                 QString from, QString to, QString id, QDomElement request)
 {
@@ -39,6 +52,13 @@ QByteArray Error::generateError(QString stanzaType, QString errorType, QString e
     return document.toByteArray();
 }
 
+/**
+ * Generate the stream management error from the XEP
+ *
+ * @brief Error::generateSmError
+ * @param childName
+ * @return QByteArray
+ */
 QByteArray Error::generateSmError(QString childName)
 {
     QDomDocument document;
@@ -54,6 +74,13 @@ QByteArray Error::generateSmError(QString childName)
     return document.toByteArray();
 }
 
+/**
+ * Generate sasl error according to the XMPP Core
+ *
+ * @brief Error::generateSaslError
+ * @param childName
+ * @return QByteArray
+ */
 QByteArray Error::generateSaslError(QString childName)
 {
     QDomDocument document;
@@ -66,6 +93,13 @@ QByteArray Error::generateSaslError(QString childName)
     return document.toByteArray();
 }
 
+/**
+ * Generate stream error during stream negotiation according to the XMPP Core
+ *
+ * @brief Error::generateStreamError
+ * @param errorCause
+ * @return
+ */
 QByteArray Error::generateStreamError(QString errorCause)
 {
     QDomDocument errorDocument;

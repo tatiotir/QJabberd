@@ -1,5 +1,12 @@
 #include "ConnectionManager.h"
 
+
+/**
+ * @brief ConnectionManager::ConnectionManager
+ * @param parent
+ * @param port
+ * @param serverConfigMap
+ */
 ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QVariant> *serverConfigMap) : QTcpServer(parent), m_port(port)
 {
     m_serverConfigMap = serverConfigMap;
@@ -124,6 +131,10 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
             SLOT(slotSendReceiptRequest(QString,QByteArray)));
 }
 
+/**
+ * This function start the connection manager
+ * @brief ConnectionManager::startManage
+ */
 void ConnectionManager::startManage()
 {
     if (listen(QHostAddress::Any, m_port))
@@ -136,11 +147,23 @@ void ConnectionManager::startManage()
     }
 }
 
+/**
+ * This function stop the connection manager
+ * @brief ConnectionManager::stopManage
+ */
 void ConnectionManager::stopManage()
 {
     this->close();
 }
 
+/**
+ * This function is call when a new connection is available in the connection manager
+ * We get the socket descriptor of the socket, create a new connection using the Connection class
+ * and emit the signal "sigNewConnection to the stream manager.
+ *
+ * @brief ConnectionManager::incomingConnection
+ * @param socketDescriptor
+ */
 void ConnectionManager::incomingConnection(qintptr socketDescriptor)
 {
     qDebug() << "New client connected on server";
@@ -154,11 +177,18 @@ void ConnectionManager::incomingConnection(qintptr socketDescriptor)
                           m_rosterManager, m_streamNegotiationManager);
 }
 
+/**
+ * @brief ConnectionManager::deconnection
+ */
 void ConnectionManager::deconnection()
 {
 
 }
 
+/**
+ * @brief ConnectionManager::getPort
+ * @return port
+ */
 int ConnectionManager::getPort()
 {
     return m_port;

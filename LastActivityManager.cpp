@@ -1,5 +1,13 @@
 #include "LastActivityManager.h"
 
+/**
+ * Constructor of the last activity manager
+ *
+ * @brief LastActivityManager::LastActivityManager
+ * @param userManager
+ * @param rosterManager
+ * @param storageManager
+ */
 LastActivityManager::LastActivityManager(UserManager *userManager, RosterManager *rosterManager,
                                          StorageManager *storageManager)
 {
@@ -8,6 +16,14 @@ LastActivityManager::LastActivityManager(UserManager *userManager, RosterManager
     m_storageManager = storageManager;
 }
 
+/**
+ * Return reply from an last activity query
+ *
+ * @brief LastActivityManager::lastActivityReply
+ * @param iqXML
+ * @param iqFrom
+ * @return QByteArray
+ */
 QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFrom)
 {
     QDomDocument document;
@@ -68,6 +84,17 @@ QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFr
     }
 }
 
+/**
+ * Return last activity result from iq request
+ *
+ * @brief LastActivityManager::lastActivityQueryResult
+ * @param from
+ * @param to
+ * @param id
+ * @param seconds
+ * @param lastStatus
+ * @return QByteArray
+ */
 QByteArray LastActivityManager::lastActivityQueryResult(QString from, QString to, QString id, int seconds, QString lastStatus)
 {
     QDomDocument document;
@@ -93,21 +120,49 @@ QByteArray LastActivityManager::lastActivityQueryResult(QString from, QString to
     return document.toByteArray();
 }
 
+/**
+ * Get the last logout for a user
+ *
+ * @brief LastActivityManager::getLastLogoutTime
+ * @param jid
+ * @return QString
+ */
 QString LastActivityManager::getLastLogoutTime(QString jid)
 {
     return m_storageManager->getStorage()->getLastLogoutTime(jid);
 }
 
+/**
+ * Set the last logout time from a user
+ *
+ *  @brief LastActivityManager::setLastLogoutTime
+ * @param jid
+ * @param lastLogoutTime
+ */
 void LastActivityManager::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
     m_storageManager->getStorage()->setLastLogoutTime(jid, lastLogoutTime);
 }
 
+/**
+ * Get the last status for an user
+ *
+ * @brief LastActivityManager::getLastStatus
+ * @param jid
+ * @return QString
+ */
 QString LastActivityManager::getLastStatus(QString jid)
 {
     return m_storageManager->getStorage()->getLastStatus(jid);
 }
 
+/**
+ * Set the last status for an user
+ *
+ * @brief LastActivityManager::setLastStatus
+ * @param jid
+ * @param status
+ */
 void LastActivityManager::setLastStatus(QString jid, QString status)
 {
     m_storageManager->getStorage()->setLastStatus(jid, status);

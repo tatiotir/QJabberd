@@ -677,6 +677,7 @@ void StreamManager::sendMessage(QString to, QByteArray message)
 
     if (offlineUser)
     {
+        qDebug() << "offline message hiiiiiiiiiiiiiiiiiii";
         QDomDocument document;
         document.setContent(message);
 

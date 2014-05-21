@@ -32,12 +32,6 @@ public:
 
 public slots:
     QByteArray parseIQ(QByteArray iqXML, QString from, QString host, QString streamId);
-    QByteArray generateIQResult(QString to, QString id);
-    QByteArray generateRosterGetResultReply(QString to, QString id, QList<Contact> rosterList);
-    QByteArray generateIqSessionReply(QString id, QString from);
-    QByteArray generateRegistrationFieldsReply(QString id);
-    QByteArray generateAlreadyRegisterReply(QString username, QString password, QString id);
-    QByteArray generatePongReply(QString from, QString to, QString id);
 
 signals:
     void sigPresenceBroadCast(QString to, QByteArray data);
@@ -50,6 +44,12 @@ signals:
     void sigStreamNegotiationError(QString streamId);
 
 private:
+    QByteArray generateIQResult(QString to, QString id);
+    QByteArray generateRosterGetResultReply(QString to, QString id, QList<Contact> rosterList);
+    QByteArray generateIqSessionReply(QString id, QString from);
+    QByteArray generateRegistrationFieldsReply(QString id);
+    QByteArray generateAlreadyRegisterReply(QString username, QString password, QString id);
+    QByteArray generatePongReply(QString from, QString to, QString id);
     QByteArray authentificationFields(QString id);
     QByteArray authenticate(QString streamId, QString id, QString username, QString password, QString resource, QString digest, QString host);
 

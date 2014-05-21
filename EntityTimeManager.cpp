@@ -5,6 +5,14 @@ EntityTimeManager::EntityTimeManager()
 
 }
 
+/**
+ * Reply to an entity time request from a user.
+ *
+ * @brief EntityTimeManager::entityTimeManagerReply
+ * @param iqXML
+ * @param iqFrom
+ * @return QByteArray
+ */
 QByteArray EntityTimeManager::entityTimeManagerReply(QByteArray iqXML, QString iqFrom)
 {
     QDomDocument document;
@@ -30,6 +38,17 @@ QByteArray EntityTimeManager::entityTimeManagerReply(QByteArray iqXML, QString i
     return QByteArray();
 }
 
+/**
+ * Generate the appropriate result according to the XEP entity time
+ *
+ * @brief EntityTimeManager::entityTimeMananerResult
+ * @param from
+ * @param to
+ * @param id
+ * @param tzo
+ * @param utc
+ * @return QByteArray
+ */
 QByteArray EntityTimeManager::entityTimeMananerResult(QString from, QString to, QString id,
                                                       QString tzo, QString utc)
 {
