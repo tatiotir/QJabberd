@@ -161,7 +161,7 @@ bool LocalStorage::updateGroupToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toJson());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -195,7 +195,7 @@ bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toJson());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -224,7 +224,7 @@ bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toJson());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -246,7 +246,7 @@ bool LocalStorage::updateNameToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toJson());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -267,7 +267,7 @@ bool LocalStorage::updateApprovedToContact(QString jid, QString contactJid, bool
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toJson());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -343,11 +343,7 @@ QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacy
     for (int i = 0, c = privacyList.count(); i < c; ++c)
     {
         QJsonObject jsonPrivacyListItem = privacyList[i].toObject();
-        itemList << PrivacyListItem(jsonPrivacyListItem.value("type").toString(),
-                                    jsonPrivacyListItem.value("value").toString(),
-                                    jsonPrivacyListItem.value("action").toString(),
-                                    jsonPrivacyListItem.value("order").toVariant().toInt(),
-                                    jsonPrivacyListItem.value("itemChildren").toVariant().toStringList().toSet());
+        itemList << PrivacyListItem::fromJsonObject(jsonPrivacyListItem);
     }
 
     qSort(itemList.begin(), itemList.end());
@@ -383,7 +379,7 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    bool ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toJson());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -402,7 +398,7 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    bool ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toJson());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -423,13 +419,8 @@ QString LocalStorage::getVCard(QString jid)
 
 bool LocalStorage::updateVCard(QString jid, QString vCardInfos)
 {
-    QString vcardDirPath = "vCard/";
-    QDir dir(vcardDirPath);
-    if (!dir.exists())
-    {
-        QDir dir;
-        dir.mkdir(vcardDirPath);
-    }
+    QDir dir;
+    dir.mkdir("vCard");
 
     QString filename = "vCard/" + jid.replace("@", "_") + ".qjv";
 
@@ -443,7 +434,7 @@ bool LocalStorage::updateVCard(QString jid, QString vCardInfos)
     vCardObject.insert("vCard", vCardInfos);
     document.setObject(vCardObject);
 
-    bool ok = vCardFile.write(document.toJson());
+    quint64 ok = vCardFile.write(document.toJson());
     vCardFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -468,13 +459,13 @@ QString LocalStorage::getLastLogoutTime(QString jid)
     return logoutTime;
 }
 
-void LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
+bool LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
     QString filename = "accounts/" + jid.replace("@", "_") + ".qju";
 
     QFile userFile(filename);
     if (!userFile.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
     QJsonObject userObject = document.object();
@@ -485,8 +476,9 @@ void LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
                 document.toJson();
 
     userFile.resize(0);
-    userFile.write(document.toJson());
+    quint64 ok = userFile.write(document.toJson());
     userFile.close();
+    return (true ? (ok >= 0) : false);
 }
 
 QString LocalStorage::getLastStatus(QString jid)
@@ -503,13 +495,13 @@ QString LocalStorage::getLastStatus(QString jid)
     return lastStatus;
 }
 
-void LocalStorage::setLastStatus(QString jid, QString status)
+bool LocalStorage::setLastStatus(QString jid, QString status)
 {
     QString filename = "accounts/" + jid.replace("@", "_") + ".qju";
 
     QFile userFile(filename);
     if (!userFile.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     qDebug() << "set last status : jid = " << jid << " status = " << status;
 
@@ -519,8 +511,9 @@ void LocalStorage::setLastStatus(QString jid, QString status)
     document.setObject(userObject);
 
     userFile.resize(0);
-    userFile.write(document.toJson());
+    quint64 ok = userFile.write(document.toJson());
     userFile.close();
+    return (true ? (ok >= 0) : false);
 }
 
 bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap)
@@ -550,7 +543,7 @@ bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    bool ok = userPrivateDataFile.write(document.toJson());
+    quint64 ok = userPrivateDataFile.write(document.toJson());
     userPrivateDataFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -584,7 +577,7 @@ bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    bool ok = userPrivateDataFile.write(document.toJson());
+    quint64 ok = userPrivateDataFile.write(document.toJson());
     userPrivateDataFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -624,7 +617,8 @@ QList<MetaContact> LocalStorage::getPrivateData(QString jid)
     return metaContactList;
 }
 
-void LocalStorage::saveOfflineMessage(QString from, QString to, QByteArray message, QString stamp)
+bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
+                                      QList<QPair<QString, QString> > bodyPairList, QString stamp)
 {
     QDir dir;
     dir.mkdir("offlineMessage");
@@ -634,11 +628,11 @@ void LocalStorage::saveOfflineMessage(QString from, QString to, QByteArray messa
 
     QFile userOfflineMessageFile(filename);
     if (!userOfflineMessageFile.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     QFile userOfflineMessageFileIndex(indexFilename);
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     QJsonDocument document = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
     QJsonObject object = document.object();
@@ -647,14 +641,25 @@ void LocalStorage::saveOfflineMessage(QString from, QString to, QByteArray messa
     QString key = QString::number(keys.value(keys.count() - 1).toInt() + 1);
 
     QJsonObject messageObject;
-    messageObject.insert("stanza", QString(message));
+    messageObject.insert("from", from);
+    messageObject.insert("type", type);
     messageObject.insert("stamp", stamp);
+
+    QJsonArray bodyArray;
+    for (int i = 0; i < bodyPairList.count(); ++i)
+    {
+        QJsonObject bodyObject;
+        bodyObject.insert("lang", bodyPairList.value(i).first);
+        bodyObject.insert("msg", bodyPairList.value(i).second);
+        bodyArray.append(bodyObject);
+    }
+    messageObject.insert("body", bodyArray);
 
     object.insert(key, messageObject);
     document.setObject(object);
 
     userOfflineMessageFile.resize(0);
-    userOfflineMessageFile.write(document.toJson());
+    quint64 ok = userOfflineMessageFile.write(document.toJson());
     userOfflineMessageFile.close();
 
     // Build indexes
@@ -670,8 +675,9 @@ void LocalStorage::saveOfflineMessage(QString from, QString to, QByteArray messa
     indexDocument.setObject(indexObject);
 
     userOfflineMessageFileIndex.resize(0);
-    userOfflineMessageFileIndex.write(indexDocument.toJson());
+    quint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toJson());
     userOfflineMessageFileIndex.close();
+    return (true ? (ok >= 0 && ok1 >= 0) : false);
 }
 
 int LocalStorage::getOfflineMessagesNumber(QString jid)
@@ -701,10 +707,31 @@ QByteArray LocalStorage::getOfflineMessage(QString jid, QString stamp)
     QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
     QString messageNumberKey = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll()).object().value(stamp).toString();
 
+    QJsonObject messageObject = offlineMessageDocument.object().value(messageNumberKey).toObject();
+
+    QDomDocument document;
+    QDomElement messageElement = document.createElement("message");
+    messageElement.setAttribute("from", messageObject.value("from").toString());
+    messageElement.setAttribute("to", jid.replace("_", "@"));
+    messageElement.setAttribute("type", messageObject.value("type").toString());
+
+    QJsonArray bodyArray = messageObject.value("body").toArray();
+    for (int i = 0; i < bodyArray.count(); ++i)
+    {
+        QDomElement bodyElement = document.createElement("body");
+        bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+        if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+            bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+        messageElement.appendChild(bodyElement);
+    }
+    document.appendChild(messageElement);
+
     userOfflineMessageFile.close();
     userOfflineMessageFileIndex.close();
 
-    return offlineMessageDocument.object().value(messageNumberKey).toObject().value("stanza").toVariant().toByteArray();
+    return document.toByteArray();
+    //return offlineMessageDocument.object().value(messageNumberKey).toObject().value("stanza").toVariant().toByteArray();
 }
 
 QMultiHash<QString, QByteArray> LocalStorage::getOfflineMessageFrom(QString jid, QString from)
@@ -729,8 +756,26 @@ QMultiHash<QString, QByteArray> LocalStorage::getOfflineMessageFrom(QString jid,
     QMultiHash<QString, QByteArray> offlineMessageList;
     for (int i = 0; i < messageNumberKeyList.count(); ++i)
     {
-        offlineMessageList.insert(offlineMessageDocument.object().value(messageNumberKeyList[i].toString()).toObject().value("stamp").toVariant().toString(),
-                                  offlineMessageDocument.object().value(messageNumberKeyList[i].toString()).toObject().value("stanza").toVariant().toByteArray());
+        QJsonObject messageObject = offlineMessageDocument.object().value(messageNumberKeyList[i].toString()).toObject();
+
+        QDomDocument document;
+        QDomElement messageElement = document.createElement("message");
+        messageElement.setAttribute("from", messageObject.value("from").toString());
+        messageElement.setAttribute("to", jid.replace("_", "@"));
+        messageElement.setAttribute("type", messageObject.value("type").toString());
+
+        QJsonArray bodyArray = messageObject.value("body").toArray();
+        for (int i = 0; i < bodyArray.count(); ++i)
+        {
+            QDomElement bodyElement = document.createElement("body");
+            bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+            if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+                bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+            messageElement.appendChild(bodyElement);
+        }
+        document.appendChild(messageElement);
+        offlineMessageList.insert(messageObject.value("stamp").toVariant().toString(), document.toByteArray());
     }
     return offlineMessageList;
 }
@@ -748,25 +793,43 @@ QMultiHash<QString, QByteArray> LocalStorage::getAllOfflineMessage(QString jid)
     QMultiHash<QString, QByteArray> offlineMessageList;
     foreach (QVariant offlineMessageJson, offlineMessageJsonList)
     {
-        offlineMessageList.insert(offlineMessageJson.toJsonObject().value("stamp").toString(),
-                                  offlineMessageJson.toJsonObject().value("stanza").toVariant().toByteArray());
+        QJsonObject messageObject = offlineMessageJson.toJsonObject();
+
+        QDomDocument document;
+        QDomElement messageElement = document.createElement("message");
+        messageElement.setAttribute("from", messageObject.value("from").toString());
+        messageElement.setAttribute("to", jid.replace("_", "@"));
+        messageElement.setAttribute("type", messageObject.value("type").toString());
+
+        QJsonArray bodyArray = messageObject.value("body").toArray();
+        for (int i = 0; i < bodyArray.count(); ++i)
+        {
+            QDomElement bodyElement = document.createElement("body");
+            bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+            if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+                bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+            messageElement.appendChild(bodyElement);
+        }
+        document.appendChild(messageElement);
+        offlineMessageList.insert(messageObject.value("stamp").toString(), document.toByteArray());
     }
     userOfflineMessageFile.close();
     return offlineMessageList;
 }
 
-void LocalStorage::deleteOfflineMessage(QString jid, QString key)
+bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
 {
     QString filename = "offlineMessage/" + jid.replace("@", "_") + ".qjo";
     QString indexFilename = "offlineMessage/index_" + jid + ".qji";
 
     QFile userOfflineMessageFile(filename);
     if (!userOfflineMessageFile.open(QIODevice::ReadOnly))
-        return;
+        return false;
 
     QFile userOfflineMessageFileIndex(indexFilename);
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
-        return;
+        return false;
 
     QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
     QJsonObject offlineMessageObject = offlineMessageDocument.object();
@@ -786,28 +849,30 @@ void LocalStorage::deleteOfflineMessage(QString jid, QString key)
 
     offlineMessageDocument.setObject(offlineMessageObject);
     userOfflineMessageFile.resize(0);
-    userOfflineMessageFile.write(offlineMessageDocument.toJson());
+    quint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toJson());
     userOfflineMessageFileIndex.close();
     userOfflineMessageFile.close();
+    return (true ? (ok >= 0) : false);
 }
 
-void LocalStorage::deleteAllOfflineMessage(QString jid)
+bool LocalStorage::deleteAllOfflineMessage(QString jid)
 {
     QString filename = "offlineMessage/" + jid.replace("@", "_") + ".qjo";
     QString indexFilename = "offlineMessage/index_" + jid + ".qji";
 
     QFile userOfflineMessageFile(filename);
     if (!userOfflineMessageFile.open(QIODevice::ReadOnly))
-        return;
+        return false;
 
     QFile userOfflineMessageFileIndex(indexFilename);
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
-        return;
+        return false;
 
-    userOfflineMessageFile.resize(0);
-    userOfflineMessageFileIndex.resize(0);
+    bool ok = userOfflineMessageFile.resize(0);
+    bool ok1 = userOfflineMessageFileIndex.resize(0);
     userOfflineMessageFile.close();
     userOfflineMessageFileIndex.close();
+    return (ok && ok1);
 }
 
 QMultiHash<QString, QString> LocalStorage::getOfflineMessageHeaders(QString jid)
@@ -823,16 +888,14 @@ QMultiHash<QString, QString> LocalStorage::getOfflineMessageHeaders(QString jid)
     QMultiHash<QString, QString> offlineMessageHeaders;
     foreach (QVariant offlineMessageJson, offlineMessageJsonList)
     {
-        QDomDocument document;
-        document.setContent(offlineMessageJson.toJsonObject().value("stanza").toVariant().toByteArray());
         offlineMessageHeaders.insert(offlineMessageJson.toJsonObject().value("stamp").toString(),
-                                     document.documentElement().attribute("from"));
+                                     offlineMessageJson.toJsonObject().value("from").toString());
     }
     userOfflineMessageFile.close();
     return offlineMessageHeaders;
 }
 
-void LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence,
+bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence,
                                                    QString presenceType)
 {
     qDebug() << "save offline presence subscribe";
@@ -859,7 +922,7 @@ void LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
 
     QFile userOfflinePresenceSubscriptionFile(filename);
     if (!userOfflinePresenceSubscriptionFile.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     QJsonDocument document = QJsonDocument::fromJson(userOfflinePresenceSubscriptionFile.readAll());
     QJsonObject object = document.object();
@@ -870,8 +933,9 @@ void LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
     document.setObject(object);
 
     userOfflinePresenceSubscriptionFile.resize(0);
-    userOfflinePresenceSubscriptionFile.write(document.toJson());
+    quint64 ok = userOfflinePresenceSubscriptionFile.write(document.toJson());
     userOfflinePresenceSubscriptionFile.close();
+    return (true ? (ok >= 0) : false);
 }
 
 QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
@@ -904,6 +968,10 @@ QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
                            << unsubscribeDocument.object().toVariantMap().values()
                               << unsubscribedDocument.object().toVariantMap().values();
 
+    subscribedFile.resize(0);
+    unsubscribedFile.resize(0);
+    unsubscribeFile.resize(0);
+
     subscribeFile.close();
     subscribedFile.close();
     unsubscribeFile.close();
@@ -912,13 +980,13 @@ QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
     return subscriptionList;
 }
 
-void LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
+bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
 {
     QString filename = "offlinePresenceSubscription/subscribe/" + to.replace("@", "_") + ".qjo";
 
     QFile subscribeFile(filename);
     if (!subscribeFile.open(QIODevice::ReadWrite))
-        return;
+        return false;
 
     QJsonDocument document = QJsonDocument::fromJson(subscribeFile.readAll());
     QJsonObject object = document.object();
@@ -929,8 +997,9 @@ void LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     document.setObject(object);
 
     subscribeFile.resize(0);
-    subscribeFile.write(document.toJson());
+    quint64 ok = subscribeFile.write(document.toJson());
     subscribeFile.close();
+    return (true ? (ok >= 0) : false);
 }
 
 //void LocalStorage::getChatRoomList(QString room)

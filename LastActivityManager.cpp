@@ -49,7 +49,7 @@ QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFr
                 if ((!contact.getSubscription().isEmpty() && (contact.getSubscription() != "none")))
                 {
                     QString lastLogoutTime = getLastLogoutTime(to);
-                    int seconds = qAbs(QTime::fromString(lastLogoutTime).secsTo(QTime::currentTime()));
+                    int seconds = qAbs(QDateTime::fromString(lastLogoutTime).secsTo(QDateTime::currentDateTime()));
                     QString lastStatus = getLastStatus(to);
 
                     return lastActivityQueryResult(to, from, id, seconds, lastStatus);
@@ -78,7 +78,6 @@ QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFr
         }
         else
         {
-            qDebug() << "last activity laba";
             return Error::generateError("iq", "auth", "forbidden", to, from, id, QDomElement());
         }
     }

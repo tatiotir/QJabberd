@@ -179,7 +179,7 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
         {
             QString xmlns = firstChild.attribute("xmlns");
 
-            if (xmlns == "jabber:iq:auth")
+            if ((xmlns == "jabber:iq:auth") && m_serverConfigMap->value("modules").toMap().value("nonsaslauth").toBool())
             {
                 return authenticate(streamId, id,
                                     document.documentElement().elementsByTagName("username").item(0).toElement().text(),
@@ -309,8 +309,7 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
                         }
                         else
                         {
-                            return QByteArray("Error");
-                            // return internal server error
+                            return Error::generateInternalServerError();
                         }
                     }
                 }
@@ -386,15 +385,13 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
                     }
                     else
                     {
-                        bool ok = m_userManager->createUser(jid, password);
-
-                        if (ok)
+                        if (m_userManager->createUser(jid, password))
                         {
                             return generateIQResult("", id);
                         }
                         else
                         {
-                            // return internal server error
+                            return Error::generateInternalServerError();
                         }
                     }
                 }
@@ -435,7 +432,7 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
         if (firstChildTagName == "query")
         {
             QString xmlns = firstChild.attribute("xmlns");
-            if (xmlns == "jabber:iq:auth")
+            if ((xmlns == "jabber:iq:auth") && m_serverConfigMap->value("modules").toMap().value("nonsaslauth").toBool())
             {
                 if (m_serverConfigMap->value("virtualHost").toList().contains(document.documentElement().attribute("to")))
                 {

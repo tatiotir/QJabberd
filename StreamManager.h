@@ -19,7 +19,8 @@ public slots:
     void resourceBindingReply(QString streamId, QString fullJid, QString id);
     void streamNegotiationError(QString streamId);
     void nonSaslAuthentification(QString streamId, QString fullJid, QString id);
-    void saveOfflineMessage(QString from, QString to, QByteArray message, QString stamp);
+    bool saveOfflineMessage(QString from, QString to, QString type, QList<QPair<QString, QString> > bodyPairList,
+                            QString stamp);
     QMultiHash<QString, QByteArray> getAllOfflineMessage(QString jid);
     QList<QVariant> getOfflinePresenceSubscription(QString jid);
     void saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence, QString presenceType);

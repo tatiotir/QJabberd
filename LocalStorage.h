@@ -33,25 +33,26 @@ public:
     QString getVCard(QString jid);
     bool updateVCard(QString jid, QString vCardInfos);
     bool vCardExist(QString jid);
-    void setLastLogoutTime(QString jid, QString lastLogoutTime);
+    bool setLastLogoutTime(QString jid, QString lastLogoutTime);
     QString getLastLogoutTime(QString jid);
-    void setLastStatus(QString jid, QString status);
+    bool setLastStatus(QString jid, QString status);
     QString getLastStatus(QString jid);
     bool storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap);
     bool storePrivateData(QString jid, QList<MetaContact> metaContactList);
     QByteArray getPrivateData(QString jid, QString node);
     QList<MetaContact> getPrivateData(QString jid);
-    void saveOfflineMessage(QString from, QString to, QByteArray message, QString stamp);
+    bool saveOfflineMessage(QString from, QString to, QString type, QList<QPair<QString, QString> > bodyPairList,
+                            QString stamp);
     int getOfflineMessagesNumber(QString jid);
     QByteArray getOfflineMessage(QString jid, QString stamp);
     QMultiHash<QString, QByteArray> getOfflineMessageFrom(QString jid, QString from);
     QMultiHash<QString, QByteArray> getAllOfflineMessage(QString jid);
     QMultiHash<QString, QString> getOfflineMessageHeaders(QString jid);
-    void deleteOfflineMessage(QString jid, QString key);
-    void deleteAllOfflineMessage(QString jid);
+    bool deleteOfflineMessage(QString jid, QString key);
+    bool deleteAllOfflineMessage(QString jid);
     QList<QVariant> getOfflinePresenceSubscription(QString jid);
-    void saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence, QString presenceType);
-    void deleteOfflinePresenceSubscribe(QString from, QString to);
+    bool saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence, QString presenceType);
+    bool deleteOfflinePresenceSubscribe(QString from, QString to);
     //QMultiHash<QString, QString> getChatRoomList(QString room);
 
 private:

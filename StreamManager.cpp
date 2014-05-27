@@ -160,7 +160,8 @@ void StreamManager::currentPresence(QString fullJid, QByteArray presenceData)
 void StreamManager::offlineUser(QString fullJid)
 {
     // Save the logout time
-    m_lastActivityManager->setLastLogoutTime(Utils::getBareJid(fullJid), QDateTime::currentDateTime().toString("dd/MM/yyyy"));
+    m_lastActivityManager->setLastLogoutTime(Utils::getBareJid(fullJid),
+                                             QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
 
     // Save the last status
     QDomDocument document;
@@ -585,6 +586,8 @@ void StreamManager::presenceBroadCast(QString to, QByteArray data)
         QString from = presenceElement.attribute("from");
         QString to = presenceElement.attribute("to");
 
+        qDebug() << "offline presence : " << " from : " << from << " to : " << to;
+
         // Save this presence subscription
         if (!presenceType.isEmpty() && (presenceType != "unavailable"))
             saveOfflinePresenceSubscription(Utils::getBareJid(from), Utils::getBareJid(to), data, presenceType);
@@ -685,7 +688,18 @@ void StreamManager::sendMessage(QString to, QByteArray message)
         {
             QDateTime dateTime(QDateTime::currentDateTime());
             dateTime.setTimeSpec(Qt::UTC);
-            saveOfflineMessage(Utils::getBareJid(document.documentElement().attribute("from")), to, message,
+            QDomNodeList bodyNodeList = document.elementsByTagName("body");
+            QList<QPair<QString, QString> > bodyPairList; // first xml:lang, second body message
+            for (int i = 0; i < bodyNodeList.count(); ++i)
+            {
+                QPair<QString, QString> pair;
+                pair.first = document.firstChildElement().attribute("xml:lang");
+                pair.first = bodyNodeList.item(i).toElement().attribute("xml:lang");
+                pair.second = bodyNodeList.item(i).toElement().text();
+                bodyPairList.append(pair);
+            }
+            saveOfflineMessage(Utils::getBareJid(document.documentElement().attribute("from")), to,
+                               document.firstChildElement().attribute("type"), bodyPairList,
                                dateTime.toString("yyyy-MM-ddThh:mm:ss.zzz") + "Z");
         }
     }
@@ -1057,9 +1071,10 @@ QList<QByteArray> StreamManager::getClientUnhandleStanza(QString smId)
     return m_storageManager->getStorage()->getClientUnhandleStanza(smId);
 }
 
-void StreamManager::saveOfflineMessage(QString from, QString to, QByteArray message, QString stamp)
+bool StreamManager::saveOfflineMessage(QString from, QString to, QString type,
+                                       QList<QPair<QString, QString> > bodyPairList, QString stamp)
 {
-    m_storageManager->getStorage()->saveOfflineMessage(from, to, message, stamp);
+    return m_storageManager->getStorage()->saveOfflineMessage(from, to, type, bodyPairList, stamp);
 }
 
 void StreamManager::saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence,

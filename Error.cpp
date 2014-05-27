@@ -113,3 +113,18 @@ QByteArray Error::generateStreamError(QString errorCause)
 
     return errorDocument.toByteArray();
 }
+
+QByteArray Error::generateInternalServerError()
+{
+    QDomDocument document;
+    QDomElement errorElement = document.createElement("error");
+    errorElement.setAttribute("type", "wait");
+    errorElement.setAttribute("code", 500);
+
+    QDomElement errorCause = document.createElement("internal-server-error");
+    errorCause.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas");
+
+    errorElement.appendChild(errorCause);
+    document.appendChild(errorElement);
+    return document.toByteArray();
+}

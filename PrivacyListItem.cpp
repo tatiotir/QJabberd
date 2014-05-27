@@ -15,6 +15,15 @@ PrivacyListItem::PrivacyListItem(QString type, QString value, QString action, in
     m_itemChildElements = itemChildElements;
 }
 
+PrivacyListItem PrivacyListItem::fromJsonObject(QJsonObject object)
+{
+    return PrivacyListItem(object.value("type").toString(),
+                    object.value("value").toString(),
+                    object.value("action").toString(),
+                    object.value("order").toInt(),
+                    object.value("childs").toVariant().toStringList().toSet());
+}
+
 QJsonObject PrivacyListItem::toJsonObject()
 {
     QJsonObject jsonObject;
@@ -23,7 +32,7 @@ QJsonObject PrivacyListItem::toJsonObject()
     jsonObject.insert("value", m_value);
     jsonObject.insert("action", m_action);
     jsonObject.insert("order", m_order);
-    jsonObject.insert("child", QJsonArray::fromStringList(QStringList::fromSet(m_itemChildElements)));
+    jsonObject.insert("childs", QJsonArray::fromStringList(QStringList::fromSet(m_itemChildElements)));
 
     return jsonObject;
 }
@@ -63,6 +72,46 @@ int PrivacyListItem::getOrder()
 void PrivacyListItem::setOrder(int order)
 {
     m_order = order;
+}
+
+QString PrivacyListItem::getValue()
+{
+    return m_value;
+}
+
+void PrivacyListItem::setValue(QString value)
+{
+    m_value = value;
+}
+
+QString PrivacyListItem::getType()
+{
+    return m_type;
+}
+
+void PrivacyListItem::setType(QString type)
+{
+    m_type = type;
+}
+
+QString PrivacyListItem::getAction()
+{
+    return m_action;
+}
+
+void PrivacyListItem::setAction(QString action)
+{
+    m_action = action;
+}
+
+QSet<QString> PrivacyListItem::getChildsElement()
+{
+    return m_itemChildElements;
+}
+
+void PrivacyListItem::setChildsElement(QSet<QString> childs)
+{
+    m_itemChildElements = childs;
 }
 
 bool operator <(PrivacyListItem item1, PrivacyListItem item2)

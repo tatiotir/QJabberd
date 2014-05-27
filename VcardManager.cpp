@@ -34,7 +34,6 @@ QByteArray VCardManager::vCardManagerReply(QByteArray iqXML, QString iqFrom)
             if (vCardExist(Utils::getBareJid(to)))
             {
                 QString vCard = getVCard(Utils::getBareJid(to));
-                qDebug() << "My vcard : " << vCard;
                 return generateVCardResult(to, from, id, vCard);
             }
             else

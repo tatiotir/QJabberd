@@ -43,7 +43,6 @@ private:
     PrivacyListManager *m_privacyListManager;
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     StreamNegotiationManager *m_streamNegotiationManager;
-    QString m_storageType;
     StorageManager *m_storageManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };

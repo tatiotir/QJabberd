@@ -2,15 +2,16 @@
 #define STORAGEMANAGER_H
 
 #include <QString>
+#include <QMap>
 #include "LocalStorage.h"
-//#include "MysqlStorage.h"
+#include "MysqlStorage.h"
 //#include "PGSqlStorage.h"
 //#include "MongoDBStorage.h"
 
 class StorageManager
 {
 public:
-    StorageManager(QString storageType);
+    StorageManager(QString storageType, QMap<QString, QVariant> databaseSettings);
 
     QString getStorageType();
     void setStorageType(QString type);

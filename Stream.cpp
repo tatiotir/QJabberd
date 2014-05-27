@@ -55,14 +55,11 @@ void Stream::closeStream()
 
 void Stream::streamEncrypted()
 {
-    qDebug() << "stream encrypted";
     m_streamNegotiationManager->firstNegotiationSuccess(m_streamId);
 }
 
 void Stream::sslError(QList<QSslError> errors)
 {
-    qDebug() << "SSL Error : " << errors;
-
     QDomDocument document;
 
     QDomElement failure = document.createElement("failure");
@@ -79,24 +76,17 @@ void Stream::sslError(QList<QSslError> errors)
 
 void Stream::dataReceived()
 {
-    QByteArray data = m_connection->readAll();
+    m_xmlPaquet.append(m_connection->readLine());
+    qDebug() << "paquet : " << m_xmlPaquet;
 
-    m_xmlPaquet += data;
-
-    if (m_xmlPaquet == "</stream:stream>")
+    QList<QByteArray> documentContentlist = Utils::parseRequest(m_xmlPaquet.trimmed());
+    if (!documentContentlist.isEmpty())
     {
-        qDebug() << "Data : " << m_xmlPaquet << endl;
-        closeStream();
-        return;
-    }
-
-    QList<QByteArray> documentContentlist = Utils::parseRequest(m_xmlPaquet);
-
-    qDebug() << "document content list : " << documentContentlist;
-
-    foreach (QByteArray documentContent, documentContentlist)
-    {
-        requestTreatment(documentContent);
+        foreach (QByteArray documentContent, documentContentlist)
+        {
+            m_xmlPaquet.remove(0, documentContent.count());
+            requestTreatment(documentContent);
+        }
     }
 }
 
@@ -110,14 +100,13 @@ void Stream::requestTreatment(QByteArray xmlRequest)
             (document.documentElement().firstChildElement().tagName() != "bind") &&
             (document.documentElement().firstChildElement().tagName() != "session"))
     {
+        qDebug() << "Client : " << xmlRequest;
         if ((document.documentElement().tagName() == "starttls")
                 && !m_streamNegotiationManager->firstFeatureProceed(m_streamId))
         {
-            qDebug() << "xmlrequest : " << xmlRequest;
             QByteArray answer = m_streamNegotiationManager->reply(xmlRequest, m_streamId);
 
             QList<QByteArray> answerList = answer.split('#');
-            qDebug() << answer << answerList;
             // Send <proceed/> reply to client
             streamReply(answerList.value(0));
 
@@ -130,9 +119,11 @@ void Stream::requestTreatment(QByteArray xmlRequest)
         {
             streamReply(m_streamNegotiationManager->reply(xmlRequest, m_streamId));
         }
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "enable")
     {
+        qDebug() << "Client : " << xmlRequest;
         if (m_streamNegotiationManager->bindFeatureProceed(m_streamId))
         {
             QDomDocument document;
@@ -153,50 +144,62 @@ void Stream::requestTreatment(QByteArray xmlRequest)
         {
             streamReply(Error::generateSmError("unexpected-request"));
         }
+        m_xmlPaquet.clear();
     }
     // Simple user authentification method of xmpp protocol which use jabber:iq:auth as namespace
     else if (document.documentElement().tagName() == "iq")
     {
+        qDebug() << "Client : " << xmlRequest;
         emit sigInboundStanzaReceived(m_fullJid);
         QByteArray answer = m_iqManager->parseIQ(xmlRequest, m_fullJid, m_host, m_streamId);
 
         // We send iq reply
         streamReply(answer);
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "presence")
     {
+        qDebug() << "Client : " << xmlRequest;
         emit sigInboundStanzaReceived(m_fullJid);
         QByteArray answer = m_presenceManager->parsePresence(xmlRequest, m_fullJid);
 
         // We send presence reply
         streamReply(answer);
         ++m_inboundStanzaCount;
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "message")
     {
+        qDebug() << "Client : " << xmlRequest;
         emit sigInboundStanzaReceived(m_fullJid);
         QByteArray answer = m_messageManager->parseMessage(xmlRequest, m_fullJid);
 
         // We send presence reply
         streamReply(answer);
         ++m_inboundStanzaCount;
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "r")
     {
+        qDebug() << "Client : " << xmlRequest;
         emit sigQueryInboundStanzaReceived(m_fullJid);
         streamReply(QByteArray());
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "a")
     {
+        qDebug() << "Client : " << xmlRequest;
         int h = document.documentElement().attribute("h").toInt();
         emit sigAcknowledgeReceiptServerStanza(m_fullJid, h);
+        m_xmlPaquet.clear();
     }
     else if (document.documentElement().tagName() == "resume")
     {
+        qDebug() << "Client : " << xmlRequest;
         emit sigResumeStream(m_connection, document.documentElement().attribute("previd"),
                              document.documentElement().attribute("h").toInt());
+        m_xmlPaquet.clear();
     }
-    m_xmlPaquet.clear();
 }
 
 /*
@@ -204,7 +207,7 @@ void Stream::requestTreatment(QByteArray xmlRequest)
  */
 void Stream::streamReply(QByteArray answer)
 {
-    qDebug() << "XML reply : " << answer << endl;
+    qDebug() << endl << "Server : " << answer << endl;
 
     m_connection->write(answer);
     m_connection->flush();

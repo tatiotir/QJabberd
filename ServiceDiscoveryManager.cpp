@@ -152,6 +152,14 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             query.appendChild(feature11);
         }
 
+        if (m_serverConfigMap->value("modules").toMap().value("nonsaslauth").toBool())
+        {
+            QDomElement feature12 = document.createElement("feature");
+            feature12.setAttribute("var", "jabber:iq:auth");
+
+            query.appendChild(feature12);
+        }
+
         iq.appendChild(query);
         document.appendChild(iq);
 

@@ -1,12 +1,16 @@
 #ifndef MYSQLSTORAGE_H
 #define MYSQLSTORAGE_H
 
-#include "storage.h"
+#include "Storage.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlQuery>
 
 class MySqlStorage : public Storage
 {
 public:
-    MySqlStorage();
+    MySqlStorage(QString host, int port, QString username, QString password, QString database);
 
     bool userExists(QString jid);
     bool contactExists(QString jid, QString contactJid);
@@ -21,19 +25,41 @@ public:
     bool addContactToRoster(QString jid, Contact contact);
     bool deleteContactToRoster(QString jid, QString contactJid);
     bool updateGroupToContact(QString jid, QString contactJid, QSet<QString> groups);
+    //bool updateContactToRoster(QString jid, QString contactJid, QString name);
     bool updateSubscriptionToContact(QString jid, QString contactJid, QString subscription);
     bool updateAskAttributeToContact(QString jid, QString contactJid, QString ask);
     bool updateNameToContact(QString jid, QString contactJid, QString name);
+    bool updateApprovedToContact(QString jid, QString contactJid, bool approved);
     QList<PrivacyListItem> getPrivacyList(QString jid, QString privacyListName);
     bool addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items);
     bool deletePrivacyList(QString jid, QString privacyListName);
-    QByteArray getVCard(QString jid);
-    bool updateVCard(QString jid, QByteArray vCardInfos);
+    QString getVCard(QString jid);
+    bool updateVCard(QString jid, QString vCardInfos);
     bool vCardExist(QString jid);
-    void setLogoutTime(QString jid, QString logoutTime);
-    QString getLogoutTime(QString jid);
+    bool setLastLogoutTime(QString jid, QString lastLogoutTime);
+    QString getLastLogoutTime(QString jid);
+    bool setLastStatus(QString jid, QString status);
+    QString getLastStatus(QString jid);
+    bool storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap);
+    bool storePrivateData(QString jid, QList<MetaContact> metaContactList);
+    QByteArray getPrivateData(QString jid, QString node);
+    QList<MetaContact> getPrivateData(QString jid);
+    bool saveOfflineMessage(QString from, QString to, QString type, QList<QPair<QString, QString> > bodyPairList, QString stamp);
+    int getOfflineMessagesNumber(QString jid);
+    QByteArray getOfflineMessage(QString jid, QString stamp);
+    QMultiHash<QString, QByteArray> getOfflineMessageFrom(QString jid, QString from);
+    QMultiHash<QString, QByteArray> getAllOfflineMessage(QString jid);
+    QMultiHash<QString, QString> getOfflineMessageHeaders(QString jid);
+    bool deleteOfflineMessage(QString jid, QString key);
+    bool deleteAllOfflineMessage(QString jid);
+    QList<QVariant> getOfflinePresenceSubscription(QString jid);
+    bool saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence, QString presenceType);
+    bool deleteOfflinePresenceSubscribe(QString from, QString to);
+    //QMultiHash<QString, QString> getChatRoomList(QString room);
 
 private:
+    int getUserId(QString jid);
+    QSqlDatabase m_database;
     static QString m_type;
 };
 

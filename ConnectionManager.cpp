@@ -12,8 +12,8 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     m_serverConfigMap = serverConfigMap;
     m_listConnection = new QList<Connection *>();
 
-    m_storageType = "local";
-    m_storageManager = new StorageManager(m_storageType);
+    m_storageManager = new StorageManager(serverConfigMap->value("storageType").toString(),
+                                          serverConfigMap->value("MySql").toMap());
     m_userManager = new UserManager(m_storageManager);
     m_offlineMessageManager = new OfflineMessageManager(m_storageManager);
     m_streamNegotiationManager = new StreamNegotiationManager(m_serverConfigMap, m_userManager);

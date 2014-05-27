@@ -6,8 +6,11 @@ Utils::Utils()
 
 QList<QByteArray> Utils::parseRequest(QByteArray data)
 {
-    QList<QByteArray> result;
+//    QDomDocument document;
+//    if ((data.indexOf("<stream:stream", 0) < 0) && !document.setContent(data))
+//        return QList<QByteArray>();
 
+    QList<QByteArray> result;
     int fromIq = 0;
     int fromPresence = 0;
     int fromMessage = 0;

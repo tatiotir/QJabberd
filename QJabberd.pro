@@ -29,7 +29,8 @@ SOURCES += \
     PrivateStorageManager.cpp \
     User.cpp \
     OfflineMessageManager.cpp \
-    StreamNegotiationData.cpp
+    StreamNegotiationData.cpp \
+    MysqlStorage.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -61,6 +62,7 @@ HEADERS += \
     PrivateStorageManager.h \
     User.h \
     OfflineMessageManager.h \
-    StreamNegotiationData.h
+    StreamNegotiationData.h \
+    MySqlStorage.h
 
-QT += xml network widgets
+QT += xml network widgets sql

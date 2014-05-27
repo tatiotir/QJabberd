@@ -1,24 +1,26 @@
 #include "StorageManager.h"
 
-StorageManager::StorageManager(QString storageType)
+StorageManager::StorageManager(QString storageType, QMap<QString, QVariant> databaseSettings)
 {
-    if (storageType == "local")
+    qDebug() << databaseSettings.value("host").toString();
+    if (storageType == "Local")
     {
         m_storage = new LocalStorage();
     }
-    /*else if (storageType == "mysql")
+    else if (storageType == "MySql")
     {
-        // We authenticate user using mysql
-        m_storage = new MySqlStorage();
+        m_storage = new MySqlStorage(databaseSettings.value("host").toString(),
+                                     databaseSettings.value("port").toInt(),
+                                     databaseSettings.value("username").toString(),
+                                     databaseSettings.value("password").toString(),
+                                     databaseSettings.value("database").toString());
     }
-    else if (storageType == "pgsql")
+    /*else if (storageType == "PgSql")
     {
-        // We authenticate user using postgresql
         m_storage = new PGSqlStorage();
     }
-    else if (storageType == "nosqlmongodb")
+    else if (storageType == "MongoDB")
     {
-        // We authenticate user using no sql mongodb database
         m_storage = new MongoDBStorage();
     }*/
 }
@@ -35,19 +37,19 @@ QString StorageManager::getStorageType()
 
 void StorageManager::setStorageType(QString type)
 {
-    if (type == "local")
+    if (type == "Local")
     {
 
     }
-    else if (type == "mysql")
+    else if (type == "MySql")
     {
         // We authenticate user using mysql
     }
-    else if (type == "pgsql")
+    else if (type == "PgSql")
     {
         // We authenticate user using postgresql
     }
-    else if (type == "nosqlmongodb")
+    else if (type == "MongoDB")
     {
         // We authenticate user using no sql mongodb database
     }

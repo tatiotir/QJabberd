@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QStringList>
+#include <QVariant>
 #include <QDomElement>
 
 class PrivacyListItem
@@ -20,7 +21,16 @@ public:
     QSet<QString> getItemChildElements();
     int getOrder();
     void setOrder(int order);
+    QString getValue();
+    void setValue(QString value);
+    QString getType();
+    void setType(QString type);
+    QString getAction();
+    void setAction(QString action);
+    QSet<QString> getChildsElement();
+    void setChildsElement(QSet<QString> childs);
     QJsonObject toJsonObject();
+    static PrivacyListItem fromJsonObject(QJsonObject object);
     QDomElement toXmlElement();
     bool isLessThan(PrivacyListItem &item);
 

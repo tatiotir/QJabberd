@@ -135,11 +135,11 @@ QByteArray StreamNegotiationManager::firstFeatures()
         QDomElement firstMechanism = document.createElement("mechanism");
         firstMechanism.appendChild(document.createTextNode("DIGEST-MD5"));
 
-        /*QDomElement secondMechanism = document.createElement("mechanism");
-        secondMechanism.appendChild(document.createTextNode("PLAIN"));*/
+//        QDomElement secondMechanism = document.createElement("mechanism");
+//        secondMechanism.appendChild(document.createTextNode("PLAIN"));
 
         mechanisms.appendChild(firstMechanism);
-        //mechanisms.appendChild(secondMechanism);
+//        mechanisms.appendChild(secondMechanism);
 
         streamFeatures.appendChild(mechanisms);
     }
@@ -163,7 +163,7 @@ QByteArray StreamNegotiationManager::secondFeatures()
     registerElement.setAttribute("xmlns", "http://jabber.org/features/iq-register");
 
     QDomElement authElement = document.createElement("auth");
-    authElement.setAttribute("xmlns", "http://jabber.org/features/ia-auth");
+    authElement.setAttribute("xmlns", "http://jabber.org/features/iq-auth");
 
     QDomElement streamFeatures = document.createElement("stream:features");
 
@@ -173,15 +173,15 @@ QByteArray StreamNegotiationManager::secondFeatures()
     QDomElement firstMechanism = document.createElement("mechanism");
     firstMechanism.appendChild(document.createTextNode("DIGEST-MD5"));
 
-    /*QDomElement secondMechanism = document.createElement("mechanism");
-    secondMechanism.appendChild(document.createTextNode("PLAIN"));
+//    QDomElement secondMechanism = document.createElement("mechanism");
+//    secondMechanism.appendChild(document.createTextNode("PLAIN"));
 
-    QDomElement thirdMechanism = document.createElement("mechanism");
-    thirdMechanism.appendChild(document.createTextNode("EXTERNAL"));*/
+//    QDomElement thirdMechanism = document.createElement("mechanism");
+//    thirdMechanism.appendChild(document.createTextNode("EXTERNAL"));
 
     mechanisms.appendChild(firstMechanism);
-    //mechanisms.appendChild(secondMechanism);
-    //mechanisms.appendChild(thirdMechanism);
+//    mechanisms.appendChild(secondMechanism);
+//    mechanisms.appendChild(thirdMechanism);
 
     streamFeatures.appendChild(authElement);
     streamFeatures.appendChild(registerElement);
@@ -199,6 +199,11 @@ QByteArray StreamNegotiationManager::bindFeature()
 
     QDomElement bind = document.createElement("bind");
     bind.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-bind");
+    bind.appendChild(document.createElement("required"));
+
+    QDomElement session = document.createElement("session");
+    session.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-session");
+    session.appendChild(document.createElement("optional"));
 
     QDomElement sm = document.createElement("sm");
     sm.setAttribute("xmlns", "urn:xmpp:sm:3");
@@ -207,6 +212,7 @@ QByteArray StreamNegotiationManager::bindFeature()
     sub.setAttribute("xmlns", "urn:xmpp:features:pre-approval");
 
     streamFeatures.appendChild(bind);
+    streamFeatures.appendChild(session);
     streamFeatures.appendChild(sm);
     streamFeatures.appendChild(sub);
     document.appendChild(streamFeatures);

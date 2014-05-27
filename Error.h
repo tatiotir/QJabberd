@@ -16,6 +16,7 @@ public:
     static QByteArray generateStreamError(QString errorCause);
     static QByteArray generateSmError(QString childName);
     static QByteArray generateSaslError(QString childName);
+    static QByteArray generateInternalServerError();
 };
 
 #endif // ERROR_H

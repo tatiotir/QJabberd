@@ -46,12 +46,9 @@ QString MetaContact::getTag()
 
 MetaContact MetaContact::fromJsonObject(QJsonObject jsonObject)
 {
-    MetaContact metaContact;
-    metaContact.setJid(jsonObject.value("jid").toString());
-    metaContact.setOrder(jsonObject.value("order").toVariant().toInt());
-    metaContact.setTag(jsonObject.value("tag").toString());
-
-    return metaContact;
+    return MetaContact(jsonObject.value("jid").toString(),
+                       jsonObject.value("tag").toString(),
+                       jsonObject.value("order").toVariant().toInt());
 }
 
 QJsonObject MetaContact::toJsonObject()
