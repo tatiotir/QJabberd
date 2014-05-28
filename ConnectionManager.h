@@ -44,6 +44,7 @@ private:
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     StreamNegotiationManager *m_streamNegotiationManager;
     StorageManager *m_storageManager;
+    OobDataManager *m_oobDataManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };
 

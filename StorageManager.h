@@ -5,7 +5,7 @@
 #include <QMap>
 #include "LocalStorage.h"
 #include "MysqlStorage.h"
-//#include "PGSqlStorage.h"
+#include "PgSqlStorage.h"
 //#include "MongoDBStorage.h"
 
 class StorageManager

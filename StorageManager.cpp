@@ -2,7 +2,6 @@
 
 StorageManager::StorageManager(QString storageType, QMap<QString, QVariant> databaseSettings)
 {
-    qDebug() << databaseSettings.value("host").toString();
     if (storageType == "Local")
     {
         m_storage = new LocalStorage();
@@ -15,11 +14,15 @@ StorageManager::StorageManager(QString storageType, QMap<QString, QVariant> data
                                      databaseSettings.value("password").toString(),
                                      databaseSettings.value("database").toString());
     }
-    /*else if (storageType == "PgSql")
+    else if (storageType == "PgSql")
     {
-        m_storage = new PGSqlStorage();
+        m_storage = new PgSqlStorage(databaseSettings.value("host").toString(),
+                                     databaseSettings.value("port").toInt(),
+                                     databaseSettings.value("username").toString(),
+                                     databaseSettings.value("password").toString(),
+                                     databaseSettings.value("database").toString());
     }
-    else if (storageType == "MongoDB")
+    /*else if (storageType == "MongoDB")
     {
         m_storage = new MongoDBStorage();
     }*/

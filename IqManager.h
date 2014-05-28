@@ -17,6 +17,7 @@
 #include "PrivateStorageManager.h"
 #include "OfflineMessageManager.h"
 #include "StreamNegotiationManager.h"
+#include "OobDataManager.h"
 
 class IQManager : public QObject
 {
@@ -28,7 +29,7 @@ public:
               PrivateStorageManager *privateStorageManager = 0,
               ServiceDiscoveryManager *serviceDiscoveryManager = 0,
               OfflineMessageManager *offlineMessageManager = 0,
-              StreamNegotiationManager *streamNegotiationManager = 0);
+              StreamNegotiationManager *streamNegotiationManager = 0, OobDataManager *oobDataManager = 0);
 
 public slots:
     QByteArray parseIQ(QByteArray iqXML, QString from, QString host, QString streamId);
@@ -63,6 +64,7 @@ private:
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     OfflineMessageManager *m_offlineMessageManager;
     StreamNegotiationManager *m_streamNegotiationManager;
+    OobDataManager *m_oobDataManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };
 

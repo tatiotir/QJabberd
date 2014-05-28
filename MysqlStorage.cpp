@@ -579,7 +579,7 @@ QMultiHash<QString, QByteArray> MySqlStorage::getOfflineMessageFrom(QString jid,
 QMultiHash<QString, QByteArray> MySqlStorage::getAllOfflineMessage(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT ufrom, type, body, stamp FROM offlineMessage WHERE user_id = :user_id");
+    query.prepare("SELECT ufrom, type, body, stamp FROM offlineMessage WHERE user_id = :user_id ORDER BY stamp ASC");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -667,9 +667,10 @@ bool MySqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
 
 QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
 {
+    int user_id = getUserId(jid);
     QSqlQuery query;
     query.prepare("SELECT presenceStanza FROM offlinepresencesubscription WHERE user_id = :user_id");
-    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":user_id", user_id);
     query.exec();
 
     QList<QVariant> subscriptionList;
@@ -677,6 +678,12 @@ QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
     {
         subscriptionList << query.value(0);
     }
+
+    query.prepare("DELETE FROM offlinepresencesubscription WHERE user_id = :user_id"
+                  " AND (type = 'subscribed' OR type = 'unsubscribed' OR type = 'unsubscribe'");
+    query.bindValue(":user_id", user_id);
+    query.exec();
+
     return subscriptionList;
 }
 

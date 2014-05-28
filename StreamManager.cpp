@@ -30,9 +30,6 @@ void StreamManager::newConnection(Connection *connection, IQManager *iqManager,
 
     connect(stream, SIGNAL(sigOfflineUser(QString)), this, SLOT(offlineUser(QString)));
 
-    connect(stream, SIGNAL(sigBindFeatureNegotiated(QString,Connection*)), this,
-            SLOT(saveStream(QString,Connection*)));
-
     connect(stream, SIGNAL(sigPresenceBroadCast(QString,QByteArray)), this,
             SLOT(presenceBroadCast(QString,QByteArray)));
 
@@ -53,6 +50,12 @@ void StreamManager::newConnection(Connection *connection, IQManager *iqManager,
             SLOT(resumeStream(Connection*,QString,int)));
 
     stream->start();
+}
+
+void StreamManager::oobRequest(QString to, QByteArray request)
+{
+    m_userMap->value(to, new User())->getConnection()->write(request);
+    m_userMap->value(to, new User())->getConnection()->flush();
 }
 
 void StreamManager::streamHost(QString streamId, QString host)
@@ -176,7 +179,7 @@ void StreamManager::saveStream(QString fullJid, Connection *connection)
 {
     m_userMap->insert(fullJid, new User(connection, "", 0, 0, QByteArray()));
     sendUndeliveredPresence(fullJid);
-    //sendOfflineMessage(fullJid);
+    sendOfflineMessage(fullJid);
 }
 
 void StreamManager::sendOfflineMessage(QString to)

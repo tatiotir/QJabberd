@@ -1,129 +1,703 @@
-#include "pgsqlstorage.h"
+#include "PgSqlStorage.h"
 
-PGSqlStorage::PGSqlStorage()
+PgSqlStorage::PgSqlStorage(QString host, int port, QString username, QString password, QString database)
 {
+    m_database = QSqlDatabase::addDatabase("QPSQL");
+    m_database.setHostName(host);
+    m_database.setPort(port);
+    m_database.setUserName(username);
+    m_database.setPassword(password);
+    m_database.setDatabaseName(database);
+    if (m_database.open())
+    {
+        qDebug() << "Database open";
+        qDebug() << createUser("c", "d");
+    }
+    else{
+        qDebug() << "Database not open";
+    }
 }
 
-QString PGSqlStorage::getStorageType()
+QString PgSqlStorage::getStorageType()
 {
-    return "pgsql";
+    return "MySql";
 }
 
-QString PGSqlStorage::getPassword(QString jid)
+int PgSqlStorage::getUserId(QString jid)
 {
-
+    QSqlQuery query;
+    query.prepare("SELECT id FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
+    if (query.first())
+    {
+        return query.value(0).toInt();
+    }
+    else
+    {
+        return -1;
+    }
 }
 
-bool PGSqlStorage::changePassword(QString jid, QString newPassword)
+QString PgSqlStorage::getPassword(QString jid)
 {
+    QSqlQuery query;
+    query.prepare("SELECT password FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
 
+    query.first();
+    return query.value(0).toString();
 }
 
-bool PGSqlStorage::createUser(QString jid, QString password)
+bool PgSqlStorage::changePassword(QString jid, QString newPassword)
 {
-
+    QSqlQuery query;
+    query.prepare("UPDATE user SET password = :password WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.bindValue(":password", newPassword);
+    return query.exec();
 }
 
-bool PGSqlStorage::deleteUser(QString jid)
+bool PgSqlStorage::createUser(QString jid, QString password)
 {
-
+    QSqlQuery query;
+    query.prepare("INSERT INTO user(jid, password) VALUES(:jid, :password)");
+    query.bindValue(":jid", jid);
+    query.bindValue(":password", password);
+    return query.exec();
 }
 
-QList<Contact> PGSqlStorage::getContactsList(QString jid)
+bool PgSqlStorage::deleteUser(QString jid)
 {
-
+    QSqlQuery query;
+    query.prepare("DELETE FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    return query.exec();
 }
 
-bool PGSqlStorage::addContactToRoster(QString jid, Contact contact)
+QList<Contact> PgSqlStorage::getContactsList(QString jid)
 {
-
+    QList<Contact> contactList;
+    QSqlQuery query;
+    query.prepare("SELECT version, approved, ask, jid, name, subscription, groups"
+                  " FROM contact WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+    while (query.next())
+    {
+        contactList << Contact(query.value(0).toString(), query.value(1).toBool(), query.value(2).toString(),
+                               query.value(3).toString(), query.value(4).toString(), query.value(5).toString(),
+                               QJsonDocument::fromJson(query.value(6).toByteArray()).object().value("groups").toVariant().toStringList().toSet());
+    }
+    return contactList;
 }
 
-Contact *PGSqlStorage::deleteContactToRoster(QString jid, QString contactJid)
+bool PgSqlStorage::addContactToRoster(QString jid, Contact contact)
 {
+    if (contactExists(jid, contact.getJid()))
+    {
+        updateNameToContact(jid, contact.getJid(), contact.getName());
+        updateGroupToContact(jid, contact.getJid(), contact.getGroups());
+        return true;
+    }
+    else
+    {
+        QJsonDocument document;
+        QJsonObject object;
+        object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
+        document.setObject(object);
 
+        QSqlQuery query;
+        query.prepare("INSERT INTO contact(user_id, approved, ask, groups, jid, name, subscription, version)"
+                      "VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":version", contact.getVersion());
+        query.bindValue(":approved", contact.getApproved());
+        query.bindValue(":ask", contact.getAsk());
+        query.bindValue(":jid", contact.getJid());
+        query.bindValue(":name", contact.getName());
+        query.bindValue(":subscription", contact.getSubscription());
+        query.bindValue(":groups", document.toJson());
+        return query.exec();
+    }
+    return false;
 }
 
-bool PGSqlStorage::updateGroupToContact(QString jid, QString contactJid,
+bool PgSqlStorage::deleteContactToRoster(QString jid, QString contactJid)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    return query.exec();
+}
+
+bool PgSqlStorage::updateGroupToContact(QString jid, QString contactJid,
                                          QSet<QString> groups)
 {
+    QJsonDocument document;
+    QJsonObject object;
+    object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(groups)));
+    document.setObject(object);
 
+    QSqlQuery query;
+    query.prepare("UPDATE contact SET groups = :groups WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.bindValue(":groups", document.toJson());
+    return query.exec();
 }
 
-bool PGSqlStorage::updateSubscriptionToContact(QString jid, QString contactJid,
+bool PgSqlStorage::updateSubscriptionToContact(QString jid, QString contactJid,
                                          QString subscription)
 {
+    if (!contactExists(jid, contactJid))
+    {
+        Contact contact("", false, "", contactJid, "", subscription, QSet<QString>());
+        return addContactToRoster(jid, contact);
+    }
 
+    QString contactSubscription = getContact(jid, contactJid).getSubscription();
+
+    QSqlQuery query;
+    query.prepare("UPDATE contact SET subscription = :subscription WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+
+    if (((subscription == "from") && (contactSubscription == "to")) ||
+            ((subscription == "to") && (contactSubscription == "from")))
+    {
+        query.bindValue(":subscription", "both");
+    }
+    else
+    {
+        query.bindValue(":subscription", subscription);
+    }
+    return query.exec();
 }
 
-bool PGSqlStorage::updateAskAttributeToContact(QString jid, QString contactJid,
+bool PgSqlStorage::updateAskAttributeToContact(QString jid, QString contactJid,
                                          QString ask)
 {
+    Contact contact = getContact(jid, contactJid);
 
+    QSqlQuery query;
+    query.prepare("UPDATE contact SET ask = :ask WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+
+    if ((contact.getSubscription() != "to") && (contact.getSubscription() != "both"))
+    {
+        query.bindValue(":ask", ask);
+    }
+    return query.exec();
 }
 
-bool PGSqlStorage::updateNameToContact(QString jid, QString contactJid,
+bool PgSqlStorage::updateNameToContact(QString jid, QString contactJid,
                                          QString name)
 {
-
+    QSqlQuery query;
+    query.prepare("UPDATE contact SET name = :name WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.bindValue(":name", name);
+    return query.exec();
 }
 
-bool PGSqlStorage::userExists(QString jid)
+bool PgSqlStorage::updateApprovedToContact(QString jid, QString contactJid, bool approved)
 {
-
+    QSqlQuery query;
+    query.prepare("UPDATE contact SET approved = :approved WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.bindValue(":approved", approved);
+    return query.exec();
 }
 
-Contact * PGSqlStorage::contactExists(QString jid, QString contactJid)
+bool PgSqlStorage::userExists(QString jid)
 {
-
+    return (getUserId(jid) >= 0);
 }
 
-Contact PGSqlStorage::getContact(QString jid, QString contactJid)
+bool PgSqlStorage::contactExists(QString jid, QString contactJid)
 {
+    int user_id = getUserId(jid);
 
+    if (user_id == -1)
+        return false;
+
+    QSqlQuery query;
+    query.prepare("SELECT id FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.exec();
+    return query.first();
 }
 
-QSet<QString> PGSqlStorage::getContactGroups(QString jid, QString contactJid)
+Contact PgSqlStorage::getContact(QString jid, QString contactJid)
 {
+    QSqlQuery query;
+    query.prepare("SELECT version, approved, ask, jid, name, subscription, groups FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.exec();
 
+    if (query.first())
+    {
+        return Contact(query.value(0).toString(),
+                       query.value(1).toBool(),
+                       query.value(2).toString(),
+                       query.value(3).toString(),
+                       query.value(4).toString(),
+                       query.value(5).toString(),
+                       QJsonDocument::fromJson(query.value(6).toByteArray()).object().value("groups").toVariant().toStringList().toSet());
+    }
+    else
+    {
+        return Contact();
+    }
 }
 
-QList<PrivacyListItem> PGSqlStorage::getPrivacyList(QString jid, QString privacyListName)
+QSet<QString> PgSqlStorage::getContactGroups(QString jid, QString contactJid)
 {
-    return QList<PrivacyListItem>();
+    QSqlQuery query;
+    query.prepare("SELECT group FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.exec();
 }
 
-bool PGSqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
+QList<PrivacyListItem> PgSqlStorage::getPrivacyList(QString jid, QString privacyListName)
 {
-    return true;
+    QSqlQuery query;
+    query.prepare("SELECT type, value, action, order, child FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":privacyListName", privacyListName);
+    query.exec();
+
+    QList<PrivacyListItem> itemList;
+    while (query.next())
+    {
+        itemList << PrivacyListItem(query.value(0).toString(),
+                                    query.value(1).toString(),
+                                    query.value(2).toString(),
+                                    query.value(3).toInt(),
+                                    QJsonDocument::fromJson(query.value(4).toByteArray()).object().value("childs").toVariant().toStringList().toSet());
+    }
+    return itemList;
 }
 
-bool PGSqlStorage::deletePrivacyList(QString jid, QString privacyListName)
+bool PgSqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
-    return true;
+    m_database.transaction();
+
+    QJsonDocument document;
+    QJsonObject object;
+    foreach (PrivacyListItem item, items)
+    {
+        object.insert("childs", QJsonArray::fromStringList(QStringList::fromSet(item.getChildsElement())));
+        document.setObject(object);
+
+        QSqlQuery query;
+        query.prepare("INSERT INTO privacylist(user_id, type, action, order, child, privacyListName)"
+                      "VALUES(:user_id, :type, :action, :order, :child, :privacyListName)");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":type", item.getType());
+        query.bindValue(":action", item.getAction());
+        query.bindValue(":order", item.getOrder());
+        query.bindValue(":child", document.toJson());
+        query.bindValue(":privacyListName", privacyListName);
+        query.exec();
+    }
+    return m_database.commit();
 }
 
-QByteArray PGSqlStorage::getVCard(QString jid)
+bool PgSqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
-
+    QSqlQuery query;
+    query.prepare("DELETE FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":privacyListName", privacyListName);
+    return query.exec();
 }
 
-bool PGSqlStorage::updateVCard(QString jid, QByteArray vCardInfos)
+QString PgSqlStorage::getVCard(QString jid)
 {
+    QSqlQuery query;
+    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
 
+    if (query.first())
+    {
+        return query.value(0).toString();
+    }
+    return QString();
 }
 
-bool PGSqlStorage::vCardExist(QString jid)
+bool PgSqlStorage::updateVCard(QString jid, QString vCardInfos)
 {
-
+    QSqlQuery query;
+    query.prepare("UPDATE user SET vcard = :vcard WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.bindValue(":vcard", vCardInfos);
+    return query.exec();
 }
 
-QString PGSqlStorage::getLogoutTime(QString jid)
+bool PgSqlStorage::vCardExist(QString jid)
 {
+    int user_id = getUserId(jid);
+    if (user_id == -1)
+        return false;
 
+    QSqlQuery query;
+    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
+
+    if (query.first())
+        return !query.value(0).toString().isEmpty();
+
+    return false;
 }
 
-void PGSqlStorage::setLogoutTime(QString jid, QString logoutTime)
+QString PgSqlStorage::getLastLogoutTime(QString jid)
 {
+    QSqlQuery query;
+    query.prepare("SELECT lastlogouttime FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
 
+    if (query.first())
+    {
+        query.value(0).toString();
+    }
+    return QString();
 }
+
+bool PgSqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
+{
+    qDebug() << "logout time : " << lastLogoutTime;
+    QSqlQuery query;
+    query.prepare("UPDATE user SET lastlogouttime = :lastlogouttime WHERE jid = :jid");
+    query.bindValue(":lastlogouttime", lastLogoutTime);
+    query.bindValue(":jid", jid);
+    return query.exec();
+}
+
+QString PgSqlStorage::getLastStatus(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT laststatus FROM user WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
+
+    if (query.first())
+    {
+        query.value(0).toString();
+    }
+    return QString();
+}
+
+bool PgSqlStorage::setLastStatus(QString jid, QString status)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE user SET laststatus = :laststatus WHERE jid = :jid");
+    query.bindValue(":laststatus", status);
+    query.bindValue(":jid", jid);
+    return query.exec();
+}
+
+bool PgSqlStorage::storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap)
+{
+    m_database.transaction();
+    foreach (QString key, nodeMap.keys())
+    {
+        QSqlQuery query;
+        query.prepare("INSERT INTO privatedata(user_id, nodename, nodevalue)"
+                      "VALUES(:user_id, :nodename, :nodevalue)");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":nodename", key);
+        query.bindValue(":nodevalue", nodeMap.value(key));
+        query.exec();
+    }
+    return m_database.commit();
+}
+
+bool PgSqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactList)
+{
+    m_database.transaction();
+    foreach (MetaContact metacontact, metaContactList)
+    {
+        QSqlQuery query;
+        query.prepare("INSERT INTO metacontact(user_id, jid, tag, order) VALUES(:user_id, :jid, :tag, :order)");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":jid", metacontact.getJid());
+        query.bindValue(":tag", metacontact.getTag());
+        query.bindValue(":order", metacontact.getOrder());
+        query.exec();
+    }
+    return m_database.commit();
+}
+
+QByteArray PgSqlStorage::getPrivateData(QString jid, QString node)
+{
+    QSqlQuery query;
+    query.prepare("SELECT nodevalue FROM privatedata WHERE user_id = :user_id AND nodename = :nodename");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":nodename", node);
+    query.exec();
+
+    if (query.first())
+    {
+        return query.value(0).toByteArray();
+    }
+    return QByteArray();
+}
+
+QList<MetaContact> PgSqlStorage::getPrivateData(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT jid, tag, order FROM metacontact WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QList<MetaContact> metaContactList;
+    while (query.next())
+    {
+        metaContactList << MetaContact(query.value(0).toString(),
+                                       query.value(1).toString(),
+                                       query.value(2).toInt());
+    }
+    return metaContactList;
+}
+
+bool PgSqlStorage::saveOfflineMessage(QString from, QString to, QString type,
+                                      QList<QPair<QString, QString> > bodyPairList, QString stamp)
+{
+    QJsonDocument document;
+    QJsonObject object;
+    QJsonArray bodyArray;
+    for (int i = 0; i < bodyPairList.count(); ++i)
+    {
+        QJsonObject bodyObject;
+        bodyObject.insert("lang", bodyPairList.value(i).first);
+        bodyObject.insert("msg", bodyPairList.value(i).second);
+        bodyArray.append(bodyObject);
+    }
+    object.insert("body", bodyArray);
+    document.setObject(object);
+
+    QSqlQuery query;
+    query.prepare("INSERT INTO offlinemessage(user_id, ufrom, stamp, type, body)"
+                  "VALUES(:user_id, :ufrom, :stamp, :type, :body)");
+    query.bindValue(":user_id", getUserId(to));
+    query.bindValue(":ufrom", from);
+    query.bindValue(":stamp", stamp);
+    query.bindValue(":type", type);
+    query.bindValue(":body", document.toJson());
+    return query.exec();
+}
+
+int PgSqlStorage::getOfflineMessagesNumber(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT COUNT(*) FROM offlineMessage WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    if (query.first())
+        return query.value(0).toInt();
+    return -1;
+}
+
+QByteArray PgSqlStorage::getOfflineMessage(QString jid, QString stamp)
+{
+    QSqlQuery query;
+    query.prepare("SELECT ufrom, type, body FROM offlineMessage WHERE user_id = :user_id AND stamp = :stamp");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":stamp", stamp);
+    query.exec();
+
+    if (query.first())
+    {
+        QDomDocument document;
+        QDomElement messageElement = document.createElement("message");
+        messageElement.setAttribute("from", query.value(0).toString());
+        messageElement.setAttribute("to", jid);
+        messageElement.setAttribute("type", query.value(1).toString());
+
+        QJsonArray bodyArray = QJsonDocument::fromJson(query.value(2).toByteArray()).object().value("body").toArray();
+        for (int i = 0; i < bodyArray.count(); ++i)
+        {
+            QDomElement bodyElement = document.createElement("body");
+            bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+            if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+                bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+            messageElement.appendChild(bodyElement);
+        }
+        document.appendChild(messageElement);
+        return document.toByteArray();
+    }
+    return QByteArray();
+}
+
+QMultiHash<QString, QByteArray> PgSqlStorage::getOfflineMessageFrom(QString jid, QString from)
+{
+    QSqlQuery query;
+    query.prepare("SELECT type, body, stamp FROM offlineMessage WHERE user_id = :user_id AND ufrom = :ufrom");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":ufrom", from);
+    query.exec();
+
+    QMultiHash<QString, QByteArray> offlineMessageList;
+    while (query.next())
+    {
+        QDomDocument document;
+        QDomElement messageElement = document.createElement("message");
+        messageElement.setAttribute("from", from);
+        messageElement.setAttribute("to", jid);
+        messageElement.setAttribute("type", query.value(0).toString());
+
+        QJsonArray bodyArray = QJsonDocument::fromJson(query.value(1).toByteArray()).object().value("body").toArray();
+        for (int i = 0; i < bodyArray.count(); ++i)
+        {
+            QDomElement bodyElement = document.createElement("body");
+            bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+            if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+                bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+            messageElement.appendChild(bodyElement);
+        }
+        document.appendChild(messageElement);
+        offlineMessageList.insert(query.value(2).toString(), document.toByteArray());
+    }
+    return offlineMessageList;
+}
+
+QMultiHash<QString, QByteArray> PgSqlStorage::getAllOfflineMessage(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT ufrom, type, body, stamp FROM offlineMessage WHERE user_id = :user_id ORDER BY stamp ASC");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QMultiHash<QString, QByteArray> offlineMessageList;
+    while (query.next())
+    {
+        QDomDocument document;
+        QDomElement messageElement = document.createElement("message");
+        messageElement.setAttribute("from", query.value(0).toString());
+        messageElement.setAttribute("to", jid);
+        messageElement.setAttribute("type", query.value(1).toString());
+
+        QJsonArray bodyArray = QJsonDocument::fromJson(query.value(2).toByteArray()).object().value("body").toArray();
+        for (int i = 0; i < bodyArray.count(); ++i)
+        {
+            QDomElement bodyElement = document.createElement("body");
+            bodyElement.appendChild(document.createTextNode(bodyArray[i].toObject().value("msg").toString()));
+            if (!bodyArray[i].toObject().value("lang").toString().isEmpty())
+                bodyElement.setAttribute("xml:lang", bodyArray[i].toObject().value("lang").toString());
+
+            messageElement.appendChild(bodyElement);
+        }
+        document.appendChild(messageElement);
+        offlineMessageList.insert(query.value(3).toString(), document.toByteArray());
+    }
+    return offlineMessageList;
+}
+
+bool PgSqlStorage::deleteOfflineMessage(QString jid, QString key)
+{
+    if (key.contains("@"))
+    {
+        QSqlQuery query;
+        query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":ufrom", key);
+        return query.exec();
+    }
+    else
+    {
+        QSqlQuery query;
+        query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
+        query.bindValue(":user_id", getUserId(jid));
+        query.bindValue(":stamp", key);
+        return query.exec();
+    }
+}
+
+bool PgSqlStorage::deleteAllOfflineMessage(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    return query.exec();
+}
+
+QMultiHash<QString, QString> PgSqlStorage::getOfflineMessageHeaders(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT stamp, ufrom FROM offlinemessage WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QMultiHash<QString, QString> offlineMessageHeaders;
+    while (query.next())
+    {
+        offlineMessageHeaders.insert(query.value(0).toString(), query.value(1).toString());
+    }
+    return offlineMessageHeaders;
+}
+
+bool PgSqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence,
+                                                   QString presenceType)
+{
+    QSqlQuery query;
+    query.prepare("INSERT INTO offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
+                  "VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
+    query.bindValue(":user_id", getUserId(to));
+    query.bindValue(":ufrom", from);
+    query.bindValue(":uto", to);
+    query.bindValue(":type", presenceType);
+    query.bindValue(":presenceStanza", presence);
+    return query.exec();
+}
+
+QList<QVariant> PgSqlStorage::getOfflinePresenceSubscription(QString jid)
+{
+    int user_id = getUserId(jid);
+    QSqlQuery query;
+    query.prepare("SELECT presenceStanza FROM offlinepresencesubscription WHERE user_id = :user_id");
+    query.bindValue(":user_id", user_id);
+    query.exec();
+
+    QList<QVariant> subscriptionList;
+    while (query.next())
+    {
+        subscriptionList << query.value(0);
+    }
+
+    query.prepare("DELETE FROM offlinepresencesubscription WHERE user_id = :user_id"
+                  " AND (type = 'subscribed' OR type = 'unsubscribed' OR type = 'unsubscribe'");
+    query.bindValue(":user_id", user_id);
+    query.exec();
+
+    return subscriptionList;
+}
+
+bool PgSqlStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM offlinepresencesubscription WHERE ufrom = :ufrom AND uto = :uto");
+    query.bindValue(":ufrom", from);
+    query.bindValue(":uto", to);
+    return query.exec();
+}
+
+//void PgSqlStorage::getChatRoomList(QString room)
+//{
+
+//}

@@ -52,6 +52,7 @@ public slots:
     void acknowledgeReceiptServerStanza(QString from, int h);
     void resumeStream(Connection *connection, QString prevId, int h);
     void clientServiceDiscoveryQuery(QString to, QByteArray request);
+    void oobRequest(QString to, QByteArray request);
 
 
 signals:

@@ -76,16 +76,23 @@ void Stream::sslError(QList<QSslError> errors)
 
 void Stream::dataReceived()
 {
-    m_xmlPaquet.append(m_connection->readLine());
+    m_xmlPaquet.append(m_connection->readAll());
     qDebug() << "paquet : " << m_xmlPaquet;
 
-    QList<QByteArray> documentContentlist = Utils::parseRequest(m_xmlPaquet.trimmed());
-    if (!documentContentlist.isEmpty())
+    if (m_xmlPaquet == "</stream:stream>")
     {
-        foreach (QByteArray documentContent, documentContentlist)
+        closeStream();
+    }
+    else
+    {
+        QList<QByteArray> documentContentlist = Utils::parseRequest(m_xmlPaquet.trimmed());
+        if (!documentContentlist.isEmpty())
         {
-            m_xmlPaquet.remove(0, documentContent.count());
-            requestTreatment(documentContent);
+            foreach (QByteArray documentContent, documentContentlist)
+            {
+                m_xmlPaquet.remove(0, documentContent.count());
+                requestTreatment(documentContent);
+            }
         }
     }
 }

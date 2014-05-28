@@ -20,7 +20,10 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
                      RosterManager *rosterManager, VCardManager *vcardManager,
                      LastActivityManager *lastActivityManager, EntityTimeManager *entityTimeManager,
                      PrivateStorageManager *privateStorageManager,
-                     ServiceDiscoveryManager *serviceDiscoveryManager, OfflineMessageManager *offlineMessageManager, StreamNegotiationManager *streamNegotiationManager)
+                     ServiceDiscoveryManager *serviceDiscoveryManager,
+                     OfflineMessageManager *offlineMessageManager,
+                     StreamNegotiationManager *streamNegotiationManager,
+                     OobDataManager *oobDataManager)
 {
     m_serverConfigMap = serverConfigMap;
     m_userManager = userManager;
@@ -33,6 +36,7 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
     m_serviceDiscoveryManager = serviceDiscoveryManager;
     m_offlineMessageManager = offlineMessageManager;
     m_streamNegotiationManager = streamNegotiationManager;
+    m_oobDataManager = oobDataManager;
 }
 
 /**
@@ -188,7 +192,6 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
                                     document.documentElement().elementsByTagName("digest").item(0).toElement().text(),
                                     document.documentElement().attribute("to"));
             }
-
             if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
             {
                 // We check if there are errors.
@@ -400,9 +403,13 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
 //            {
 //                return m_privacyListManager->privacyListReply(iqXML, iqFrom);
 //            }
-            else if (xmlns == "jabber:iq:private" && m_serverConfigMap->value("modules").toMap().value("private").toBool())
+            else if ((xmlns == "jabber:iq:private") && m_serverConfigMap->value("modules").toMap().value("private").toBool())
             {
                 return m_privateStorageManager->privateStorageManagerReply(iqXML, iqFrom);
+            }
+            else if (xmlns == "jabber:iq:oob" && m_serverConfigMap->value("modules").toMap().value("oob").toBool())
+            {
+                return m_oobDataManager->oobDataManagerReply(iqXML, iqFrom);
             }
             else
             {

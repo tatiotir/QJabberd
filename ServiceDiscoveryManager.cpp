@@ -160,6 +160,38 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             query.appendChild(feature12);
         }
 
+//        if (m_serverConfigMap->value("modules").toMap().value("si").toBool())
+//        {
+//            QDomElement feature13 = document.createElement("feature");
+//            feature13.setAttribute("var", "http://jabber.org/protocol/si");
+
+//            query.appendChild(feature13);
+//        }
+
+//        if (m_serverConfigMap->value("modules").toMap().value("file-transfert").toBool())
+//        {
+//            QDomElement feature14 = document.createElement("feature");
+//            feature14.setAttribute("var", "http://jabber.org/protocol/file-transfert");
+
+//            query.appendChild(feature14);
+//        }
+
+//        if (m_serverConfigMap->value("modules").toMap().value("ibb").toBool())
+//        {
+//            QDomElement feature13 = document.createElement("feature");
+//            feature13.setAttribute("var", "http://jabber.org/protocol/ibb");
+
+//            query.appendChild(feature13);
+//        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("oob").toBool())
+        {
+            QDomElement feature14 = document.createElement("feature");
+            feature14.setAttribute("var", "http://jabber.org/protocol/oob");
+
+            query.appendChild(feature14);
+        }
+
         iq.appendChild(query);
         document.appendChild(iq);
 

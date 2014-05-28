@@ -13,7 +13,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     m_listConnection = new QList<Connection *>();
 
     m_storageManager = new StorageManager(serverConfigMap->value("storageType").toString(),
-                                          serverConfigMap->value("MySql").toMap());
+                                          serverConfigMap->value(serverConfigMap->value("storageType").toString()).toMap());
     m_userManager = new UserManager(m_storageManager);
     m_offlineMessageManager = new OfflineMessageManager(m_storageManager);
     m_streamNegotiationManager = new StreamNegotiationManager(m_serverConfigMap, m_userManager);
@@ -21,12 +21,14 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     m_vCardManager = new VCardManager(m_storageManager);
     m_privateStorageManager = new PrivateStorageManager(m_storageManager);
     m_entityTimeManager = new EntityTimeManager();
+    m_oobDataManager = new OobDataManager();
     m_serviceDiscoveryManager = new ServiceDiscoveryManager(m_serverConfigMap, m_userManager);
     m_privacyListManager = new PrivacyListManager(m_storageManager);
     m_lastActivityManager= new LastActivityManager(m_userManager, m_rosterManager, m_storageManager);
-    m_iqManager = new IQManager(m_serverConfigMap, m_userManager, m_privacyListManager, m_rosterManager, m_vCardManager,
-                                m_lastActivityManager, m_entityTimeManager, m_privateStorageManager,
-                                m_serviceDiscoveryManager, m_offlineMessageManager, m_streamNegotiationManager);
+    m_iqManager = new IQManager(m_serverConfigMap, m_userManager, m_privacyListManager, m_rosterManager,
+                                m_vCardManager, m_lastActivityManager, m_entityTimeManager,
+                                m_privateStorageManager, m_serviceDiscoveryManager, m_offlineMessageManager,
+                                m_streamNegotiationManager, m_oobDataManager);
     m_messageManager = new MessageManager(m_userManager, m_privacyListManager);
     m_presenceManager = new PresenceManager( m_userManager, m_rosterManager, m_lastActivityManager,
                                             m_privacyListManager);
@@ -129,6 +131,9 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
 
     connect(m_vCardManager, SIGNAL(sigSendReceiptRequest(QString,QByteArray)), m_streamManager,
             SLOT(slotSendReceiptRequest(QString,QByteArray)));
+
+    connect(m_oobDataManager, SIGNAL(sigOobRequest(QString,QByteArray)), m_streamManager,
+            SLOT(oobRequest(QString,QByteArray)));
 }
 
 /**
