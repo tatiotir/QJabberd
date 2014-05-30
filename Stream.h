@@ -49,7 +49,7 @@ public slots:
 signals:
     void sigOfflineUser(QString jid);
     void sigBindFeatureNegotiated(QString fullJid, Stream *stream);
-    void sigPresenceBroadCast(QString jid, QByteArray data);
+    void sigPresenceBroadCast(QString jid, QDomDocument document);
     void sigPresenceUnavailableBroadCast(QString to, QString from);
     void sigEnableStreamManagement(QString fullJid, QString smId);
     void sigInboundStanzaReceived(QString from);

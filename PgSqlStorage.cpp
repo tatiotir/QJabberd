@@ -725,7 +725,24 @@ bool PgSqlStorage::emptyUserBlockList(QString jid)
     return true;
 }
 
-//void PgSqlStorage::getChatRoomList(QString room)
-//{
+QMultiHash<QString, QString> PgSqlStorage::getChatRoomNameList(QString roomService)
+{
+    return QMultiHash<QString, QString>();
+}
 
-//}
+bool PgSqlStorage::chatRoomExist(QString roomName)
+{
+    return false;
+}
+
+
+QList<QString> PgSqlStorage::getChatRoomOccupants(QString roomName)
+{
+    return QList<QString>();
+}
+
+bool PgSqlStorage::isPrivateOccupantsList(QString roomName)
+{
+    return false;
+}
+

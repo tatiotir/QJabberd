@@ -5,13 +5,13 @@
 #include <QDomDocument>
 #include <QDomElement>
 #include "Error.h"
-#include "StorageManager.h"
+#include "RosterManager.h"
 
 class BlockingCommandManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit BlockingCommandManager(StorageManager *storageManager = 0);
+    explicit BlockingCommandManager(StorageManager *storageManager = 0, RosterManager *rosterManager = 0);
 
     QByteArray blockingCommandManagerReply(QDomDocument document, QString iqFrom);
     QByteArray blockingCommandManagerResult(QString id, QList<QString> blocklist);
@@ -21,6 +21,7 @@ public:
 
 signals:
     void sigUnavailablePresenceBroadCast(QString to, QString from);
+    void sigPresenceBroadCastFromContact(QString to, QString from);
     void sigBlockPush(QString to, QList<QString> items);
     void sigUnblockPush(QString to, QList<QString> items);
 
@@ -33,7 +34,7 @@ private:
     bool emptyUserBlockList(QString jid);
 
     StorageManager *m_storageManager;
-
+    RosterManager *m_rosterManager;
 };
 
 #endif // BLOCKINGCOMMANDMANAGER_H

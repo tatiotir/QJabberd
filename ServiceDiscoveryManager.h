@@ -8,13 +8,14 @@
 #include "Error.h"
 #include "UserManager.h"
 #include "StreamNegotiationManager.h"
+#include "MucManager.h"
 
 class ServiceDiscoveryManager : public QObject
 {
     Q_OBJECT
 public:
     explicit ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap = 0,
-                                     UserManager *userManager = 0);
+                                     UserManager *userManager = 0, MucManager *mucManager = 0);
 
     QByteArray serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom);
 
@@ -27,16 +28,17 @@ signals:
 public slots:
 
 private:
-    QByteArray serviceDiscoveryManagerInfoQueryResult(QString from, QString to, QString id, QDomElement request);
+    QByteArray serviceDiscoveryManagerInfoQueryResult(QString from, QString to, QString id,
+                                                      QDomDocument document);
     QByteArray serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
-                                                       QDomElement request);
-    QByteArray serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QDomElement iqElement);
+                                                       QDomDocument document);
+    QByteArray serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QString node, QDomDocument document);
     QByteArray serviceDiscoveryManagerItemsQueryResult(QString node, QString iqFrom);
     int getOfflineMessagesNumber(QString jid);
     QMultiHash<QString, QString> getOfflineMessageHeaders(QString jid);
-    QMultiHash<QString, QString> getChatRoomList(QString room);
 
     UserManager *m_userManager;
+    MucManager *m_mucManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };
 

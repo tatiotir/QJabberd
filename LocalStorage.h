@@ -58,8 +58,10 @@ public:
     bool addUserBlockListItems(QString jid, QList<QString> items);
     bool deleteUserBlockListItems(QString jid, QList<QString> items);
     bool emptyUserBlockList(QString jid);
-
-    //QMultiHash<QString, QString> getChatRoomList(QString room);
+    QMultiHash<QString, QString> getChatRoomNameList(QString roomService);
+    bool chatRoomExist(QString roomName);
+    QList<QString> getChatRoomOccupants(QString roomName);
+    bool isPrivateOccupantsList(QString roomName);
 
 private:
     static QString m_type;

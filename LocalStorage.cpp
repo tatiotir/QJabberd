@@ -1026,7 +1026,7 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
 
 QList<QString> LocalStorage::getUserBlockList(QString jid)
 {
-    QString filename = "blocklist/" + jid.replace("@", "_");
+    QString filename = "blocklist/" + jid.replace("@", "_") + ".qjb";
 
     QFile blocklistFile(filename);
     if (!blocklistFile.open(QIODevice::ReadOnly))
@@ -1043,15 +1043,17 @@ QList<QString> LocalStorage::getUserBlockList(QString jid)
 bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
 {
     /* Map the block list to the default privacy list */
-    QList<PrivacyListItem> privacyListItems;
-    foreach (QString item, items)
-    {
-        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
-    }
-    addItemsToPrivacyList(jid, "default", privacyListItems);
+//    QList<PrivacyListItem> privacyListItems;
+//    foreach (QString item, items)
+//    {
+//        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+//    }
+//    addItemsToPrivacyList(jid, "default", privacyListItems);
 
+    QDir dir;
+    dir.mkdir("blocklist");
 
-    QString filename = "blocklist/" + jid.replace("@", "_");
+    QString filename = "blocklist/" + jid.replace("@", "_") + ".qjb";
 
     QFile blocklistFile(filename);
     if (!blocklistFile.open(QIODevice::ReadWrite))
@@ -1078,7 +1080,7 @@ bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
 
 bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
 {
-    QString filename = "blocklist/" + jid.replace("@", "_");
+    QString filename = "blocklist/" + jid.replace("@", "_") + ".qjb";
 
     QFile blocklistFile(filename);
     if (!blocklistFile.open(QIODevice::ReadWrite))
@@ -1105,12 +1107,28 @@ bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
 
 bool LocalStorage::emptyUserBlockList(QString jid)
 {
-    QString filename = "blocklist/" + jid.replace("@", "_");
+    QString filename = "blocklist/" + jid.replace("@", "_") + ".qjb";
     QFile file;
     return file.remove(filename);
 }
 
-//void LocalStorage::getChatRoomList(QString room)
-//{
+QMultiHash<QString, QString> LocalStorage::getChatRoomNameList(QString roomService)
+{
+    return QMultiHash<QString, QString>();
+}
 
-//}
+bool LocalStorage::chatRoomExist(QString roomName)
+{
+    return false;
+}
+
+
+QList<QString> LocalStorage::getChatRoomOccupants(QString roomName)
+{
+    return QList<QString>();
+}
+
+bool LocalStorage::isPrivateOccupantsList(QString roomName)
+{
+    return false;
+}

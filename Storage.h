@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QSet>
 #include <QVariant>
+#include <QVariantList>
 #include <QFile>
 #include <QDir>
 #include <QString>
@@ -73,7 +74,10 @@ public:
     virtual bool deleteUserBlockListItems(QString jid, QList<QString> items) = 0;
     virtual bool emptyUserBlockList(QString jid) = 0;
     virtual bool addUserBlockListItems(QString jid, QList<QString> items) = 0;
-    //virtual QMultiHash<QString, QString> getChatRoomList(QString room) = 0;
+    virtual QMultiHash<QString, QString> getChatRoomNameList(QString roomService) = 0;
+    virtual bool chatRoomExist(QString roomName) = 0;
+    virtual QList<QString> getChatRoomOccupants(QString roomName) = 0;
+    virtual bool isPrivateOccupantsList(QString roomName) = 0;
 };
 
 #endif // STORAGE_H

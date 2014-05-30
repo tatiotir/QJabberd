@@ -34,7 +34,8 @@ SOURCES += \
     InbandByteStreamsManager.cpp \
     OobDataManager.cpp \
     PgSqlStorage.cpp \
-    BlockingCommandManager.cpp
+    BlockingCommandManager.cpp \
+    MucManager.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -71,6 +72,7 @@ HEADERS += \
     InbandByteStreamsManager.h \
     OobDataManager.h \
     PgSqlStorage.h \
-    BlockingCommandManager.h
+    BlockingCommandManager.h \
+    MucManager.h
 
 QT += xml network widgets sql

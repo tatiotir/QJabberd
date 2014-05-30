@@ -1,22 +1,37 @@
 #include "ServiceDiscoveryManager.h"
 
 ServiceDiscoveryManager::ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap,
-                                                 UserManager *userManager)
+                                                 UserManager *userManager, MucManager *mucManager)
 {
     m_serverConfigMap = serverConfigMap;
     m_userManager = userManager;
+    m_mucManager = mucManager;
 }
 
 QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom)
 {
     QDomElement iq = document.documentElement();
     QString to = iq.attribute("to");
+    QString type = iq.attribute("type");
     QString from = iq.attribute("from", iqFrom);
     QString xmlns = iq.firstChildElement().attribute("xmlns");
     QString id = iq.attribute("id", Utils::generateId());
 
     if (xmlns == "http://jabber.org/protocol/disco#items")
     {
+        if (to.contains("/"))
+        {
+            if (type == "set")
+            {
+                emit sigClientServiceDiscoveryQuery(to, document.toByteArray());
+            }
+            else if (type == "result")
+            {
+                emit sigClientServiceDiscoveryResponse(to, document.toByteArray());
+            }
+            return QByteArray();
+        }
+
         QString node = iq.firstChildElement().attribute("node");
         if (!node.isEmpty())
         {
@@ -24,26 +39,39 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QDomDocument do
         }
         else
         {
-            return serviceDiscoveryManagerItemsQueryResult(from, to, id, iq.firstChildElement());
+            return serviceDiscoveryManagerItemsQueryResult(from, to, id, document);
         }
     }
     else if (xmlns == "http://jabber.org/protocol/disco#info")
     {
+        if (to.contains("/"))
+        {
+            if (type == "set")
+            {
+                emit sigClientServiceDiscoveryQuery(to, document.toByteArray());
+            }
+            else if (type == "result")
+            {
+                emit sigClientServiceDiscoveryResponse(to, document.toByteArray());
+            }
+            return QByteArray();
+        }
+
         QString node = iq.firstChildElement().attribute("node");
         if (!node.isEmpty())
         {
-            return serviceDiscoveryManagerInfoQueryResult(iqFrom, iq);
+            return serviceDiscoveryManagerInfoQueryResult(iqFrom, node, document);
         }
         else
         {
-            return serviceDiscoveryManagerInfoQueryResult(from, to, id, iq.firstChildElement());
+            return serviceDiscoveryManagerInfoQueryResult(from, to, id, document);
         }
     }
     return QByteArray();
 }
 
 QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QString from, QString to, QString id,
-                                                                           QDomElement request)
+                                                                           QDomDocument document)
 {
     if (m_serverConfigMap->value("virtualHost").toList().contains(to))
     {
@@ -212,7 +240,36 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
-    else if (to == "conference.localhost")
+    // Entity Queries Chat Service for MUC Support via Disco
+    else if (m_serverConfigMap->value("muc").toStringList().contains(to))
+    {
+        QDomDocument document;
+
+        QDomElement iq = document.createElement("iq");
+        iq.setAttribute("from", to);
+        iq.setAttribute("to", from);
+        iq.setAttribute("id", id);
+        iq.setAttribute("type", "result");
+
+        QDomElement query = document.createElement("query");
+        query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
+
+        QDomElement identity = document.createElement("identity");
+        identity.setAttribute("category", "conference");
+        identity.setAttribute("type", "text");
+        identity.setAttribute("name", "Chat room");
+
+        QDomElement feature = document.createElement("feature");
+        feature.setAttribute("var", "http://jabber.org/protocol/muc");
+
+        query.appendChild(identity);
+        query.appendChild(feature);
+
+        document.appendChild(query);
+        return document.toByteArray();
+    }
+    // Entity Queries for Information about a Specific Chat Room
+    else if (m_mucManager->chatRoomExist(to))
     {
         QDomDocument document;
 
@@ -233,8 +290,64 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         QDomElement feature = document.createElement("feature");
         feature.setAttribute("var", "http://jabber.org/protocol/muc");
 
+        QDomElement feature1 = document.createElement("feature");
+        feature1.setAttribute("var", "muc_passwordprotected");
+
+        QDomElement feature2 = document.createElement("feature");
+        feature2.setAttribute("var", "muc_hidden");
+
+        QDomElement feature3 = document.createElement("feature");
+        feature3.setAttribute("var", "muc_temporary");
+
+        QDomElement feature4 = document.createElement("feature");
+        feature4.setAttribute("var", "muc_open");
+
+        QDomElement feature5 = document.createElement("feature");
+        feature5.setAttribute("var", "muc_modereted");
+
+        QDomElement feature6 = document.createElement("feature");
+        feature6.setAttribute("var", "muc_unmoderated");
+
+        QDomElement feature7 = document.createElement("feature");
+        feature7.setAttribute("var", "muc_semianonymous");
+
+        QDomElement feature8 = document.createElement("feature");
+        feature8.setAttribute("var", "muc_nonanonymous");
+
+        QDomElement feature9 = document.createElement("feature");
+        feature9.setAttribute("var", "muc_public");
+
+        QDomElement feature10 = document.createElement("feature");
+        feature10.setAttribute("var", "muc_membersonly");
+
+        QDomElement feature11 = document.createElement("feature");
+        feature11.setAttribute("var", "muc_persistent");
+
+        QDomElement feature12 = document.createElement("feature");
+        feature12.setAttribute("var", "muc_unsecured");
+
+        QDomElement feature13 = document.createElement("feature");
+        feature13.setAttribute("var", "http://jabber.org/protocol/muc#roominfo");
+
+        QDomElement feature14 = document.createElement("feature");
+        feature14.setAttribute("var", "http://jabber.org/protocol/muc#roomconfig");
+
         query.appendChild(identity);
         query.appendChild(feature);
+        query.appendChild(feature1);
+        query.appendChild(feature2);
+        query.appendChild(feature3);
+        query.appendChild(feature4);
+        query.appendChild(feature5);
+        query.appendChild(feature6);
+        query.appendChild(feature7);
+        query.appendChild(feature8);
+        query.appendChild(feature9);
+        query.appendChild(feature10);
+        query.appendChild(feature11);
+        query.appendChild(feature12);
+        query.appendChild(feature13);
+        query.appendChild(feature14);
 
         iq.appendChild(query);
         document.appendChild(iq);
@@ -277,14 +390,14 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         }
         else
         {
-            return Error::generateError("iq", "cancel", "item-not-found", to, from, id, request);
+            return Error::generateError("iq", "cancel", "item-not-found", to, from, id, document.documentElement());
         }
     }
     return QByteArray();
 }
 
 QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
-                                                                            QDomElement request)
+                                                                            QDomDocument document)
 {
     if (m_serverConfigMap->value("virtualHost").toList().contains(to))
     {
@@ -299,11 +412,13 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         QDomElement query = document.createElement("query");
         query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
 
-        QDomElement item1 = document.createElement("item");
-        item1.setAttribute("jid", "conference.localhost");
-        item1.setAttribute("name", "QJabberd chatroom service");
-
-        query.appendChild(item1);
+        foreach (QString muc, m_serverConfigMap->value("muc").toStringList())
+        {
+            QDomElement mucItem = document.createElement("item");
+            mucItem.setAttribute("jid", muc);
+            mucItem.setAttribute("name", "Qjabberd chatroom service");
+            query.appendChild(mucItem);
+        }
 
         iq.appendChild(query);
         document.appendChild(iq);
@@ -313,10 +428,9 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
-    else if (to == "conference.localhost")
+    else if (m_serverConfigMap->value("muc").toStringList().contains(to))
     {
         QDomDocument document;
-
         QDomElement iq = document.createElement("iq");
         iq.setAttribute("from", to);
         iq.setAttribute("to", from);
@@ -326,15 +440,12 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         QDomElement query = document.createElement("query");
         query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
 
-        QMultiHash<QString, QString> roomList;
-        QList<QString> keys = roomList.keys();
-
-        foreach (QString key, keys)
+        QMultiHash<QString, QString> roomList = m_mucManager->getChatRoomNameList(to);
+        foreach (QString key, roomList.keys())
         {
             QDomElement item = document.createElement("item");
-            item.setAttribute("jid", roomList.value(key));
-            item.setAttribute("name", key);
-
+            item.setAttribute("jid", key);
+            item.setAttribute("name", roomList.value(key));
             query.appendChild(item);
         }
 
@@ -347,7 +458,38 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
-    else if (Utils::getHost(to) == "localhost")
+    // Entity Queries for Items Associated with a Specific Chat Room
+    else if (m_mucManager->chatRoomExist(to))
+    {
+        QDomDocument document;
+
+        QDomElement iq = document.createElement("iq");
+        iq.setAttribute("from", to);
+        iq.setAttribute("to", from);
+        iq.setAttribute("id", id);
+        iq.setAttribute("type", "result");
+
+        QDomElement query = document.createElement("query");
+        query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
+
+        if (!m_mucManager->isPrivateOccupantsList(to))
+        {
+            QList<QString> occupantsList = m_mucManager->getChatRoomOccupants(to);
+            foreach (QString jid, occupantsList)
+            {
+                QDomElement mucItem = document.createElement("item");
+                mucItem.setAttribute("jid", jid);
+                query.appendChild(mucItem);
+            }
+        }
+        iq.appendChild(query);
+        document.appendChild(iq);
+
+        // Request Acknowledgment of receipt
+        sigSendReceiptRequest(from, document.toByteArray());
+        return document.toByteArray();
+    }
+    else if (m_serverConfigMap->value("virtualHost").toStringList().contains(Utils::getHost(to)))
     {
         if (!to.contains("/"))
         {
@@ -358,9 +500,10 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
     return QByteArray();
 }
 
-QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QDomElement iqElement)
+QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QString node,
+                                                                           QDomDocument document)
 {
-    if (iqElement.firstChildElement().attribute("node") == "http://jabber.org/protocol/offline")
+    if (node == "http://jabber.org/protocol/offline")
     {
         QDomDocument document;
 
@@ -368,7 +511,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
 
         QDomElement query = document.createElement("query");
         query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
-        query.setAttribute("node", iqElement.firstChildElement().attribute("node"));
+        query.setAttribute("node", document.firstChildElement().attribute("node"));
 
         QDomElement identity = document.createElement("identity");
         identity.setAttribute("category", "automation");
@@ -408,19 +551,6 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         document.appendChild(iq);
 
         return document.toByteArray();
-    }
-    else
-    {
-        QDomDocument document;
-        QDomElement iq = document.createElement("iq");
-        iq = iqElement;
-        iq.setAttribute("from", iqFrom);
-        document.appendChild(iq);
-
-        qDebug() << "to : " << iqElement.attribute("to");
-
-        emit sigClientServiceDiscoveryQuery(iqElement.attribute("to"), document.toByteArray());
-        return QByteArray();
     }
     return QByteArray();
 }

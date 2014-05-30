@@ -1,8 +1,9 @@
 #include "BlockingCommandManager.h"
 
-BlockingCommandManager::BlockingCommandManager(StorageManager *storageManager)
+BlockingCommandManager::BlockingCommandManager(StorageManager *storageManager, RosterManager *rosterManager)
 {
     m_storageManager = storageManager;
+    m_rosterManager = rosterManager;
 }
 
 QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument document, QString iqFrom)
@@ -22,11 +23,13 @@ QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument docu
             {
                 return Error::generateError("iq", "modify", "bad-request", iqFrom, "", iq.attribute("id"), QDomElement());
             }
+
             QList<QString> itemList;
-            for (int i = 0; i < itemList.count(); ++i)
+            for (int i = 0; i < itemListElement.count(); ++i)
             {
                 itemList << itemListElement.item(i).toElement().attribute("jid");
             }
+
             if (addUserBlockListItems(Utils::getBareJid(iqFrom), itemList))
             {
                 foreach (QString item, itemList)
@@ -47,8 +50,14 @@ QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument docu
             QDomNodeList itemListElement = document.firstChildElement().elementsByTagName("item");
             if (itemListElement.isEmpty())
             {
+                QList<QString> itemList = getUserBlockList(Utils::getBareJid(iqFrom));
                 if (emptyUserBlockList(Utils::getBareJid(iqFrom)))
                 {
+                    foreach (QString item, itemList)
+                    {
+                        if (m_rosterManager->contactExists(Utils::getBareJid(iqFrom), item))
+                            emit sigPresenceBroadCastFromContact(item, Utils::getBareJid(iqFrom));
+                    }
                     emit sigUnblockPush(Utils::getBareJid(iqFrom), QList<QString>());
                     return generateIQResult(iqFrom, iq.attribute("id"));
                 }
@@ -58,13 +67,18 @@ QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument docu
                 }
             }
             QList<QString> itemList;
-            for (int i = 0; i < itemList.count(); ++i)
+            for (int i = 0; i < itemListElement.count(); ++i)
             {
                 itemList << itemListElement.item(i).toElement().attribute("jid");
             }
 
             if (deleteUserBlockListItems(Utils::getBareJid(iqFrom), itemList))
             {
+                foreach (QString item, itemList)
+                {
+                    if (m_rosterManager->contactExists(Utils::getBareJid(iqFrom), item))
+                        emit sigPresenceBroadCastFromContact(item, Utils::getBareJid(iqFrom));
+                }
                 emit sigUnblockPush(Utils::getBareJid(iqFrom), itemList);
                 return generateIQResult(iqFrom, iq.attribute("id"));
             }

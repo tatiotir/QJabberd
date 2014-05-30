@@ -674,8 +674,8 @@ QDomDocument Utils::generateUnblockPush(QString to, QString id, QList<QString> i
     iq.setAttribute("type", "set");
     iq.setAttribute("id", id);
 
-    QDomElement blockElement = document.createElement("unblock");
-    blockElement.setAttribute("xmlns", "urn:xmpp:blocking");
+    QDomElement unBlockElement = document.createElement("unblock");
+    unBlockElement.setAttribute("xmlns", "urn:xmpp:blocking");
 
     if (!items.isEmpty())
     {
@@ -683,10 +683,10 @@ QDomDocument Utils::generateUnblockPush(QString to, QString id, QList<QString> i
         {
             QDomElement item = document.createElement("item");
             item.setAttribute("jid", jid);
-            blockElement.appendChild(item);
+            unBlockElement.appendChild(item);
         }
     }
-    iq.appendChild(blockElement);
+    iq.appendChild(unBlockElement);
     document.appendChild(iq);
 
     return document;

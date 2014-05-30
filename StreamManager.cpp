@@ -1,7 +1,8 @@
 #include "StreamManager.h"
 
 StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, UserManager *userManager, RosterManager *rosterManager,
-                             LastActivityManager *lastActivityManager) :
+                             LastActivityManager *lastActivityManager,
+                             BlockingCommandManager *blockingCmdManager) :
     QThread(parent)
 {
     m_userMap = new QMultiHash<QString, User* >();
@@ -10,7 +11,7 @@ StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, Us
     m_userManager = userManager;
     m_rosterManager = rosterManager;
     m_lastActivityManager = lastActivityManager;
-
+    m_blockingCmdManager = blockingCmdManager;
     m_serverTime.start();
 }
 
@@ -31,8 +32,8 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
 
     connect(stream, SIGNAL(sigOfflineUser(QString)), this, SLOT(offlineUser(QString)));
 
-    connect(stream, SIGNAL(sigPresenceBroadCast(QString,QByteArray)), this,
-            SLOT(presenceBroadCast(QString,QByteArray)));
+    connect(stream, SIGNAL(sigPresenceBroadCast(QString,QDomDocument)), this,
+            SLOT(presenceBroadCast(QString,QDomDocument)));
 
     connect(stream, SIGNAL(sigPresenceUnavailableBroadCast(QString,QString)), this,
             SLOT(presenceUnavailableBroadCast(QString,QString)));
@@ -65,7 +66,7 @@ void StreamManager::unblockPush(QString to, QList<QString> items)
     QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
     foreach (QString toResource, toResourceList)
     {
-        QDomDocument document = Utils::generateBlockPush(toResource, Utils::generateId(), items);
+        QDomDocument document = Utils::generateUnblockPush(toResource, Utils::generateId(), items);
         m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
         m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
 
@@ -178,6 +179,12 @@ void StreamManager::enableStreamManagement(QString fullJid, QString smId)
 void StreamManager::clientServiceDiscoveryQuery(QString to, QByteArray request)
 {
     m_userMap->value(to, new User())->getStream()->getConnection()->write(request);
+    m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+}
+
+void StreamManager::clientServiceDiscoveryResponse(QString to, QByteArray response)
+{
+    m_userMap->value(to, new User())->getStream()->getConnection()->write(response);
     m_userMap->value(to, new User())->getStream()->getConnection()->flush();
 }
 
@@ -306,6 +313,29 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
 
     QDomElement presenceElement = document.documentElement();
     QString presenceType = presenceElement.attribute("type");
+
+    QString from = Utils::getBareJid(presenceElement.attribute("from"));
+    QStringList fromResourceList = keyList.filter(from, Qt::CaseInsensitive);
+    if (m_blockingCmdManager->getUserBlockList(from).contains(to) ||
+            m_blockingCmdManager->getUserBlockList(from).contains(Utils::getHost(to)) /*||
+            m_blockingCmdManager->getUserBlockList(to).contains(from) ||
+            m_blockingCmdManager->getUserBlockList(to).contains(Utils::getBareJid(from))*/)
+    {
+        QDomDocument document;
+        QDomElement blockedElement = document.createElement("blocked");
+        blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
+
+        QByteArray error = Error::generateError("message", "cancel", "not-acceptable",
+                                         document.documentElement().attribute("from"),
+                                         document.documentElement().attribute("to"),
+                                         "", blockedElement);
+        foreach (QString fromResource, fromResourceList)
+        {
+            m_userMap->value(fromResource, new User())->getStream()->getConnection()->write(error);
+            m_userMap->value(fromResource, new User())->getStream()->getConnection()->flush();
+        }
+        return;
+    }
 
     if (!toResourceList.isEmpty())
     {
@@ -632,7 +662,13 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
 }
 
 void StreamManager::presenceBroadCastFromContact(QString to, QString contactJid)
-{    
+{
+    if (/*m_blockingCmdManager->getUserBlockList(contactJid).contains(to) ||
+            m_blockingCmdManager->getUserBlockList(contactJid).contains(Utils::getHost(to)) ||*/
+            m_blockingCmdManager->getUserBlockList(to).contains(contactJid) ||
+            m_blockingCmdManager->getUserBlockList(to).contains(Utils::getBareJid(contactJid)))
+        return;
+
     QStringList keyList = QStringList::fromSet(m_userMap->keys().toSet());
     QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
     QStringList contactResourceList = keyList.filter(contactJid, Qt::CaseInsensitive);

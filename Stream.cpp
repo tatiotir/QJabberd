@@ -78,7 +78,6 @@ void Stream::sslError(QList<QSslError> errors)
 void Stream::dataReceived()
 {
     m_xmlPaquet.append(m_connection->readAll());
-    qDebug() << "paquet : " << m_xmlPaquet;
 
     if (m_xmlPaquet == "</stream:stream>")
     {
@@ -96,12 +95,27 @@ void Stream::dataReceived()
     }
     else
     {
-        QDomDocument document;
-        if (document.setContent(m_xmlPaquet))
+        QList<QByteArray> requestList = Utils::parseRequest(m_xmlPaquet);
+        qDebug() << "paquet before : " << m_xmlPaquet;
+        if (!requestList.isEmpty())
         {
-            requestTreatment(document);
-            m_xmlPaquet.clear();
+            foreach (QByteArray request, requestList)
+            {
+                m_xmlPaquet.remove(m_xmlPaquet.indexOf(request), request.length() + 1);
+                QDomDocument document;
+                document.setContent(request);
+                requestTreatment(document);
+
+                qDebug() << "paquet after : " << m_xmlPaquet;
+            }
         }
+
+//        QDomDocument document;
+//        if (document.setContent(m_xmlPaquet))
+//        {
+//            requestTreatment(document);
+//            m_xmlPaquet.clear();
+//        }
 //        QList<QByteArray> documentContentlist = Utils::parseRequest(m_xmlPaquet.trimmed());
 //        if (!documentContentlist.isEmpty())
 //        {
@@ -176,8 +190,10 @@ void Stream::requestTreatment(QDomDocument document)
         QList<QString> fromBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(m_fullJid));
         QList<QString> toBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(document.documentElement().attribute("to")));
 
+
         // Check block list items
         if (fromBlockList.contains(document.documentElement().attribute("to")) ||
+                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
         {
@@ -185,12 +201,13 @@ void Stream::requestTreatment(QDomDocument document)
             QDomElement blockedElement = document.createElement("blocked");
             blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
 
-            streamReply(Error::generateError("iq", "cancel", "not-acceptable",
+            streamReply(Error::generateError("message", "cancel", "not-acceptable",
                                              document.documentElement().attribute("from"),
                                              document.documentElement().attribute("to"),
                                              "", blockedElement));
         }
         else if (toBlockList.contains(m_fullJid) ||
+                 toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
                  toBlockList.contains(Utils::getHost(m_fullJid)) ||
                  toBlockList.contains(m_fullJid.split("@").value(1)))
         {
@@ -216,6 +233,7 @@ void Stream::requestTreatment(QDomDocument document)
 
         // Check block list items
         if (fromBlockList.contains(document.documentElement().attribute("to")) ||
+                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
         {
@@ -223,13 +241,14 @@ void Stream::requestTreatment(QDomDocument document)
             QDomElement blockedElement = document.createElement("blocked");
             blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
 
-            streamReply(Error::generateError("iq", "cancel", "not-acceptable",
+            streamReply(Error::generateError("message", "cancel", "not-acceptable",
                                              document.documentElement().attribute("from"),
                                              document.documentElement().attribute("to"),
                                              "", blockedElement));
         }
 
         if (!toBlockList.contains(m_fullJid) ||
+                !toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
                 !toBlockList.contains(Utils::getHost(m_fullJid)) ||
                 !toBlockList.contains(m_fullJid.split("@").value(1)))
         {
@@ -248,8 +267,12 @@ void Stream::requestTreatment(QDomDocument document)
         QList<QString> fromBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(m_fullJid));
         QList<QString> toBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(document.documentElement().attribute("to")));
 
+        qDebug() << "blockList from : " << fromBlockList;
+        qDebug() << "blockList to : " << toBlockList;
+
         // Check block list items
         if (fromBlockList.contains(document.documentElement().attribute("to")) ||
+                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
                 fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
         {
@@ -263,10 +286,11 @@ void Stream::requestTreatment(QDomDocument document)
                                              "", blockedElement));
         }
         else if (toBlockList.contains(m_fullJid) ||
+                 toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
                  toBlockList.contains(Utils::getHost(m_fullJid)) ||
                  toBlockList.contains(m_fullJid.split("@").value(1)))
         {
-            streamReply(Error::generateError("message", "cancel", "service-unavalaible",
+            streamReply(Error::generateError("iq", "cancel", "service-unavalaible",
                                              Utils::getHost(m_fullJid), m_fullJid, "", QDomElement()));
         }
         else
@@ -323,12 +347,12 @@ void Stream::sendUnavailablePresence()
         {
             document.documentElement().setAttribute("to", contact.getJid());
             // Send presence to this contact
-            emit sigPresenceBroadCast(contact.getJid(), document.toByteArray());
+            emit sigPresenceBroadCast(contact.getJid(), document);
         }
     }
     document.documentElement().setAttribute("from", m_fullJid);
     document.documentElement().setAttribute("to", Utils::getBareJid(m_fullJid));
-    emit sigPresenceBroadCast(Utils::getBareJid(m_fullJid), document.toByteArray());
+    emit sigPresenceBroadCast(Utils::getBareJid(m_fullJid), document);
 }
 
 void Stream::bindFeatureNegotiated(QString fullJid)

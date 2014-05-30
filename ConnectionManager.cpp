@@ -16,9 +16,9 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
                                           serverConfigMap->value(serverConfigMap->value("storageType").toString()).toMap());
     m_userManager = new UserManager(m_storageManager);
     m_offlineMessageManager = new OfflineMessageManager(m_storageManager);
-    m_blockingCmdManager = new BlockingCommandManager(m_storageManager);
     m_streamNegotiationManager = new StreamNegotiationManager(m_serverConfigMap, m_userManager);
     m_rosterManager = new RosterManager(m_storageManager);
+    m_blockingCmdManager = new BlockingCommandManager(m_storageManager, m_rosterManager);
     m_vCardManager = new VCardManager(m_storageManager);
     m_privateStorageManager = new PrivateStorageManager(m_storageManager);
     m_entityTimeManager = new EntityTimeManager();
@@ -35,7 +35,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
                                             m_privacyListManager);
 
     m_streamManager = new StreamManager(this, m_storageManager, m_userManager, m_rosterManager,
-                                        m_lastActivityManager);
+                                        m_lastActivityManager, m_blockingCmdManager);
     m_streamManager->start();
 
     // Connect SessionManager to the signal newConnection(Connection *)
@@ -120,6 +120,9 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     connect(m_serviceDiscoveryManager, SIGNAL(sigClientServiceDiscoveryQuery(QString,QByteArray)),
             m_streamManager, SLOT(clientServiceDiscoveryQuery(QString,QByteArray)));
 
+    connect(m_serviceDiscoveryManager, SIGNAL(sigClientServiceDiscoveryResponse(QString,QByteArray)),
+            m_streamManager, SLOT(clientServiceDiscoveryResponse(QString,QByteArray)));
+
     connect(m_lastActivityManager, SIGNAL(sigLastActivityQuery(QString,QString,QString,QString)),
             m_streamManager, SLOT(lastActivityQuery(QString,QString,QString,QString)));
 
@@ -146,6 +149,9 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
 
     connect(m_blockingCmdManager, SIGNAL(sigUnavailablePresenceBroadCast(QString,QString)), m_streamManager,
             SLOT(presenceUnavailableBroadCast(QString,QString)));
+
+    connect(m_blockingCmdManager, SIGNAL(sigPresenceBroadCastFromContact(QString,QString)), m_streamManager,
+            SLOT(presenceBroadCastFromContact(QString,QString)));
 }
 
 /*!

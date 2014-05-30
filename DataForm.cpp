@@ -165,3 +165,26 @@ QMultiHash<QString, QString> DataForm::parseDataForm(QDomElement xElement)
 {
 
 }
+
+QDomDocument DataForm::getRoomConfigForm(QString from, QString to, QString id)
+{
+    QDomDocument document;
+
+    QDomElement iqNode = document.createElement("iq");
+    iqNode.setAttribute("type", "result");
+    iqNode.setAttribute("from", from);
+    iqNode.setAttribute("to", to);
+    iqNode.setAttribute("id", id);
+
+    QDomElement query = document.createElement("query");
+    query.setAttribute("xmlns", "jabber:iq:register");
+
+    QDomElement instructionNode = document.createElement("instructions");
+    QString instruction = "Use the enclosed form to register . If your Jabber client does ";
+    instruction += "not support Data Forms , visit http: // www . shakespeare . lit / contests .php";
+    instructionNode.appendChild(document.createTextNode(instruction));
+
+    QDomElement xNode = document.createElement("x");
+    xNode.setAttribute("xmlns", "jabber:x:data");
+    xNode.setAttribute("type", "form");
+}

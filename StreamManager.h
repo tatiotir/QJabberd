@@ -10,7 +10,8 @@ class StreamManager : public QThread
 public:
     StreamManager(QObject *parent = 0, StorageManager *storageManager = 0,
                   UserManager *userManager = 0, RosterManager *rosterManager = 0,
-                  LastActivityManager *lastActivityManager = 0);
+                  LastActivityManager *lastActivityManager = 0,
+                  BlockingCommandManager *blockingCmdManager = 0);
 
 public slots:
     void newConnection(Connection *connection, IqManager *iqManager,
@@ -53,6 +54,7 @@ public slots:
     void acknowledgeReceiptServerStanza(QString from, int h);
     void resumeStream(Connection *connection, QString prevId, int h);
     void clientServiceDiscoveryQuery(QString to, QByteArray request);
+    void clientServiceDiscoveryResponse(QString to, QByteArray response);
     void oobRequest(QString to, QByteArray request);
     void blockPush(QString to, QList<QString> items);
     void unblockPush(QString to, QList<QString> items);
@@ -81,6 +83,7 @@ private:
     RosterManager *m_rosterManager;
     QMultiHash<QString, User* > *m_userMap;
     QMultiHash<QString, Stream* > *m_notNegotiatedStream;
+    BlockingCommandManager *m_blockingCmdManager;
     QStringList *m_resourceDefaultList; // this list contain the resource who has set a default list
 };
 

@@ -420,6 +420,10 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
         {
             return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
         }
+        else if ((firstChildTagName == "unblock") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        {
+            return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
+        }
         else
         {
             return Error::generateError("iq", "cancel", "service-unavalaible",

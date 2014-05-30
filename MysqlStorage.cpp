@@ -746,7 +746,24 @@ bool MySqlStorage::emptyUserBlockList(QString jid)
     return true;
 }
 
-//void MySqlStorage::getChatRoomList(QString room)
-//{
+QMultiHash<QString, QString> MySqlStorage::getChatRoomNameList(QString roomService)
+{
+    return QMultiHash<QString, QString>();
+}
 
-//}
+bool MySqlStorage::chatRoomExist(QString roomName)
+{
+    return false;
+}
+
+
+QList<QString> MySqlStorage::getChatRoomOccupants(QString roomName)
+{
+    return QList<QString>();
+}
+
+bool MySqlStorage::isPrivateOccupantsList(QString roomName)
+{
+    return false;
+}
+
