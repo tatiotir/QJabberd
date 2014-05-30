@@ -11,7 +11,6 @@ PgSqlStorage::PgSqlStorage(QString host, int port, QString username, QString pas
     if (m_database.open())
     {
         qDebug() << "Database open";
-        qDebug() << createUser("c", "d");
     }
     else{
         qDebug() << "Database not open";
@@ -20,13 +19,13 @@ PgSqlStorage::PgSqlStorage(QString host, int port, QString username, QString pas
 
 QString PgSqlStorage::getStorageType()
 {
-    return "MySql";
+    return "PgSql";
 }
 
 int PgSqlStorage::getUserId(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT id FROM user WHERE jid = :jid");
+    query.prepare("SELECT id FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
     if (query.first())
@@ -42,7 +41,7 @@ int PgSqlStorage::getUserId(QString jid)
 QString PgSqlStorage::getPassword(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT password FROM user WHERE jid = :jid");
+    query.prepare("SELECT password FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -53,7 +52,7 @@ QString PgSqlStorage::getPassword(QString jid)
 bool PgSqlStorage::changePassword(QString jid, QString newPassword)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET password = :password WHERE jid = :jid");
+    query.prepare("UPDATE users SET password = :password WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":password", newPassword);
     return query.exec();
@@ -62,7 +61,7 @@ bool PgSqlStorage::changePassword(QString jid, QString newPassword)
 bool PgSqlStorage::createUser(QString jid, QString password)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO user(jid, password) VALUES(:jid, :password)");
+    query.prepare("INSERT INTO users(jid, password) VALUES(:jid, :password)");
     query.bindValue(":jid", jid);
     query.bindValue(":password", password);
     return query.exec();
@@ -71,7 +70,7 @@ bool PgSqlStorage::createUser(QString jid, QString password)
 bool PgSqlStorage::deleteUser(QString jid)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM user WHERE jid = :jid");
+    query.prepare("DELETE FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     return query.exec();
 }
@@ -103,6 +102,7 @@ bool PgSqlStorage::addContactToRoster(QString jid, Contact contact)
     }
     else
     {
+        qDebug() << "Je suis juste ici : " << getUserId(jid);
         QJsonDocument document;
         QJsonObject object;
         object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
@@ -110,10 +110,10 @@ bool PgSqlStorage::addContactToRoster(QString jid, Contact contact)
 
         QSqlQuery query;
         query.prepare("INSERT INTO contact(user_id, approved, ask, groups, jid, name, subscription, version)"
-                      "VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
+                      " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":version", contact.getVersion());
-        query.bindValue(":approved", contact.getApproved());
+        query.bindValue(":approved", (int)contact.getApproved());
         query.bindValue(":ask", contact.getAsk());
         query.bindValue(":jid", contact.getJid());
         query.bindValue(":name", contact.getName());
@@ -325,7 +325,7 @@ bool PgSqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 QString PgSqlStorage::getVCard(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -339,7 +339,7 @@ QString PgSqlStorage::getVCard(QString jid)
 bool PgSqlStorage::updateVCard(QString jid, QString vCardInfos)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET vcard = :vcard WHERE jid = :jid");
+    query.prepare("UPDATE users SET vcard = :vcard WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":vcard", vCardInfos);
     return query.exec();
@@ -352,7 +352,7 @@ bool PgSqlStorage::vCardExist(QString jid)
         return false;
 
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -365,7 +365,7 @@ bool PgSqlStorage::vCardExist(QString jid)
 QString PgSqlStorage::getLastLogoutTime(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT lastlogouttime FROM user WHERE jid = :jid");
+    query.prepare("SELECT lastLogoutTime FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -380,8 +380,8 @@ bool PgSqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
     qDebug() << "logout time : " << lastLogoutTime;
     QSqlQuery query;
-    query.prepare("UPDATE user SET lastlogouttime = :lastlogouttime WHERE jid = :jid");
-    query.bindValue(":lastlogouttime", lastLogoutTime);
+    query.prepare("UPDATE users SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
+    query.bindValue(":lastLogoutTime", lastLogoutTime);
     query.bindValue(":jid", jid);
     return query.exec();
 }
@@ -389,7 +389,7 @@ bool PgSqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 QString PgSqlStorage::getLastStatus(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT laststatus FROM user WHERE jid = :jid");
+    query.prepare("SELECT lastStatus FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -403,8 +403,8 @@ QString PgSqlStorage::getLastStatus(QString jid)
 bool PgSqlStorage::setLastStatus(QString jid, QString status)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET laststatus = :laststatus WHERE jid = :jid");
-    query.bindValue(":laststatus", status);
+    query.prepare("UPDATE users SET lastStatus = :lastStatus WHERE jid = :jid");
+    query.bindValue(":lastStatus", status);
     query.bindValue(":jid", jid);
     return query.exec();
 }
@@ -415,11 +415,11 @@ bool PgSqlStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     foreach (QString key, nodeMap.keys())
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO privatedata(user_id, nodename, nodevalue)"
-                      "VALUES(:user_id, :nodename, :nodevalue)");
+        query.prepare("INSERT INTO privatedata(user_id, nodeName, nodeValue)"
+                      " VALUES(:user_id, :nodeName, :nodeValue)");
         query.bindValue(":user_id", getUserId(jid));
-        query.bindValue(":nodename", key);
-        query.bindValue(":nodevalue", nodeMap.value(key));
+        query.bindValue(":nodeName", key);
+        query.bindValue(":nodeValue", nodeMap.value(key));
         query.exec();
     }
     return m_database.commit();
@@ -444,9 +444,9 @@ bool PgSqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
 QByteArray PgSqlStorage::getPrivateData(QString jid, QString node)
 {
     QSqlQuery query;
-    query.prepare("SELECT nodevalue FROM privatedata WHERE user_id = :user_id AND nodename = :nodename");
+    query.prepare("SELECT nodeValue FROM privatedata WHERE user_id = :user_id AND nodeName = :nodeName");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":nodename", node);
+    query.bindValue(":nodeName", node);
     query.exec();
 
     if (query.first())
@@ -491,7 +491,7 @@ bool PgSqlStorage::saveOfflineMessage(QString from, QString to, QString type,
 
     QSqlQuery query;
     query.prepare("INSERT INTO offlinemessage(user_id, ufrom, stamp, type, body)"
-                  "VALUES(:user_id, :ufrom, :stamp, :type, :body)");
+                  " VALUES(:user_id, :ufrom, :stamp, :type, :body)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":stamp", stamp);
@@ -657,7 +657,7 @@ bool PgSqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
 {
     QSqlQuery query;
     query.prepare("INSERT INTO offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
-                  "VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
+                  " VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
@@ -695,6 +695,34 @@ bool PgSqlStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
     return query.exec();
+}
+
+QList<QString> PgSqlStorage::getUserBlockList(QString jid)
+{
+    return QList<QString>();
+}
+
+bool PgSqlStorage::addUserBlockListItems(QString jid, QList<QString> items)
+{
+    /* Map the block list to the default privacy list */
+    QList<PrivacyListItem> privacyListItems;
+    foreach (QString item, items)
+    {
+        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+    }
+    addItemsToPrivacyList(jid, "default", privacyListItems);
+
+    return true;
+}
+
+bool PgSqlStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
+{
+    return true;
+}
+
+bool PgSqlStorage::emptyUserBlockList(QString jid)
+{
+    return true;
 }
 
 //void PgSqlStorage::getChatRoomList(QString room)

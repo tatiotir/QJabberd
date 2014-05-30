@@ -5,11 +5,8 @@ VCardManager::VCardManager(StorageManager *storageManager)
     m_storageManager = storageManager;
 }
 
-QByteArray VCardManager::vCardManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QDomElement iq = document.documentElement();
     QString from = iq.attribute("from", iqFrom);
     QString to = iq.attribute("to");

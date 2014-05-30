@@ -17,7 +17,7 @@ signals:
     void sigSendReceiptRequest(QString to, QByteArray data);
 
 public slots:
-    QByteArray privacyListReply(QByteArray iqXML, QString iqFrom);
+    QByteArray privacyListReply(QDomDocument document, QString iqFrom);
     QByteArray generatePrivacyListResult(QString to, QString id, QString privacyListName, QList<PrivacyListItem> items);
     QByteArray generateIQResult(QString to, QString id);
     QByteArray generatePrivacyPush(QString to, QString privacyListName, QString id);

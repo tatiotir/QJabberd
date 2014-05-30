@@ -22,14 +22,16 @@ public:
     static QString getResource(QString fullJid);
     static QString getUsername(QString fullJid);
     static QString getHost(QString fullJid);
-    static QByteArray generateRosterPush(QString to, QString id, QString jid, QString name,
+    static QDomDocument generateRosterPush(QString to, QString id, QString jid, QString name,
                                             QString subscription, QString ask, bool approved, QSet<QString> groupList);
-    static QByteArray generatePresence(QString type, QString from, QString to, QString id, QString show,
+    static QDomDocument generateBlockPush(QString to, QString id, QList<QString> items);
+    static QDomDocument generateUnblockPush(QString to, QString id, QList<QString> items);
+    static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString show,
                                        QString priority, QMultiHash<QString, QString> status);
-    static QByteArray generatePresence(QString type, QString from, QString to, QString id, QString show,
+    static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString show,
                                        QString priority, QString status);
     static QList<QByteArray> parseRequest(QByteArray data);
-    static QByteArray generateMessage(QString type, QString from, QString to, QString body);
+    static QDomDocument generateMessage(QString type, QString from, QString to, QString body);
 };
 
 #endif // UTILS_H

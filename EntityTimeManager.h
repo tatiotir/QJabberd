@@ -12,7 +12,7 @@ class EntityTimeManager : public QObject
 public:
     explicit EntityTimeManager();
 
-    QByteArray entityTimeManagerReply(QByteArray iqXML, QString iqFrom);
+    QByteArray entityTimeManagerReply(QDomDocument document, QString iqFrom);
     QByteArray entityTimeMananerResult(QString from, QString to, QString id, QString tzo, QString utc);
 
 signals:

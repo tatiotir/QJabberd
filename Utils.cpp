@@ -500,7 +500,7 @@ QString Utils::getHost(QString fullJid)
     }
 }
 
-QByteArray Utils::generatePresence(QString type, QString from, QString to, QString id, QString show,
+QDomDocument Utils::generatePresence(QString type, QString from, QString to, QString id, QString show,
                                    QString priority, QMultiHash<QString, QString> status)
 {
     QDomDocument document;
@@ -546,10 +546,10 @@ QByteArray Utils::generatePresence(QString type, QString from, QString to, QStri
     }
 
     document.appendChild(presence);
-    return document.toByteArray();
+    return document;
 }
 
-QByteArray Utils::generatePresence(QString type, QString from, QString to, QString id, QString show,
+QDomDocument Utils::generatePresence(QString type, QString from, QString to, QString id, QString show,
                                    QString priority, QString status)
 {
     QDomDocument document;
@@ -590,10 +590,10 @@ QByteArray Utils::generatePresence(QString type, QString from, QString to, QStri
     }
 
     document.appendChild(presence);
-    return document.toByteArray();
+    return document;
 }
 
-QByteArray Utils::generateRosterPush(QString to, QString id, QString jid, QString name,
+QDomDocument Utils::generateRosterPush(QString to, QString id, QString jid, QString name,
                                                    QString subscription, QString ask, bool approved,
                                                    QSet<QString> groupList)
 {
@@ -640,7 +640,56 @@ QByteArray Utils::generateRosterPush(QString to, QString id, QString jid, QStrin
     iq.appendChild(query);
     document.appendChild(iq);
 
-    return document.toByteArray();
+    return document;
+}
+
+QDomDocument Utils::generateBlockPush(QString to, QString id, QList<QString> items)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+    iq.setAttribute("to", to);
+    iq.setAttribute("type", "set");
+    iq.setAttribute("id", id);
+
+    QDomElement blockElement = document.createElement("block");
+    blockElement.setAttribute("xmlns", "urn:xmpp:blocking");
+
+    foreach (QString jid, items)
+    {
+        QDomElement item = document.createElement("item");
+        item.setAttribute("jid", jid);
+        blockElement.appendChild(item);
+    }
+    iq.appendChild(blockElement);
+    document.appendChild(iq);
+
+    return document;
+}
+
+QDomDocument Utils::generateUnblockPush(QString to, QString id, QList<QString> items)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+    iq.setAttribute("to", to);
+    iq.setAttribute("type", "set");
+    iq.setAttribute("id", id);
+
+    QDomElement blockElement = document.createElement("unblock");
+    blockElement.setAttribute("xmlns", "urn:xmpp:blocking");
+
+    if (!items.isEmpty())
+    {
+        foreach (QString jid, items)
+        {
+            QDomElement item = document.createElement("item");
+            item.setAttribute("jid", jid);
+            blockElement.appendChild(item);
+        }
+    }
+    iq.appendChild(blockElement);
+    document.appendChild(iq);
+
+    return document;
 }
 
 /*

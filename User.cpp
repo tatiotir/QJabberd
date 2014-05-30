@@ -1,9 +1,9 @@
 #include "User.h"
 
-User::User(Connection *connection, QString smId, int presencePriority, int inboundStanzaCount,
+User::User(Stream *stream, QString smId, int presencePriority, int inboundStanzaCount,
            QByteArray currentPresence)
 {
-    m_connection = connection;
+    m_stream = stream;
     m_inboundStanzaReceivedCount = inboundStanzaCount;
     m_presencePriority = presencePriority;
     m_currentPresence = currentPresence;
@@ -24,9 +24,9 @@ User::User(Connection *connection, QString smId, int presencePriority, int inbou
 //    m_connectedTime.start();
 //}
 
-Connection* User::getConnection()
+Stream* User::getStream()
 {
-    return m_connection;
+    return m_stream;
 }
 
 QString User::getSmId()
@@ -54,9 +54,9 @@ int User::getPresencePriority()
     return m_presencePriority;
 }
 
-void User::setConnection(Connection *connection)
+void User::setStream(Stream *stream)
 {
-    m_connection = connection;
+    m_stream = stream;
 }
 
 void User::setSmId(QString smId)

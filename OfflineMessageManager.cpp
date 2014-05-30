@@ -5,19 +5,14 @@ OfflineMessageManager::OfflineMessageManager(StorageManager *storageManager)
     m_storageManager = storageManager;
 }
 
-/**
- * Offline message reply
- *
- * @brief OfflineMessageManager::offlineMessageManagerReply
- * @param iqXML
- * @param iqFrom
- * @return QByteArray
+/*!
+ * \brief The OfflineMessageManager::offlineMessageManagerReply method parse an offline message query an return response
+ * \param iqXML
+ * \param iqFrom
+ * \return QByteArray
  */
-QByteArray OfflineMessageManager::offlineMessageManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray OfflineMessageManager::offlineMessageManagerReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QString id = document.documentElement().attribute("id", Utils::generateId());
     QString offlineFirstChildTagName = document.documentElement().firstChildElement().firstChildElement().tagName();
     if (offlineFirstChildTagName == "fetch")
@@ -120,14 +115,12 @@ QByteArray OfflineMessageManager::offlineMessageManagerReply(QByteArray iqXML, Q
     }
 }
 
-/**
- * Offline message retrival result
- *
- * @brief OfflineMessageManager::offlineMessageManagerResult
- * @param to
- * @param id
- * @param messageList
- * @return QByteArray
+/*!
+ * \brief The OfflineMessageManager::offlineMessageManagerResult method return iq result for an offline message query
+ * \param to
+ * \param id
+ * \param messageList
+ * \return QByteArray
  */
 QByteArray OfflineMessageManager::offlineMessageManagerResult(QString to, QString id, QByteArray messageList)
 {
@@ -140,56 +133,52 @@ QByteArray OfflineMessageManager::offlineMessageManagerResult(QString to, QStrin
     return (messageList.isEmpty() ? (document.toByteArray()) : (messageList + document.toByteArray()));
 }
 
-/**
- * Get offline message from a user
- *
- * @brief OfflineMessageManager::getOfflineMessageFrom
- * @param jid
- * @param from
- * @return QMultiHash<QString, QByteArray>
+/*!
+ * \brief The OfflineMessageManager::getOfflineMessageFrom method get user offline message
+ * \param jid
+ * \param from
+ * \return QMultiHash<QString, QByteArray>
  */
 QMultiHash<QString, QByteArray> OfflineMessageManager::getOfflineMessageFrom(QString jid, QString from)
 {
     return m_storageManager->getStorage()->getOfflineMessageFrom(jid, from);
 }
 
-/**
- * Get offline message using the time stamp at which the message has been sent
- *
- * @brief OfflineMessageManager::getOfflineMessage
- * @param jid
- * @param stamp
- * @return QByteArray
+/*!
+ * \brief The OfflineMessageManager::getOfflineMessage method get user offline message using the time stamp at which the message has been sent
+ * \param jid
+ * \param stamp
+ * \return QByteArray
  */
 QByteArray OfflineMessageManager::getOfflineMessage(QString jid, QString stamp)
 {
     return m_storageManager->getStorage()->getOfflineMessage(jid, stamp);
 }
 
-/**
- * Get all offline message for a user
- *
- * @brief OfflineMessageManager::getAllOfflineMessage
- * @param jid
- * @return QMultiHash<QString, QByteArray>
+/*!
+ * \brief The OfflineMessageManager::getAllOfflineMessage metod get all user offline message
+ * \param jid
+ * \return QMultiHash<QString, QByteArray>
  */
 QMultiHash<QString, QByteArray> OfflineMessageManager::getAllOfflineMessage(QString jid)
 {
     return m_storageManager->getStorage()->getAllOfflineMessage(jid);
 }
 
-/**
- * Delete offline message using the key
- *
- * @brief OfflineMessageManager::deleteOfflineMessage
- * @param jid
- * @param key
+/*!
+ * \brief The OfflineMessageManager::deleteOfflineMessage method delete user offline message using the key (stamp or user jid)
+ * \param jid
+ * \param key
  */
 void OfflineMessageManager::deleteOfflineMessage(QString jid, QString key)
 {
     m_storageManager->getStorage()->deleteOfflineMessage(jid, key);
 }
 
+/*!
+ * \brief The OfflineMessageManager::deleteAllOfflineMessage method delete all usser offline message
+ * \param jid
+ */
 void OfflineMessageManager::deleteAllOfflineMessage(QString jid)
 {
     m_storageManager->getStorage()->deleteAllOfflineMessage(jid);

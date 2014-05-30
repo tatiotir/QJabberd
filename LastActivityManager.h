@@ -12,7 +12,7 @@ class LastActivityManager : public QObject
 public:
     explicit LastActivityManager(UserManager *userManager = 0, RosterManager *rosterManager = 0,
                                  StorageManager *storageManager = 0);
-    QByteArray lastActivityReply(QByteArray iqXML, QString iqFrom);
+    QByteArray lastActivityReply(QDomDocument document, QString iqFrom);
     QByteArray lastActivityQueryResult(QString from, QString to, QString id, int seconds, QString lastStatus);
 
     void setLastLogoutTime(QString jid, QString lastLogoutTime);

@@ -16,7 +16,7 @@ public:
     explicit ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap = 0,
                                      UserManager *userManager = 0);
 
-    QByteArray serviceDiscoveryManagerReply(QByteArray iqXML, QString iqFrom);
+    QByteArray serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom);
 
 signals:
     void sigAccountAvailableResourceQuery(QString from, QString accountJid, QString id);

@@ -1,16 +1,16 @@
 #include "Contact.h"
 
-/**
+/*!
  * Construct a new contact
  *
- * @brief Contact::Contact
- * @param version
- * @param approved
- * @param ask
- * @param jid
- * @param name
- * @param subscription
- * @param groupList
+ * \brief Contact::Contact
+ * \param version
+ * \param approved
+ * \param ask
+ * \param jid
+ * \param name
+ * \param subscription
+ * \param groupList
  */
 Contact::Contact(QString version, bool approved, QString ask, QString jid, QString name, QString subscription, QSet<QString> groupList)
 {
@@ -23,10 +23,8 @@ Contact::Contact(QString version, bool approved, QString ask, QString jid, QStri
     m_groupList = groupList;
 }
 
-/**
- * Default constructor for a contact
- *
- * @brief Contact::Contact
+/*!
+ * \brief Contact::Contact Default constructor for a contact
  */
 Contact::Contact()
 {
@@ -50,10 +48,8 @@ Contact::Contact()
     m_groupList = contact.getGroups();
 }*/
 
-/**
- * Get the version of the contact.
- *
- * @brief Contact::getVersion
+/*!
+ * \brief The Contact::getVersion method return the version of the contact.
  * @return QString
  */
 QString Contact::getVersion()
@@ -61,10 +57,8 @@ QString Contact::getVersion()
     return m_version;
 }
 
-/**
- * Get the approved attribute of the contact
- *
- * @brief Contact::getApproved
+/*!
+ * \brief The Contact::getApproved method return the approved attribute of the contact
  * @return bool
  */
 bool Contact::getApproved()
@@ -72,10 +66,8 @@ bool Contact::getApproved()
     return m_approved;
 }
 
-/**
- * Get the ask attribute of the contact
- *
- * @brief Contact::getAsk
+/*!
+ * \brief The Contact::getAsk method return the ask attribute of the contact
  * @return QString
  */
 QString Contact::getAsk()
@@ -83,10 +75,8 @@ QString Contact::getAsk()
     return m_ask;
 }
 
-/**
- * Get the jid of the contact
- *
- * @brief Contact::getJid
+/*!
+ * \brief The Contact::getJid method return the jid of the contact
  * @return QString
  */
 QString Contact::getJid()
@@ -94,10 +84,8 @@ QString Contact::getJid()
     return m_jid;
 }
 
-/**
- * Get the name of the contact
- *
- * @brief Contact::getName
+/*!
+ * \brief The Contact::getName method return the name of the contact
  * @return QString
  */
 QString Contact::getName()
@@ -105,10 +93,8 @@ QString Contact::getName()
     return m_name;
 }
 
-/**
- * Get the subscription attribute of the contact
- *
- * @brief Contact::getSubscription
+/*!
+ * \brief The Contact::getSubscription method return the subscription attribute of the contact
  * @return QString
  */
 QString Contact::getSubscription()
@@ -116,98 +102,80 @@ QString Contact::getSubscription()
     return m_subscription;
 }
 
-/**
- * Set the version attribute of the contact
- *
- * @brief Contact::setVersion
- * @param version
+/*!
+ * \brief The Contact::setVersion method set the version attribute of the contact
+ * \param version
  */
 void Contact::setVersion(QString version)
 {
     m_version = version;
 }
 
-/**
- * Set the approved attribute of the contact
- *
- * @brief Contact::setApproved
- * @param approved
+/*!
+ * \brief The Contact::setApproved method set the approved attribute of the contact
+ * \param approved
  */
 void Contact::setApproved(bool approved)
 {
     m_approved = approved;
 }
 
-/**
- * Set the ask attribute of the contact
- *
- * @brief Contact::setAsk
- * @param ask
+/*!
+ * \brief The Contact::setAsk method set the ask attribute of the contact
+ * \param ask
  */
 void Contact::setAsk(QString ask)
 {
     m_ask = ask;
 }
 
-/**
- * Set the jid of the contact
- *
- * @brief Contact::setJid
- * @param jid
+/*!
+ * \brief The Contact::setJid method set the jid of the contact
+ * \param jid
  */
 void Contact::setJid(QString jid)
 {
     m_jid = jid;
 }
 
-/**
- * Set the name of the contact
- *
- * @brief Contact::setName
- * @param name
+/*!
+ * \brief The Contact::setName method set the name of the contact
+ * \param name
  */
 void Contact::setName(QString name)
 {
     m_name = name;
 }
 
-/**
- * Set the subscription of the contact
- *
- * @brief Contact::setSubscription
- * @param subscription
+/*!
+ * \brief The Contact::setSubscription method set the subscription of the contact
+ * \param subscription
  */
 void Contact::setSubscription(QString subscription)
 {
     m_subscription = subscription;
 }
 
-/**
- * Set the groups of the contact
- *
- * @brief Contact::setGroups
- * @param groups
+/*!
+ * \brief The Contact::setGroups method set the groups of the contact
+ * \param groups
  */
 void Contact::setGroups(QSet<QString> groups)
 {
     m_groupList = groups;
 }
 
-/**
- * Add group to group list of the contact
- *
- * @brief Contact::addGroup
- * @param group
+/*!
+ * \brief The Contact::addGroup method add group to group list of the contact
+ * \param group
  */
 void Contact::addGroup(QString group)
 {
     m_groupList << group;
 }
 
-/**
- * Get the group list of the contact
- *
- * @brief Contact::getGroups
+/*!
+ * \brief The Contact::getGroups method return the group list of the contact
  * @return QSet<String>
  */
 QSet<QString> Contact::getGroups()
@@ -215,10 +183,8 @@ QSet<QString> Contact::getGroups()
     return m_groupList;
 }
 
-/**
- * Return the json representation of this Contact
- *
- * @brief Contact::toJsonObject
+/*!
+ * \brief The Contact::toJsonObject method return the json representation of this Contact
  * @return QJsonObject
  */
 QJsonObject Contact::toJsonObject()
@@ -235,11 +201,9 @@ QJsonObject Contact::toJsonObject()
     return jsonObject;
 }
 
-/**
- * Return the Contact representation from a json object
- *
- * @brief Contact::fromJsonObject
- * @param jsonObject
+/*!
+ * \brief The Contact::fromJsonObject method return the Contact object from a json object
+ * \param jsonObject
  * @return Contact
  */
 Contact Contact::fromJsonObject(QJsonObject jsonObject)
@@ -256,11 +220,9 @@ Contact Contact::fromJsonObject(QJsonObject jsonObject)
     return contact;
 }
 
-/**
- * Display a contact in a stream
- *
- * @brief Contact::display
- * @param flux
+/*!
+ * \brief The Contact::display method display a contact in a stream
+ * \param flux
  */
 void Contact::display(ostream &flux)
 {

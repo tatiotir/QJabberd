@@ -14,7 +14,7 @@ class PrivateStorageManager : public QObject
 public:
     explicit PrivateStorageManager(StorageManager *storageManager = 0);
 
-    QByteArray privateStorageManagerReply(QByteArray iqXML, QString from);
+    QByteArray privateStorageManagerReply(QDomDocument document, QString from);
     QByteArray privateStorageManagerResult(QByteArray data, QString id);
     QByteArray privateStorageManagerResult(QList<MetaContact> metacontactList, QString id);
 

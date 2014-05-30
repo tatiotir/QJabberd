@@ -5,11 +5,10 @@
 #include <QtXml/QtXml>
 #include <QDebug>
 #include <QtNetwork/QtNetwork>
-#include "PresenceManager.h"
-#include "StreamNegotiationManager.h"
 #include "MessageManager.h"
-#include "OfflineMessageManager.h"
 #include "IqManager.h"
+#include "PresenceManager.h"
+#include "BlockingCommandManager.h"
 #include "Connection.h"
 
 class Stream : public QThread
@@ -29,9 +28,10 @@ class Stream : public QThread
 public:
     explicit Stream(QObject *parent = 0, QString streamId = QString(),
                     Connection *connection = 0,
-                    IQManager *iqManager = 0, PresenceManager *presenceManager = 0,
+                    IqManager *iqManager = 0, PresenceManager *presenceManager = 0,
                     MessageManager *messageManager = 0,
-                    RosterManager *rosterManager = 0, StreamNegotiationManager *streamNegotiationManager = 0);
+                    RosterManager *rosterManager = 0, StreamNegotiationManager *streamNegotiationManager = 0,
+                    BlockingCommandManager *blockingCmdManager = 0);
 
 private slots:
     void dataReceived();
@@ -44,10 +44,11 @@ public slots:
     void streamReply(QByteArray answer);
     void bindFeatureNegotiated(QString fullJid);
     void setHost(QString host);
+    Connection* getConnection();
 
 signals:
     void sigOfflineUser(QString jid);
-    void sigBindFeatureNegotiated(QString fullJid, Connection *connection);
+    void sigBindFeatureNegotiated(QString fullJid, Stream *stream);
     void sigPresenceBroadCast(QString jid, QByteArray data);
     void sigPresenceUnavailableBroadCast(QString to, QString from);
     void sigEnableStreamManagement(QString fullJid, QString smId);
@@ -62,13 +63,14 @@ protected:
     void run();
 
 private:
-    void requestTreatment(QByteArray xmlRequest);
+    void requestTreatment(QDomDocument document);
 
-    IQManager *m_iqManager;
+    IqManager *m_iqManager;
     PresenceManager *m_presenceManager;
     MessageManager *m_messageManager;
     RosterManager *m_rosterManager;
     StreamNegotiationManager *m_streamNegotiationManager;
+    BlockingCommandManager *m_blockingCmdManager;
 
     Connection *m_connection;
     QByteArray m_xmlPaquet;

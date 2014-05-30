@@ -5,19 +5,14 @@ EntityTimeManager::EntityTimeManager()
 
 }
 
-/**
- * Reply to an entity time request from a user.
- *
- * @brief EntityTimeManager::entityTimeManagerReply
- * @param iqXML
- * @param iqFrom
- * @return QByteArray
+/*!
+ * \brief The EntityTimeManager::entityTimeManagerReply method reply to an entity time request from a user.
+ * \param iqXML
+ * \param iqFrom
+ * \return QByteArray
  */
-QByteArray EntityTimeManager::entityTimeManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray EntityTimeManager::entityTimeManagerReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QString to = document.documentElement().attribute("to");
     QString id = document.documentElement().attribute("id");
 
@@ -38,16 +33,14 @@ QByteArray EntityTimeManager::entityTimeManagerReply(QByteArray iqXML, QString i
     return QByteArray();
 }
 
-/**
- * Generate the appropriate result according to the XEP entity time
- *
- * @brief EntityTimeManager::entityTimeMananerResult
- * @param from
- * @param to
- * @param id
- * @param tzo
- * @param utc
- * @return QByteArray
+/*!
+ * \brief The EntityTimeManager::entityTimeMananerResult method generate the appropriate result according to the XEP entity time
+ * \param from
+ * \param to
+ * \param id
+ * \param tzo
+ * \param utc
+ * \return QByteArray
  */
 QByteArray EntityTimeManager::entityTimeMananerResult(QString from, QString to, QString id,
                                                       QString tzo, QString utc)

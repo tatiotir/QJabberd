@@ -7,11 +7,8 @@ ServiceDiscoveryManager::ServiceDiscoveryManager(QMap<QString, QVariant> *server
     m_userManager = userManager;
 }
 
-QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QDomElement iq = document.documentElement();
     QString to = iq.attribute("to");
     QString from = iq.attribute("from", iqFrom);
@@ -160,29 +157,29 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             query.appendChild(feature12);
         }
 
-//        if (m_serverConfigMap->value("modules").toMap().value("si").toBool())
-//        {
-//            QDomElement feature13 = document.createElement("feature");
-//            feature13.setAttribute("var", "http://jabber.org/protocol/si");
+        if (m_serverConfigMap->value("modules").toMap().value("si").toBool())
+        {
+            QDomElement feature13 = document.createElement("feature");
+            feature13.setAttribute("var", "http://jabber.org/protocol/si");
 
-//            query.appendChild(feature13);
-//        }
+            query.appendChild(feature13);
+        }
 
-//        if (m_serverConfigMap->value("modules").toMap().value("file-transfert").toBool())
-//        {
-//            QDomElement feature14 = document.createElement("feature");
-//            feature14.setAttribute("var", "http://jabber.org/protocol/file-transfert");
+        if (m_serverConfigMap->value("modules").toMap().value("file-transfert").toBool())
+        {
+            QDomElement feature14 = document.createElement("feature");
+            feature14.setAttribute("var", "http://jabber.org/protocol/file-transfert");
 
-//            query.appendChild(feature14);
-//        }
+            query.appendChild(feature14);
+        }
 
-//        if (m_serverConfigMap->value("modules").toMap().value("ibb").toBool())
-//        {
-//            QDomElement feature13 = document.createElement("feature");
-//            feature13.setAttribute("var", "http://jabber.org/protocol/ibb");
+        if (m_serverConfigMap->value("modules").toMap().value("ibb").toBool())
+        {
+            QDomElement feature13 = document.createElement("feature");
+            feature13.setAttribute("var", "http://jabber.org/protocol/ibb");
 
-//            query.appendChild(feature13);
-//        }
+            query.appendChild(feature13);
+        }
 
         if (m_serverConfigMap->value("modules").toMap().value("oob").toBool())
         {
@@ -190,6 +187,22 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             feature14.setAttribute("var", "http://jabber.org/protocol/oob");
 
             query.appendChild(feature14);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("privacy").toBool())
+        {
+            QDomElement feature15 = document.createElement("feature");
+            feature15.setAttribute("var", "jabber:iq:privacy");
+
+            query.appendChild(feature15);
+        }
+
+        if (m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        {
+            QDomElement feature16 = document.createElement("feature");
+            feature16.setAttribute("var", "urn:xmpp:blocking");
+
+            query.appendChild(feature16);
         }
 
         iq.appendChild(query);

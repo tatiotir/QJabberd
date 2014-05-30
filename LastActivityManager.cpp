@@ -1,12 +1,10 @@
 #include "LastActivityManager.h"
 
-/**
- * Constructor of the last activity manager
- *
- * @brief LastActivityManager::LastActivityManager
- * @param userManager
- * @param rosterManager
- * @param storageManager
+/*!
+ * \brief LastActivityManager::LastActivityManager constructor of the last activity manager
+ * \param userManager
+ * \param rosterManager
+ * \param storageManager
  */
 LastActivityManager::LastActivityManager(UserManager *userManager, RosterManager *rosterManager,
                                          StorageManager *storageManager)
@@ -16,19 +14,14 @@ LastActivityManager::LastActivityManager(UserManager *userManager, RosterManager
     m_storageManager = storageManager;
 }
 
-/**
- * Return reply from an last activity query
- *
- * @brief LastActivityManager::lastActivityReply
- * @param iqXML
- * @param iqFrom
- * @return QByteArray
+/*!
+ * \brief The LastActivityManager::lastActivityReply method eturn response from last activity query
+ * \param iqXML
+ * \param iqFrom
+ * \return QByteArray
  */
-QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFrom)
+QByteArray LastActivityManager::lastActivityReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QString from = document.documentElement().attribute("from", iqFrom);
     QString to = document.documentElement().attribute("to");
     QString id = document.documentElement().attribute("id", Utils::generateId());
@@ -83,16 +76,14 @@ QByteArray LastActivityManager::lastActivityReply(QByteArray iqXML, QString iqFr
     }
 }
 
-/**
- * Return last activity result from iq request
- *
- * @brief LastActivityManager::lastActivityQueryResult
- * @param from
- * @param to
- * @param id
- * @param seconds
- * @param lastStatus
- * @return QByteArray
+/*!
+ * \brief The LastActivityManager::lastActivityQueryResult method return last activity result from iq request
+ * \param from
+ * \param to
+ * \param id
+ * \param seconds
+ * \param lastStatus
+ * \return QByteArray
  */
 QByteArray LastActivityManager::lastActivityQueryResult(QString from, QString to, QString id, int seconds, QString lastStatus)
 {
@@ -119,48 +110,40 @@ QByteArray LastActivityManager::lastActivityQueryResult(QString from, QString to
     return document.toByteArray();
 }
 
-/**
- * Get the last logout for a user
- *
- * @brief LastActivityManager::getLastLogoutTime
- * @param jid
- * @return QString
+/*!
+ * \brief The LastActivityManager::getLastLogoutTime method get the last user logout time
+ * \param jid
+ * \return QString
  */
 QString LastActivityManager::getLastLogoutTime(QString jid)
 {
     return m_storageManager->getStorage()->getLastLogoutTime(jid);
 }
 
-/**
- * Set the last logout time from a user
- *
- *  @brief LastActivityManager::setLastLogoutTime
- * @param jid
- * @param lastLogoutTime
+/*!
+ * \brief The LastActivityManager::setLastLogoutTime method set the last user logout time
+ * \param jid
+ * \param lastLogoutTime
  */
 void LastActivityManager::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
     m_storageManager->getStorage()->setLastLogoutTime(jid, lastLogoutTime);
 }
 
-/**
- * Get the last status for an user
- *
- * @brief LastActivityManager::getLastStatus
- * @param jid
- * @return QString
+/*!
+ * \brief The LastActivityManager::getLastStatus method get the last user status
+ * \param jid
+ * \return QString
  */
 QString LastActivityManager::getLastStatus(QString jid)
 {
     return m_storageManager->getStorage()->getLastStatus(jid);
 }
 
-/**
- * Set the last status for an user
- *
- * @brief LastActivityManager::setLastStatus
- * @param jid
- * @param status
+/*!
+ * \brief The LastActivityManager::setLastStatus method set the last user status
+ * \param jid
+ * \param status
  */
 void LastActivityManager::setLastStatus(QString jid, QString status)
 {

@@ -5,11 +5,8 @@ PrivateStorageManager::PrivateStorageManager(StorageManager *storageManager)
     m_storageManager = storageManager;
 }
 
-QByteArray PrivateStorageManager::privateStorageManagerReply(QByteArray iqXML, QString from)
+QByteArray PrivateStorageManager::privateStorageManagerReply(QDomDocument document, QString from)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QDomElement iq = document.documentElement();
     QString id = document.documentElement().attribute("id");
     QString iqType = document.documentElement().attribute("type");

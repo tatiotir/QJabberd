@@ -1,5 +1,12 @@
 #include "PresenceManager.h"
 
+/*!
+ * \brief PresenceManager::PresenceManager PresenceManager constructor
+ * \param usermanager
+ * \param rosterManager
+ * \param lastActivityManager
+ * \param privateListManager
+ */
 PresenceManager::PresenceManager(UserManager *usermanager, RosterManager *rosterManager,
                                  LastActivityManager *lastActivityManager,
                                  PrivacyListManager *privateListManager)
@@ -11,11 +18,14 @@ PresenceManager::PresenceManager(UserManager *usermanager, RosterManager *roster
     m_clientSendFirstPresence = false;
 }
 
-QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presenceFrom)
+/*!
+ * \brief The PresenceManager::parsePresence method parse presence stanza and output a response in a byte array
+ * \param presenceXML
+ * \param presenceFrom
+ * \return QByteArray
+ */
+QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenceFrom)
 {
-    QDomDocument document;
-    document.setContent(presenceXML);
-
     QDomElement presence = document.documentElement();
     QString presenceType = presence.attribute("type", "");
     QString from = Utils::getBareJid(presence.attribute("from", presenceFrom));
@@ -33,7 +43,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
                 presence.setAttribute("from", from);
 
                 // Locally deliver the presence stanza
-                emit sigPresenceBroadCast(to, document.toByteArray());
+                emit sigPresenceBroadCast(to, document);
 
                 m_rosterManager->updateAskAttributeToContact(from, to, "subscribe");
 
@@ -67,7 +77,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
             presence.setAttribute("from", from);
 
             // Locally deliver the presence stanza
-            emit sigPresenceBroadCast(to, document.toByteArray());
+            emit sigPresenceBroadCast(to, document);
 
             // Refresh user contact
             userContact = m_rosterManager->getContact(from, to);
@@ -103,7 +113,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
                 presence.setAttribute("from", from);
 
                 // Locally deliver the presence stanza
-                emit sigPresenceBroadCast(to, document.toByteArray());
+                emit sigPresenceBroadCast(to, document);
 
                 m_rosterManager->updateAskAttributeToContact(from, to, "");
                 m_rosterManager->updateSubscriptionToContact(from, to, "from");
@@ -169,7 +179,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
                 presence.setAttribute("from", from);
 
                 // Locally deliver the presence stanza
-                emit sigPresenceBroadCast(to, document.toByteArray());
+                emit sigPresenceBroadCast(to, document);
 
                 // Send presence of type unavailable to the user
                 emit sigPresenceUnavailableBroadCast(to, from);
@@ -199,9 +209,6 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
     }
     else if (presenceType.isEmpty() && to.isEmpty())
     {
-        QDomDocument document;
-        document.setContent(presenceXML);
-
         QString priority = presence.elementsByTagName("priority").item(0).toElement().text();
         emit sigPresencePriority(presenceFrom, priority.toInt());
 
@@ -213,7 +220,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
             {
                 document.documentElement().setAttribute("from", presenceFrom);
                 document.documentElement().setAttribute("to", contact.getJid());
-                emit sigPresenceBroadCast(contact.getJid(), document.toByteArray());
+                emit sigPresenceBroadCast(contact.getJid(), document);
             }
             if ((contact.getSubscription() == "to") || (contact.getSubscription() == "both"))
             {
@@ -225,7 +232,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
 
         document.documentElement().setAttribute("from", presenceFrom);
         document.documentElement().setAttribute("to", Utils::getBareJid(from));
-        emit sigPresenceBroadCast(Utils::getBareJid(from), document.toByteArray());
+        emit sigPresenceBroadCast(Utils::getBareJid(from), document);
     }
     else if ((presenceType == "unavailable") && to.isEmpty())
     {
@@ -239,7 +246,7 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
             {
                 document.documentElement().setAttribute("from", presenceFrom);
                 document.documentElement().setAttribute("to", contact.getJid());
-                emit sigPresenceBroadCast(contact.getJid(), document.toByteArray());
+                emit sigPresenceBroadCast(contact.getJid(), document);
             }
         }
         m_lastActivityManager->setLastStatus(from, presence.elementsByTagName("status").item(0).toElement().text());
@@ -258,7 +265,115 @@ QByteArray PresenceManager::parsePresence(QByteArray presenceXML, QString presen
     return QByteArray();
 }
 
+void PresenceManager::presenceBroadcast(QString to, QDomDocument document)
+{
+    emit sigPresenceBroadCast(to, document);
+}
+
+void PresenceManager::presenceUnavailableBroadcast(QString to, QString from)
+{
+    emit sigPresenceUnavailableBroadCast(to, from);
+}
+
+/*!
+ * \brief The PresenceManager::deleteOfflinePresenceSubscribe method delete offline presence subscription of type "subscribe" using the key (from, to)
+ * \param from
+ * \param to
+ */
 void PresenceManager::deleteOfflinePresenceSubscribe(QString from, QString to)
 {
     m_userManager->getStorageManager()->getStorage()->deleteOfflinePresenceSubscribe(from, to);
+}
+
+QDomDocument PresenceManager::generatePresence(QString type, QString from, QString to, QString id, QString show,
+                                   QString priority, QMultiHash<QString, QString> status)
+{
+    QDomDocument document;
+
+    QDomElement presence = document.createElement("presence");
+
+    if (!type.isEmpty())
+        presence.setAttribute("type", type);
+
+    if (!from.isEmpty())
+        presence.setAttribute("from", from);
+
+    if (!to.isEmpty())
+        presence.setAttribute("to", to);
+
+    if (!id.isEmpty())
+        presence.setAttribute("id", id);
+
+    if (!show.isEmpty())
+    {
+        QDomElement showNode = document.createElement("show");
+        showNode.appendChild(document.createTextNode(show));
+        presence.appendChild(showNode);
+    }
+
+    if (!priority.isEmpty())
+    {
+        QDomElement priorityNode = document.createElement("priority");
+        priorityNode.appendChild(document.createTextNode(priority));
+        presence.appendChild(priorityNode);
+    }
+
+    if (!status.isEmpty())
+    {
+        QList<QString> keys = status.keys();
+        for (int i = 0, c = keys.count(); i < c; ++i)
+        {
+            QDomElement statusNode = document.createElement("status");
+            statusNode.setAttribute("xml:lang", status.value(keys.value(i)));
+            statusNode.appendChild(document.createTextNode(status.value(keys.value(i))));
+            presence.appendChild(statusNode);
+        }
+    }
+
+    document.appendChild(presence);
+    return document;
+}
+
+QDomDocument PresenceManager::generatePresence(QString type, QString from, QString to, QString id, QString show,
+                                   QString priority, QString status)
+{
+    QDomDocument document;
+
+    QDomElement presence = document.createElement("presence");
+
+    if (!type.isEmpty())
+        presence.setAttribute("type", type);
+
+    if (!from.isEmpty())
+        presence.setAttribute("from", from);
+
+    if (!to.isEmpty())
+        presence.setAttribute("to", to);
+
+    if (!id.isEmpty())
+        presence.setAttribute("id", id);
+
+    if (!show.isEmpty())
+    {
+        QDomElement showNode = document.createElement("show");
+        showNode.appendChild(document.createTextNode(show));
+        presence.appendChild(showNode);
+    }
+
+    if (!priority.isEmpty())
+    {
+        QDomElement priorityNode = document.createElement("priority");
+        priorityNode.appendChild(document.createTextNode(priority));
+        presence.appendChild(priorityNode);
+    }
+
+    if (!status.isEmpty())
+    {
+        QDomElement statusNode = document.createElement("status");
+        statusNode.appendChild(document.createTextNode(status));
+        presence.appendChild(statusNode);
+    }
+
+    document.appendChild(presence);
+    return document;
 }

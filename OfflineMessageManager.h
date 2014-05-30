@@ -12,7 +12,7 @@ class OfflineMessageManager : public QObject
 public:
     explicit OfflineMessageManager(StorageManager *storageManager = 0);
 
-    QByteArray offlineMessageManagerReply(QByteArray iqXML, QString iqFrom);
+    QByteArray offlineMessageManagerReply(QDomDocument document, QString iqFrom);
     QByteArray offlineMessageManagerResult(QString to, QString id, QByteArray messageList);
 
 signals:

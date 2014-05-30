@@ -33,7 +33,8 @@ SOURCES += \
     MysqlStorage.cpp \
     InbandByteStreamsManager.cpp \
     OobDataManager.cpp \
-    PgSqlStorage.cpp
+    PgSqlStorage.cpp \
+    BlockingCommandManager.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -69,6 +70,7 @@ HEADERS += \
     MySqlStorage.h \
     InbandByteStreamsManager.h \
     OobDataManager.h \
-    PgSqlStorage.h
+    PgSqlStorage.h \
+    BlockingCommandManager.h
 
 QT += xml network widgets sql

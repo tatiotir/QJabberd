@@ -19,9 +19,10 @@ public slots:
 
 
 signals:
-    void sigNewConnection(Connection *connection, IQManager *iqManager,
+    void sigNewConnection(Connection *connection, IqManager *iqManager,
                           PresenceManager *presenceManager, MessageManager *messageManager,
-                          RosterManager *rosterManager, StreamNegotiationManager *streamNegotiationManager);
+                          RosterManager *rosterManager, StreamNegotiationManager *streamNegotiationManager,
+                          BlockingCommandManager *blockingCmdManager);
 
 protected:
     void incomingConnection(qintptr socketDescriptor);
@@ -32,7 +33,7 @@ private:
     StreamManager *m_streamManager;
     UserManager *m_userManager;
     OfflineMessageManager *m_offlineMessageManager;
-    IQManager *m_iqManager;
+    IqManager *m_iqManager;
     PrivateStorageManager *m_privateStorageManager;
     PresenceManager *m_presenceManager;
     MessageManager *m_messageManager;
@@ -45,6 +46,7 @@ private:
     StreamNegotiationManager *m_streamNegotiationManager;
     StorageManager *m_storageManager;
     OobDataManager *m_oobDataManager;
+    BlockingCommandManager *m_blockingCmdManager;
     QMap<QString, QVariant> *m_serverConfigMap;
 };
 

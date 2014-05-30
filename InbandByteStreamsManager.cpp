@@ -4,7 +4,7 @@ InbandByteStreamsManager::InbandByteStreamsManager()
 {
 }
 
-QByteArray InbandByteStreamsManager::inbandByteStreamsManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray InbandByteStreamsManager::inbandByteStreamsManagerReply(QDomDocument document, QString iqFrom)
 {
 
 }

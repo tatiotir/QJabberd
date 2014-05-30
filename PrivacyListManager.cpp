@@ -5,11 +5,8 @@ PrivacyListManager::PrivacyListManager(StorageManager *storageManager)
     m_storageManager =  storageManager;
 }
 
-QByteArray PrivacyListManager::privacyListReply(QByteArray iqXML, QString iqFrom)
+QByteArray PrivacyListManager::privacyListReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QDomElement iq = document.documentElement();
     QString from = iq.attribute("from", iqFrom);
     QString to = iq.attribute("to");

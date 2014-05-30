@@ -18,16 +18,16 @@ public:
     StreamNegotiationManager(QMap<QString, QVariant> *serverConfigMap = 0, UserManager *userManager = 0);
 
 public slots:
-    QByteArray reply(QByteArray clientXML, QString streamId);
+    QByteArray reply(QDomDocument document, QString streamId);
     QByteArray firstFeatures();
     QByteArray secondFeatures();
     QByteArray bindFeature();
     bool secondFeatureProceed(QString streamId);
     bool firstFeatureProceed(QString streamId);
     bool bindFeatureProceed(QString streamId);
-    QByteArray generateFirstStreamReply(QByteArray clientXml, QString streamId);
+    QByteArray generateFirstStreamReply(QDomDocument document, QString streamId);
     QByteArray generateStartTlsReply();
-    QByteArray generateFirstChallengeReply(QByteArray clientXml, QString streamId);
+    QByteArray generateFirstChallengeReply(QDomDocument document, QString streamId);
     QByteArray generateSecondChallengeReply(QString streamId);
     QByteArray generateSaslSuccessReply(QString streamId);
     void firstNegotiationSuccess(QString streamId);

@@ -353,6 +353,17 @@ QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacy
 
 bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
+    if (privacyListName == "default")
+    {
+        /* Map the default privacy list to the block list */
+        QList<QString> blocklist;
+        foreach (PrivacyListItem item, items)
+        {
+            blocklist << item.getValue();
+        }
+        addUserBlockListItems(jid, blocklist);
+    }
+
     QString privacyListDirPath = "privacyList/";
     QDir dir(privacyListDirPath);
     if (!dir.exists())
@@ -386,6 +397,17 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
 
 bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
+    if (privacyListName == "default")
+    {
+        /* Map the block list to the default privacy list */
+        QList<QString> blocklist;
+        foreach (PrivacyListItem item, getPrivacyList(jid, privacyListName))
+        {
+            blocklist << item.getValue();
+        }
+        deleteUserBlockListItems(jid, blocklist);
+    }
+
     QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
     QFile privacyListFile(filename);
 
@@ -1000,6 +1022,92 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     quint64 ok = subscribeFile.write(document.toJson());
     subscribeFile.close();
     return (true ? (ok >= 0) : false);
+}
+
+QList<QString> LocalStorage::getUserBlockList(QString jid)
+{
+    QString filename = "blocklist/" + jid.replace("@", "_");
+
+    QFile blocklistFile(filename);
+    if (!blocklistFile.open(QIODevice::ReadOnly))
+        return QList<QString>();
+
+    QJsonArray array = QJsonDocument::fromJson(blocklistFile.readAll()).object().value("blocklist").toArray();
+    QList<QString> blocklist;
+
+    for (int i = 0; i < array.count(); ++i)
+        blocklist << array[i].toString();
+    return blocklist;
+}
+
+bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
+{
+    /* Map the block list to the default privacy list */
+    QList<PrivacyListItem> privacyListItems;
+    foreach (QString item, items)
+    {
+        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+    }
+    addItemsToPrivacyList(jid, "default", privacyListItems);
+
+
+    QString filename = "blocklist/" + jid.replace("@", "_");
+
+    QFile blocklistFile(filename);
+    if (!blocklistFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonObject object = document.object();
+
+    QJsonArray blocklistArray = object.value("blocklist").toArray();
+
+    foreach (QString item, items)
+    {
+        blocklistArray.append(item);
+    }
+
+    object.insert("blocklist", blocklistArray);
+    document.setObject(object);
+
+    blocklistFile.resize(0);
+    quint64 ok = blocklistFile.write(document.toJson());
+    blocklistFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
+{
+    QString filename = "blocklist/" + jid.replace("@", "_");
+
+    QFile blocklistFile(filename);
+    if (!blocklistFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonObject object = document.object();
+
+    QStringList blocklist = object.value("blocklist").toVariant().toStringList();
+
+    foreach (QString item, items)
+    {
+        blocklist.removeOne(item);
+    }
+
+    object.insert("blocklist", QJsonArray::fromStringList(blocklist));
+    document.setObject(object);
+
+    blocklistFile.resize(0);
+    quint64 ok = blocklistFile.write(document.toJson());
+    blocklistFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::emptyUserBlockList(QString jid)
+{
+    QString filename = "blocklist/" + jid.replace("@", "_");
+    QFile file;
+    return file.remove(filename);
 }
 
 //void LocalStorage::getChatRoomList(QString room)

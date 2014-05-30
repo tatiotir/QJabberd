@@ -12,7 +12,7 @@ class InbandByteStreamsManager : public QObject
 public:
     InbandByteStreamsManager();
 
-    QByteArray inbandByteStreamsManagerReply(QByteArray iqXML, QString iqFrom);
+    QByteArray inbandByteStreamsManagerReply(QDomDocument document, QString iqFrom);
 
 signals:
     void inbandByteStreamRequest(QString to, QByteArray data);

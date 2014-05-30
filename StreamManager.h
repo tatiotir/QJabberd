@@ -13,9 +13,10 @@ public:
                   LastActivityManager *lastActivityManager = 0);
 
 public slots:
-    void newConnection(Connection *connection, IQManager *iqManager,
+    void newConnection(Connection *connection, IqManager *iqManager,
                        PresenceManager *presenceManager, MessageManager *messageManager,
-                       RosterManager *rosterManager, StreamNegotiationManager *streamNegotiationManager = 0);
+                       RosterManager *rosterManager, StreamNegotiationManager *streamNegotiationManager,
+                       BlockingCommandManager *blockingCmdManager);
     void resourceBindingReply(QString streamId, QString fullJid, QString id);
     void streamNegotiationError(QString streamId);
     void nonSaslAuthentification(QString streamId, QString fullJid, QString id);
@@ -28,14 +29,14 @@ public slots:
     void sendOfflineMessage(QString to);
     void sendReceiptRequest(QString to, QByteArray data);
     void slotSendReceiptRequest(QString to, QByteArray data);
-    void saveStream(QString fullJid, Connection *connection);
+    void saveStream(QString fullJid, Stream *stream);
     void streamHost(QString streamId, QString host);
-    void rosterPush(QString to, QByteArray data);
-    void presenceBroadCast(QString to, QByteArray data);
+    void rosterPush(QString to, QDomDocument document);
+    void presenceBroadCast(QString to, QDomDocument document);
     void presenceBroadCastFromContact(QString to, QString contactJid);
     void presenceProbeReply(QString to, QString from, bool directedPresenceProbe);
     void presenceProbeToContact(QString to, QString from, bool directedPresenceProbe);
-    void sendMessage(QString to, QByteArray message);
+    void sendMessage(QString to, QDomDocument document);
     void presencePriority(QString fullJid, int priority);
     void defaultListNameSetReply(QString jid, QString to, QString defaultListName, QString id);
     void sendUndeliveredPresence(QString to);
@@ -53,6 +54,8 @@ public slots:
     void resumeStream(Connection *connection, QString prevId, int h);
     void clientServiceDiscoveryQuery(QString to, QByteArray request);
     void oobRequest(QString to, QByteArray request);
+    void blockPush(QString to, QList<QString> items);
+    void unblockPush(QString to, QList<QString> items);
 
 
 signals:

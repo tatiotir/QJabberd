@@ -3,6 +3,11 @@
 
 #include <QSslSocket>
 
+/*!
+ * \class Connection
+ *
+ * \brief The Connection class represent the client connection. It subclass the QSslSocket class.
+ */
 class Connection : public QSslSocket
 {
     Q_OBJECT

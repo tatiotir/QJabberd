@@ -12,7 +12,7 @@ class OobDataManager : public QObject
 public:
     OobDataManager();
 
-    QByteArray oobDataManagerReply(QByteArray iqXML, QString iqFrom);
+    QByteArray oobDataManagerReply(QDomDocument document, QString iqFrom);
 
 signals:
     void sigOobRequest(QString to, QByteArray request);

@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
+#include <QtSql/QSqlDriver>
 
 class PgSqlStorage : public Storage
 {
@@ -55,6 +56,11 @@ public:
     QList<QVariant> getOfflinePresenceSubscription(QString jid);
     bool saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence, QString presenceType);
     bool deleteOfflinePresenceSubscribe(QString from, QString to);
+
+    QList<QString> getUserBlockList(QString jid);
+    bool addUserBlockListItems(QString jid, QList<QString> items);
+    bool deleteUserBlockListItems(QString jid, QList<QString> items);
+    bool emptyUserBlockList(QString jid);
     //QMultiHash<QString, QString> getChatRoomList(QString room);
 
 private:

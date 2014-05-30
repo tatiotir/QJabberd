@@ -13,12 +13,12 @@ class MessageManager : public QObject
     Q_OBJECT
 public:
     MessageManager(UserManager *userManager = 0, PrivacyListManager *privacyListManager = 0);
-    QByteArray parseMessage(QByteArray messageXML, QString messageFrom);
+    QByteArray parseMessage(QDomDocument document, QString messageFrom);
 
 public slots:
 
 signals:
-    void sigNewChatMessage(QString to, QByteArray message);
+    void sigNewChatMessage(QString to, QDomDocument document);
 
 private:
     UserManager *m_userManager;

@@ -69,6 +69,10 @@ public:
     virtual bool storePrivateData(QString jid, QList<MetaContact> metaContactList) = 0;
     virtual QByteArray getPrivateData(QString jid, QString node) = 0;
     virtual QList<MetaContact> getPrivateData(QString jid) = 0;
+    virtual QList<QString> getUserBlockList(QString jid) = 0;
+    virtual bool deleteUserBlockListItems(QString jid, QList<QString> items) = 0;
+    virtual bool emptyUserBlockList(QString jid) = 0;
+    virtual bool addUserBlockListItems(QString jid, QList<QString> items) = 0;
     //virtual QMultiHash<QString, QString> getChatRoomList(QString room) = 0;
 };
 

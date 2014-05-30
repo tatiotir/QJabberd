@@ -25,7 +25,7 @@ QString MySqlStorage::getStorageType()
 int MySqlStorage::getUserId(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT id FROM user WHERE jid = :jid");
+    query.prepare("SELECT id FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
     if (query.first())
@@ -41,7 +41,7 @@ int MySqlStorage::getUserId(QString jid)
 QString MySqlStorage::getPassword(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT password FROM user WHERE jid = :jid");
+    query.prepare("SELECT password FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -52,7 +52,7 @@ QString MySqlStorage::getPassword(QString jid)
 bool MySqlStorage::changePassword(QString jid, QString newPassword)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET password = :password WHERE jid = :jid");
+    query.prepare("UPDATE users SET password = :password WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":password", newPassword);
     return query.exec();
@@ -70,7 +70,7 @@ bool MySqlStorage::createUser(QString jid, QString password)
 bool MySqlStorage::deleteUser(QString jid)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM user WHERE jid = :jid");
+    query.prepare("DELETE FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     return query.exec();
 }
@@ -109,7 +109,7 @@ bool MySqlStorage::addContactToRoster(QString jid, Contact contact)
 
         QSqlQuery query;
         query.prepare("INSERT INTO contact(user_id, approved, ask, groups, jid, name, subscription, version)"
-                      "VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
+                      " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":version", contact.getVersion());
         query.bindValue(":approved", contact.getApproved());
@@ -289,6 +289,17 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacy
 
 bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
+    if (privacyListName == "default")
+    {
+        /* Map the default privacy list to the block list */
+        QList<QString> blocklist;
+        foreach (PrivacyListItem item, items)
+        {
+            blocklist << item.getValue();
+        }
+        addUserBlockListItems(jid, blocklist);
+    }
+
     m_database.transaction();
 
     QJsonDocument document;
@@ -314,6 +325,17 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
 
 bool MySqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
+    if (privacyListName == "default")
+    {
+        /* Map the block list to the default privacy list */
+        QList<QString> blocklist;
+        foreach (PrivacyListItem item, getPrivacyList(jid, privacyListName))
+        {
+            blocklist << item.getValue();
+        }
+        deleteUserBlockListItems(jid, blocklist);
+    }
+
     QSqlQuery query;
     query.prepare("DELETE FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
     query.bindValue(":user_id", getUserId(jid));
@@ -324,7 +346,7 @@ bool MySqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 QString MySqlStorage::getVCard(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -338,7 +360,7 @@ QString MySqlStorage::getVCard(QString jid)
 bool MySqlStorage::updateVCard(QString jid, QString vCardInfos)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET vcard = :vcard WHERE jid = :jid");
+    query.prepare("UPDATE users SET vcard = :vcard WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":vcard", vCardInfos);
     return query.exec();
@@ -351,7 +373,7 @@ bool MySqlStorage::vCardExist(QString jid)
         return false;
 
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM user WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -364,7 +386,7 @@ bool MySqlStorage::vCardExist(QString jid)
 QString MySqlStorage::getLastLogoutTime(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT lastLogoutTime FROM user WHERE jid = :jid");
+    query.prepare("SELECT lastLogoutTime FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -379,7 +401,7 @@ bool MySqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
     qDebug() << "logout time : " << lastLogoutTime;
     QSqlQuery query;
-    query.prepare("UPDATE user SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
+    query.prepare("UPDATE users SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
     query.bindValue(":lastLogoutTime", lastLogoutTime);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -388,7 +410,7 @@ bool MySqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 QString MySqlStorage::getLastStatus(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT lastStatus FROM user WHERE jid = :jid");
+    query.prepare("SELECT lastStatus FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -402,7 +424,7 @@ QString MySqlStorage::getLastStatus(QString jid)
 bool MySqlStorage::setLastStatus(QString jid, QString status)
 {
     QSqlQuery query;
-    query.prepare("UPDATE user SET lastStatus = :lastStatus WHERE jid = :jid");
+    query.prepare("UPDATE users SET lastStatus = :lastStatus WHERE jid = :jid");
     query.bindValue(":lastStatus", status);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -415,7 +437,7 @@ bool MySqlStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     {
         QSqlQuery query;
         query.prepare("INSERT INTO privatedata(user_id, nodeName, nodeValue)"
-                      "VALUES(:user_id, :nodeName, :nodeValue)");
+                      " VALUES(:user_id, :nodeName, :nodeValue)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":nodeName", key);
         query.bindValue(":nodeValue", nodeMap.value(key));
@@ -490,7 +512,7 @@ bool MySqlStorage::saveOfflineMessage(QString from, QString to, QString type,
 
     QSqlQuery query;
     query.prepare("INSERT INTO offlinemessage(user_id, ufrom, stamp, type, body)"
-                  "VALUES(:user_id, :ufrom, :stamp, :type, :body)");
+                  " VALUES(:user_id, :ufrom, :stamp, :type, :body)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":stamp", stamp);
@@ -656,7 +678,7 @@ bool MySqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
 {
     QSqlQuery query;
     query.prepare("INSERT INTO offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
-                  "VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
+                  " VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
@@ -694,6 +716,34 @@ bool MySqlStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
     return query.exec();
+}
+
+QList<QString> MySqlStorage::getUserBlockList(QString jid)
+{
+    return QList<QString>();
+}
+
+bool MySqlStorage::addUserBlockListItems(QString jid, QList<QString> items)
+{
+    /* Map the block list to the default privacy list */
+    QList<PrivacyListItem> privacyListItems;
+    foreach (QString item, items)
+    {
+        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+    }
+    addItemsToPrivacyList(jid, "default", privacyListItems);
+
+    return true;
+}
+
+bool MySqlStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
+{
+    return true;
+}
+
+bool MySqlStorage::emptyUserBlockList(QString jid)
+{
+    return true;
 }
 
 //void MySqlStorage::getChatRoomList(QString room)

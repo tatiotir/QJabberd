@@ -4,11 +4,8 @@ OobDataManager::OobDataManager()
 {
 }
 
-QByteArray OobDataManager::oobDataManagerReply(QByteArray iqXML, QString iqFrom)
+QByteArray OobDataManager::oobDataManagerReply(QDomDocument document, QString iqFrom)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
-    emit sigOobRequest(document.firstChildElement().attribute("to"), iqXML);
+    emit sigOobRequest(document.firstChildElement().attribute("to"), document.toByteArray());
     return QByteArray();
 }

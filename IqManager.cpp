@@ -1,29 +1,29 @@
 #include "IqManager.h"
 
-/**
- * Constructor of the iq manager
- *
- * @brief IQManager::IQManager
- * @param serverConfigMap
- * @param userManager
- * @param privacyListManager
- * @param rosterManager
- * @param vcardManager
- * @param lastActivityManager
- * @param entityTimeManager
- * @param privateStorageManager
- * @param serviceDiscoveryManager
- * @param offlineMessageManager
- * @param streamNegotiationManager
+/*!
+ * \brief IqManager::IqManager constructor of the iq manager
+ * \param serverConfigMap
+ * \param userManager
+ * \param privacyListManager
+ * \param rosterManager
+ * \param vcardManager
+ * \param lastActivityManager
+ * \param entityTimeManager
+ * \param privateStorageManager
+ * \param serviceDiscoveryManager
+ * \param offlineMessageManager
+ * \param streamNegotiationManager
+ * \param oobDataManager
  */
-IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *userManager, PrivacyListManager *privacyListManager,
-                     RosterManager *rosterManager, VCardManager *vcardManager,
-                     LastActivityManager *lastActivityManager, EntityTimeManager *entityTimeManager,
-                     PrivateStorageManager *privateStorageManager,
+IqManager::IqManager(QMap<QString, QVariant> *serverConfigMap,
+                     UserManager *userManager,
+                     PrivacyListManager *privacyListManager, RosterManager *rosterManager,
+                     VCardManager *vcardManager, LastActivityManager *lastActivityManager,
+                     EntityTimeManager *entityTimeManager, PrivateStorageManager *privateStorageManager,
                      ServiceDiscoveryManager *serviceDiscoveryManager,
                      OfflineMessageManager *offlineMessageManager,
                      StreamNegotiationManager *streamNegotiationManager,
-                     OobDataManager *oobDataManager)
+                     OobDataManager *oobDataManager, BlockingCommandManager *blockingCmdManager)
 {
     m_serverConfigMap = serverConfigMap;
     m_userManager = userManager;
@@ -37,22 +37,21 @@ IQManager::IQManager(QMap<QString, QVariant> *serverConfigMap, UserManager *user
     m_offlineMessageManager = offlineMessageManager;
     m_streamNegotiationManager = streamNegotiationManager;
     m_oobDataManager = oobDataManager;
+    m_blockingCmdManager = blockingCmdManager;
 }
 
-/**
- * Authenticate an user using the old jabber:iq:auth mechanism
- *
- * @brief IQManager::authenticate
- * @param streamId
- * @param id
- * @param username
- * @param password
- * @param resource
- * @param digest
- * @param host
- * @return QByteArray
+/*!
+ * \brief The IqManager::authenticate method authenticate an user using the old jabber:iq:auth mechanism
+ * \param streamId
+ * \param id
+ * \param username
+ * \param password
+ * \param resource
+ * \param digest
+ * \param host
+ * \return QByteArray
  */
-QByteArray IQManager::authenticate(QString streamId, QString id, QString username, QString password,
+QByteArray IqManager::authenticate(QString streamId, QString id, QString username, QString password,
                                      QString resource, QString digest, QString host)
 {
     if (username.isEmpty() || resource.isEmpty())
@@ -95,14 +94,12 @@ QByteArray IQManager::authenticate(QString streamId, QString id, QString usernam
 }
 
 
-/**
- * Return the authentification fields to an user which want to use the old jabber authentification mechanism (v1.0)
- *
- * @brief IQManager::authentificationFields
- * @param id
- * @return QByteArray
+/*!
+ * \brief The IqManager::authentificationFields method return the authentification fields to an user which want to use the old jabber authentification mechanism (v1.0)
+ * \param id
+ * \return QByteArray
  */
-QByteArray IQManager::authentificationFields(QString id)
+QByteArray IqManager::authentificationFields(QString id)
 {
     QDomDocument document;
 
@@ -128,23 +125,17 @@ QByteArray IQManager::authentificationFields(QString id)
     return document.toByteArray();
 }
 
-/**
- * Parse an iq xml request and output the result in a byte array
- *
- * @brief IQManager::parseIQ
- * @param iqXML
- * @param from
- * @param host
- * @param streamId
- * @return QByteArray
+/*!
+ * \brief The IqManager::parseIQ method parse an iq xml request and output the result in a byte array
+ * \param document
+ * \param from
+ * \param host
+ * \param streamId
+ * \return QByteArray
  */
-QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QString streamId)
+QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host, QString streamId)
 {
-    QDomDocument document;
-    document.setContent(iqXML);
-
     QDomElement iq = document.firstChild().toElement();
-
     QString iqFrom = iq.attribute("from", from);
     QString id = iq.attribute("id", Utils::generateId());
 
@@ -317,7 +308,7 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
                     }
                 }
             }
-            else if (xmlns == "jabber:iq:register" && m_serverConfigMap->value("modules").toMap().value("register").toBool())
+            else if ((xmlns == "jabber:iq:register") && m_serverConfigMap->value("modules").toMap().value("register").toBool())
             {
                 // Data form
                 if (firstChild.firstChild().toElement().tagName() == "x")
@@ -399,17 +390,17 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
                     }
                 }
             }
-//            else if (xmlns == "jabber:iq:privacy")
-//            {
-//                return m_privacyListManager->privacyListReply(iqXML, iqFrom);
-//            }
+            else if ((xmlns == "jabber:iq:privacy") && m_serverConfigMap->value("modules").toMap().value("privacy").toBool())
+            {
+                return m_privacyListManager->privacyListReply(document, iqFrom);
+            }
             else if ((xmlns == "jabber:iq:private") && m_serverConfigMap->value("modules").toMap().value("private").toBool())
             {
-                return m_privateStorageManager->privateStorageManagerReply(iqXML, iqFrom);
+                return m_privateStorageManager->privateStorageManagerReply(document, iqFrom);
             }
             else if (xmlns == "jabber:iq:oob" && m_serverConfigMap->value("modules").toMap().value("oob").toBool())
             {
-                return m_oobDataManager->oobDataManagerReply(iqXML, iqFrom);
+                return m_oobDataManager->oobDataManagerReply(document, iqFrom);
             }
             else
             {
@@ -419,11 +410,15 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
         }
         else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfigMap->value("modules").toMap().value("vcard-temp").toBool())
         {
-            return m_vCardManager->vCardManagerReply(iqXML, iqFrom);
+            return m_vCardManager->vCardManagerReply(document, iqFrom);
         }
         else if (firstChildTagName == "offline" && m_serverConfigMap->value("modules").toMap().value("msgoffline").toBool())
         {
-            return m_offlineMessageManager->offlineMessageManagerReply(iqXML, iqFrom);
+            return m_offlineMessageManager->offlineMessageManagerReply(document, iqFrom);
+        }
+        else if ((firstChildTagName == "block") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        {
+            return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
         }
         else
         {
@@ -464,24 +459,24 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
             {
                 if (xmlns == "http://jabber.org/protocol/disco#info")
                 {
-                    return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(iqXML, iqFrom);
+                    return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(document, iqFrom);
                 }
                 else if (xmlns == "http://jabber.org/protocol/disco#items")
                 {
-                    return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(iqXML, iqFrom);
+                    return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(document, iqFrom);
                 }
             }
-//            else if (xmlns == "jabber:iq:privacy")
-//            {
-//                return m_privacyListManager->privacyListReply(iqXML, iqFrom);
-//            }
+            else if ((xmlns == "jabber:iq:privacy") && m_serverConfigMap->value("modules").toMap().value("privacy").toBool())
+            {
+                return m_privacyListManager->privacyListReply(document, iqFrom);
+            }
             else if (xmlns == "jabber:iq:last")
             {
-                return m_lastActivityManager->lastActivityReply(iqXML, iqFrom);
+                return m_lastActivityManager->lastActivityReply(document, iqFrom);
             }
             else if ((xmlns == "jabber:iq:private") && m_serverConfigMap->value("modules").toMap().value("private").toBool())
             {
-                return m_privateStorageManager->privateStorageManagerReply(iqXML, iqFrom);
+                return m_privateStorageManager->privateStorageManagerReply(document, iqFrom);
             }
             else
             {
@@ -495,15 +490,19 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
         }
         else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfigMap->value("modules").toMap().value("vcard-temp").toBool())
         {
-            return m_vCardManager->vCardManagerReply(iqXML, iqFrom);
+            return m_vCardManager->vCardManagerReply(document, iqFrom);
         }
         else if ((firstChildTagName == "time") && m_serverConfigMap->value("modules").toMap().value("time").toBool())
         {
-            return m_entityTimeManager->entityTimeManagerReply(iqXML, iqFrom);
+            return m_entityTimeManager->entityTimeManagerReply(document, iqFrom);
         }
         else if ((firstChildTagName == "offline") && m_serverConfigMap->value("modules").toMap().value("msgoffline").toBool())
         {
-            return m_offlineMessageManager->offlineMessageManagerReply(iqXML, iqFrom);
+            return m_offlineMessageManager->offlineMessageManagerReply(document, iqFrom);
+        }
+        else if ((firstChildTagName == "blocklist") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        {
+            return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
         }
         else
         {
@@ -514,16 +513,14 @@ QByteArray IQManager::parseIQ(QByteArray iqXML, QString from, QString host, QStr
     return QByteArray();
 }
 
-/**
- * Generate the roster get result from an iq get with the namespace "jabber:iq:roster"
- *
- * @brief IQManager::generateRosterGetResultReply
- * @param to
- * @param id
- * @param rosterList
- * @return QByteArray
+/*!
+ * \brief The IqManager::generateRosterGetResultReply method generate the roster get result from an iq get with the namespace "jabber:iq:roster"
+ * \param to
+ * \param id
+ * \param rosterList
+ * \return QByteArray
  */
-QByteArray IQManager::generateRosterGetResultReply(QString to, QString id,
+QByteArray IqManager::generateRosterGetResultReply(QString to, QString id,
                                                    QList<Contact> rosterList)
 {
     QDomDocument document;
@@ -574,15 +571,13 @@ QByteArray IQManager::generateRosterGetResultReply(QString to, QString id,
     }
 }
 
-/**
- * Generate an iq response from an iq
- *
- * @brief IQManager::generateIqSessionReply
- * @param id
- * @param from
- * @return QByteArray
+/*!
+ * \brief The IqManager::generateIqSessionReply method generate an iq response from an iq
+ * \param id
+ * \param from
+ * \return QByteArray
  */
-QByteArray IQManager::generateIqSessionReply(QString id, QString from)
+QByteArray IqManager::generateIqSessionReply(QString id, QString from)
 {
     QDomDocument document;
     QDomElement iqResult = document.createElement("iq");
@@ -595,15 +590,13 @@ QByteArray IQManager::generateIqSessionReply(QString id, QString from)
     return document.toByteArray();
 }
 
-/**
- * Generate an iq result as result from an iq request
- *
- * @brief IQManager::generateIQResult
- * @param to
- * @param id
- * @return QByteArray
+/*!
+ * \brief The IqManager::generateIQResult method generate an iq result as result from an iq request
+ * \param to
+ * \param id
+ * \return QByteArray
  */
-QByteArray IQManager::generateIQResult(QString to, QString id)
+QByteArray IqManager::generateIQResult(QString to, QString id)
 {
     QDomDocument document;
     QDomElement iq = document.createElement("iq");
@@ -622,14 +615,12 @@ QByteArray IQManager::generateIQResult(QString to, QString id)
     return document.toByteArray();
 }
 
-/**
- * Generate the registration fields to an user for account registration
- *
- * @brief IQManager::generateRegistrationFieldsReply
- * @param id
- * @return QByteArray
+/*!
+ * \brief The IqManager::generateRegistrationFieldsReply method generate the registration fields to an user for account registration
+ * \param id
+ * \return QByteArray
  */
-QByteArray IQManager::generateRegistrationFieldsReply(QString id)
+QByteArray IqManager::generateRegistrationFieldsReply(QString id)
 {
     QDomDocument document;
 
@@ -649,16 +640,14 @@ QByteArray IQManager::generateRegistrationFieldsReply(QString id)
     return document.toByteArray();
 }
 
-/**
- * Return iq result when an XMPP client want to register an account which is already created
- *
- * @brief IQManager::generateAlreadyRegisterReply
- * @param username
- * @param password
- * @param id
- * @return QByteArray
+/*!
+ * \brief The IqManager::generateAlreadyRegisterReply method return iq result when an XMPP client want to register an account which is already created
+ * \param username
+ * \param password
+ * \param id
+ * \return QByteArray
  */
-QByteArray IQManager::generateAlreadyRegisterReply(QString username, QString password, QString id)
+QByteArray IqManager::generateAlreadyRegisterReply(QString username, QString password, QString id)
 {
     QDomDocument document;
 
@@ -684,16 +673,14 @@ QByteArray IQManager::generateAlreadyRegisterReply(QString username, QString pas
     return document.toByteArray();
 }
 
-/**
- * Generate pong reply to an iq ping request from an XMPP client
- *
- * @brief IQManager::generatePongReply
- * @param from
- * @param to
- * @param id
- * @return QByteArray
+/*!
+ * \brief The IqManager::generatePongReply method generate pong reply to an iq ping request from an XMPP client
+ * \param from
+ * \param to
+ * \param id
+ * \return QByteArray
  */
-QByteArray IQManager::generatePongReply(QString from, QString to, QString id)
+QByteArray IqManager::generatePongReply(QString from, QString to, QString id)
 {
     QDomDocument document;
     QDomElement iq = document.createElement("iq");

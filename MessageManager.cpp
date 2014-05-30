@@ -1,11 +1,9 @@
 #include "MessageManager.h"
 
-/**
- * Constructor of the message manager
- *
- * @brief MessageManager::MessageManager
- * @param userManager
- * @param privacyListManager
+/*!
+ * \brief The MessageManager::MessageManager constructor of the message manager
+ * \param userManager
+ * \param privacyListManager
  */
 MessageManager::MessageManager(UserManager *userManager, PrivacyListManager *privacyListManager)
 {
@@ -13,19 +11,14 @@ MessageManager::MessageManager(UserManager *userManager, PrivacyListManager *pri
     m_privacyListManager = privacyListManager;
 }
 
-/**
- * Parse a message request from XMPP client
- *
- * @brief MessageManager::parseMessage
- * @param messageXML
- * @param messageFrom
- * @return QByteArray
+/*!
+ * \brief The MessageManager::parseMessage method parse a message request from XMPP client
+ * \param messageXML
+ * \param messageFrom
+ * \return QByteArray
  */
-QByteArray MessageManager::parseMessage(QByteArray messageXML, QString messageFrom)
+QByteArray MessageManager::parseMessage(QDomDocument document, QString messageFrom)
 {
-    QDomDocument document;
-    document.setContent(messageXML);
-
     QDomElement messageNode = document.firstChildElement();
     QString from = messageNode.attribute("from", messageFrom);
     QString to = messageNode.attribute("to");
@@ -40,7 +33,7 @@ QByteArray MessageManager::parseMessage(QByteArray messageXML, QString messageFr
     if ((type == "chat") || (type == "normal"))
     {
         messageNode.setAttribute("from", from);
-        emit sigNewChatMessage(to, document.toByteArray());
+        emit sigNewChatMessage(to, document);
     }
     return QByteArray();
 }

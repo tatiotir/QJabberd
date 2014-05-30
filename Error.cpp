@@ -4,18 +4,16 @@ Error::Error()
 {
 }
 
-/**
- * Generate stanza error function to the stanza type according to the XMPP core
- *
- * @brief Error::generateError
- * @param stanzaType
- * @param errorType
- * @param errorCause
- * @param from
- * @param to
- * @param id
- * @param request
- * @return QByteArray
+/*!
+ * \brief The Error::generateError method generate stanza error function to the stanza type according to the XMPP core
+ * \param stanzaType
+ * \param errorType
+ * \param errorCause
+ * \param from
+ * \param to
+ * \param id
+ * \param request
+ * \return QByteArray
  */
 QByteArray Error::generateError(QString stanzaType, QString errorType, QString errorCause,
                                 QString from, QString to, QString id, QDomElement request)
@@ -52,12 +50,10 @@ QByteArray Error::generateError(QString stanzaType, QString errorType, QString e
     return document.toByteArray();
 }
 
-/**
- * Generate the stream management error from the XEP
- *
- * @brief Error::generateSmError
- * @param childName
- * @return QByteArray
+/*!
+ * \brief The Error::generateSmError method generate the stream management error
+ * \param childName
+ * \return QByteArray
  */
 QByteArray Error::generateSmError(QString childName)
 {
@@ -74,12 +70,10 @@ QByteArray Error::generateSmError(QString childName)
     return document.toByteArray();
 }
 
-/**
- * Generate sasl error according to the XMPP Core
- *
- * @brief Error::generateSaslError
- * @param childName
- * @return QByteArray
+/*!
+ * \brief The Error::generateSaslError method generate sasl error according to the XMPP Core
+ * \param childName
+ * \return QByteArray
  */
 QByteArray Error::generateSaslError(QString childName)
 {
@@ -93,12 +87,10 @@ QByteArray Error::generateSaslError(QString childName)
     return document.toByteArray();
 }
 
-/**
- * Generate stream error during stream negotiation according to the XMPP Core
- *
- * @brief Error::generateStreamError
- * @param errorCause
- * @return
+/*!
+ * \brief The Error::generateStreamError method generate stream error during stream negotiation according to the XMPP Core
+ * \param errorCause
+ * \return QByteArray
  */
 QByteArray Error::generateStreamError(QString errorCause)
 {
@@ -114,6 +106,10 @@ QByteArray Error::generateStreamError(QString errorCause)
     return errorDocument.toByteArray();
 }
 
+/*!
+ * \brief The Error::generateInternalServerError generate internal server error according to the XMPP Core
+ * \return QByteArray
+ */
 QByteArray Error::generateInternalServerError()
 {
     QDomDocument document;

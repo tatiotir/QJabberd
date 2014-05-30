@@ -21,11 +21,8 @@ void StreamNegotiationManager::resourceBind(QString streamId)
     m_streamNegotiationVariableMap->value(streamId)->setBindFeatureProceed(true);
 }
 
-QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamId)
+QByteArray StreamNegotiationManager::reply(QDomDocument document, QString streamId)
 {
-    QDomDocument document;
-    document.setContent(clientXML);
-
     QString xmlTagname = document.documentElement().tagName();
     if ((xmlTagname == "iq") || (xmlTagname == "message") || (xmlTagname == "presence"))
     {
@@ -51,7 +48,7 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
         {
             m_streamNegotiationVariableMap->insert(streamId, new StreamNegotiationData());
         }
-        return generateFirstStreamReply(clientXML, streamId);
+        return generateFirstStreamReply(document, streamId);
     }
     else if (document.documentElement().tagName() == "starttls")
     {
@@ -65,7 +62,7 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
         {
             return Error::generateSaslError("invalid-mechanism");
         }
-        return generateFirstChallengeReply(clientXML, streamId);
+        return generateFirstChallengeReply(document, streamId);
     }
     else if (document.documentElement().tagName() == "abort")
     {
@@ -101,17 +98,6 @@ QByteArray StreamNegotiationManager::reply(QByteArray clientXML, QString streamI
                 return QByteArray();
             }
         }
-    }
-    else if (document.documentElement().attribute("type") == "get")
-    {
-        if (document.documentElement().firstChildElement().attribute("xmlns") == "jabber:iq:auth")
-        {
-
-        }
-    }
-    else if (document.documentElement().attribute("type") == "set")
-    {
-
     }
     return QByteArray();
 }
@@ -235,11 +221,8 @@ bool StreamNegotiationManager::secondFeatureProceed(QString streamId)
     return m_streamNegotiationVariableMap->value(streamId, new StreamNegotiationData())->secondFeatureProceed();
 }
 
-QByteArray StreamNegotiationManager::generateFirstStreamReply(QByteArray clientXml, QString streamId)
+QByteArray StreamNegotiationManager::generateFirstStreamReply(QDomDocument document, QString streamId)
 {
-    QDomDocument document;
-    document.setContent(clientXml);
-
     QDomElement xmlElement = document.documentElement();
 
     QString from = xmlElement.attribute("from", "");
@@ -318,11 +301,8 @@ QByteArray StreamNegotiationManager::generateSaslSuccessReply(QString streamId)
 /*
  * This function generate first server challenge according to the digest mechanism for sasl authentification
  */
-QByteArray StreamNegotiationManager::generateFirstChallengeReply(QByteArray clientXml, QString streamId)
+QByteArray StreamNegotiationManager::generateFirstChallengeReply(QDomDocument document, QString streamId)
 {
-    QDomDocument document;
-    document.setContent(clientXml);
-
     QDomElement auth = document.documentElement();
 
     QString mechanism = auth.attribute("mechanism");

@@ -15,13 +15,19 @@ public:
     PresenceManager(UserManager *usermanager = 0, RosterManager *rosterManager = 0,
                     LastActivityManager *lastActivityManager = 0, PrivacyListManager *privateListManager = 0);
 
+    static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString show,
+                                       QString priority, QMultiHash<QString, QString> status);
+    static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString show,
+                                       QString priority, QString status);
 public slots:
-    QByteArray parsePresence(QByteArray presenceXML, QString presenceFrom);
+    QByteArray parsePresence(QDomDocument document, QString presenceFrom);
+    void presenceUnavailableBroadcast(QString to, QString from);
+    void presenceBroadcast(QString to, QDomDocument document);
     void deleteOfflinePresenceSubscribe(QString from, QString to);
 
 signals:
-    void sigRosterPush(QString to, QByteArray data);
-    void sigPresenceBroadCast(QString to, QByteArray data);
+    void sigRosterPush(QString to, QDomDocument document);
+    void sigPresenceBroadCast(QString to, QDomDocument document);
     void sigPresenceBroadCastFromContact(QString to, QString contactJid);
     //void sigPresenceProbeReply(QString from, QString to, QString id, QByteArray data, bool contactSubscribedToUser);
     void sigPresenceProbeToContact(QString to, QString from, bool directedPresenceProbe);
