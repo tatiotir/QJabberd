@@ -6,7 +6,7 @@
 #include <QDomElement>
 #include <QDomNodeList>
 #include "UserManager.h"
-#include "DataForm.h"
+#include "DataFormManager.h"
 #include "Error.h"
 #include "ServiceDiscoveryManager.h"
 #include "PrivacyListManager.h"
@@ -18,14 +18,15 @@
 #include "PrivateStorageManager.h"
 #include "OfflineMessageManager.h"
 #include "StreamNegotiationManager.h"
-#include "OobDataManager.h"
 #include "BlockingCommandManager.h"
+#include "MucManager.h"
+#include "ByteStreamsManager.h"
 
 class IqManager : public QObject
 {
     Q_OBJECT
 public:
-    IqManager(QMap<QString, QVariant> *serverConfigMap = 0,
+    IqManager(QJsonObject *serverConfiguration = 0,
               UserManager *userManager = 0,
               PrivacyListManager *privacyListManager = 0,
               RosterManager *rosterManager = 0, VCardManager *vcardManager = 0,
@@ -33,8 +34,9 @@ public:
               PrivateStorageManager *privateStorageManager = 0,
               ServiceDiscoveryManager *serviceDiscoveryManager = 0,
               OfflineMessageManager *offlineMessageManager = 0,
-              StreamNegotiationManager *streamNegotiationManager = 0, OobDataManager *oobDataManager = 0,
-              BlockingCommandManager *blockingCmdManager = 0);
+              StreamNegotiationManager *streamNegotiationManager = 0,
+              BlockingCommandManager *blockingCmdManager = 0, MucManager *mucManager = 0,
+              ByteStreamsManager *byteStreamManager = 0);
 
 public slots:
     QByteArray parseIQ(QDomDocument document, QString from, QString host, QString streamId);
@@ -46,9 +48,20 @@ signals:
     void sigResourceBinding(QString streamId, QString fullJid, QString id);
     void sigNonSaslAuthentification(QString streamId, QString fullJid, QString id);
     void sigStreamNegotiationError(QString streamId);
+    void sigMucPresenceBroadCast(QString to, QDomDocument document);
+    void sigGroupchatMessage(QString to, QDomDocument document);
+    void sigOobRequest(QString to, QDomDocument document);
+    void sigInbandByteStreamRequest(QString to, QDomDocument document);
+    void sigApplicationReply(QString to, QDomDocument document);
+    void sigApplicationRequest(QString to, QDomDocument document);
+    void sigIqAvatarQuery(QString to, QDomDocument document);
 
 private:
-    QByteArray generateIQResult(QString to, QString id);
+    QByteArray generateRoomAffiliationList(QString from, QString to, QString id, QList<QString> list,
+                                           QString affiliation);
+    QByteArray generateRoomRoleList(QString from, QString to, QString id, QList<QString> list,
+                                           QString role);
+    QByteArray generateIQResult(QString from, QString to, QString id);
     QByteArray generateRosterGetResultReply(QString to, QString id, QList<Contact> rosterList);
     QByteArray generateIqSessionReply(QString id, QString from);
     QByteArray generateRegistrationFieldsReply(QString id);
@@ -56,6 +69,8 @@ private:
     QByteArray generatePongReply(QString from, QString to, QString id);
     QByteArray authentificationFields(QString id);
     QByteArray authenticate(QString streamId, QString id, QString username, QString password, QString resource, QString digest, QString host);
+    QByteArray registerUserReply(QString username, QString password, QString jid, QString id, QDomElement firstChild, QString iqFrom);
+    QDomDocument generateStorageAvatarDocument(QString from, QString to, QDomElement avatarElement);
 
     PresenceManager *m_presenceManager;
     UserManager *m_userManager;
@@ -68,9 +83,11 @@ private:
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     OfflineMessageManager *m_offlineMessageManager;
     StreamNegotiationManager *m_streamNegotiationManager;
-    OobDataManager *m_oobDataManager;
+    MucManager *m_mucManager;
     BlockingCommandManager *m_blockingCmdManager;
-    QMap<QString, QVariant> *m_serverConfigMap;
+    ByteStreamsManager *m_byteStreamManager;
+    QJsonObject *m_serverConfiguration;
+
 };
 
 #endif // IQMANAGER_H

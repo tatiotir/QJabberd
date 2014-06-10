@@ -15,7 +15,7 @@ public:
 
 private:
     ConnectionManager *m_conManager;
-    QMap<QString, QVariant> *m_configMap;
+    QJsonObject *m_configuration;
 };
 
 #endif // SERVER_H

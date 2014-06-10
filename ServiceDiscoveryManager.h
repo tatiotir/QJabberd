@@ -9,12 +9,13 @@
 #include "UserManager.h"
 #include "StreamNegotiationManager.h"
 #include "MucManager.h"
+#include "DataFormManager.h"
 
 class ServiceDiscoveryManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit ServiceDiscoveryManager(QMap<QString, QVariant> *serverConfigMap = 0,
+    explicit ServiceDiscoveryManager(QJsonObject *serverConfiguration = 0,
                                      UserManager *userManager = 0, MucManager *mucManager = 0);
 
     QByteArray serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom);
@@ -33,13 +34,14 @@ private:
     QByteArray serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
                                                        QDomDocument document);
     QByteArray serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QString node, QDomDocument document);
-    QByteArray serviceDiscoveryManagerItemsQueryResult(QString node, QString iqFrom);
+    QByteArray serviceDiscoveryManagerItemsQueryResult(QString node, QString iqFrom, QDomDocument document);
     int getOfflineMessagesNumber(QString jid);
+    QJsonObject chatServiceExist(QString serviceJid);
     QMultiHash<QString, QString> getOfflineMessageHeaders(QString jid);
 
     UserManager *m_userManager;
     MucManager *m_mucManager;
-    QMap<QString, QVariant> *m_serverConfigMap;
+    QJsonObject *m_serverConfiguration;
 };
 
 #endif // SERVICEDISCOVERYMANAGER_H

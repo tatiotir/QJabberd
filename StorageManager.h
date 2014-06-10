@@ -11,7 +11,7 @@
 class StorageManager
 {
 public:
-    StorageManager(QString storageType, QMap<QString, QVariant> databaseSettings);
+    StorageManager(QString storageType, QJsonObject databaseSettings);
 
     QString getStorageType();
     void setStorageType(QString type);

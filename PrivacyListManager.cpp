@@ -1,8 +1,9 @@
 #include "PrivacyListManager.h"
 
-PrivacyListManager::PrivacyListManager(StorageManager *storageManager)
+PrivacyListManager::PrivacyListManager(StorageManager *storageManager, RosterManager *rosterManager)
 {
     m_storageManager =  storageManager;
+    m_rosterMananager = rosterManager;
 }
 
 QByteArray PrivacyListManager::privacyListReply(QDomDocument document, QString iqFrom)
@@ -15,23 +16,24 @@ QByteArray PrivacyListManager::privacyListReply(QDomDocument document, QString i
     QDomElement query = iq.firstChild().toElement();
     if (iq.attribute("type") == "get")
     {
-        qDebug() << "query text : " << query.text();
-        if (query.firstChild().toElement().isNull())
+        if (query.firstChildElement().isNull())
         {
-            return privacyListNames(to, from, id);
+            return privacyListNames(to, from, id, getPrivacyListNames(Utils::getBareJid(from)),
+                                    getActivePrivacyList(Utils::getBareJid(from)),
+                                    getDefaultPrivacyList(Utils::getBareJid(from)));
         }
         else
         {
             QString privacyListName = query.firstChild().toElement().attribute("name");
-            if ((privacyListName != "private") || (privacyListName != "public") || (privacyListName != "special"))
+            if (!privacyListExist(Utils::getBareJid(from), privacyListName))
             {
-                return Error::generateError("iq", "cancel", "item-not-found", from, "", id,
+                return Error::generateError("", "iq", "cancel", "item-not-found", "", from, id,
                                                    iq.firstChildElement());
             }
 
             if (query.elementsByTagName("list").count() > 1)
             {
-                return Error::generateError("iq", "modify", "bad-request", "", from, id, iq.firstChildElement());
+                return Error::generateError("", "iq", "modify", "bad-request", "", from, id, iq.firstChildElement());
             }
 
             QList<PrivacyListItem> privacyListItems = getPrivacyList(Utils::getBareJid(from),
@@ -39,26 +41,35 @@ QByteArray PrivacyListManager::privacyListReply(QDomDocument document, QString i
             return generatePrivacyListResult(from, id, privacyListName, privacyListItems);
         }
     }
-    else if (query.attribute("type") == "set")
+    else if (iq.attribute("type") == "set")
     {
         QString firstChildTagName = query.firstChild().toElement().tagName();
-        QString firstChildAttributeName = query.firstChild().toElement().attribute("name", "");
-        if ((!firstChildAttributeName.isEmpty()) && ((firstChildAttributeName != "private") ||
-                                                     (firstChildAttributeName != "public") ||
-                                                     (firstChildAttributeName != "special")))
+        QString privacyListName = query.firstChild().toElement().attribute("name");
+        if (((firstChildTagName == "default") || (firstChildTagName == "active")) &&
+                !privacyListExist(Utils::getBareJid(from), privacyListName))
         {
-            return Error::generateError("iq", "cancel", "item-not-found", from, "", id,
+            return Error::generateError("", "iq", "cancel", "item-not-found", "", from, id,
                                                iq.firstChildElement());
         }
 
         if (firstChildTagName == "active")
         {
-            m_privacyActiveListName = firstChildAttributeName;
+            setActivePrivacyList(Utils::getBareJid(from), privacyListName);
             return generateIQResult(from, id);
         }
         else if (firstChildTagName == "default")
         {
-            emit sigSetDefaultListName(Utils::getBareJid(from), from, firstChildAttributeName, id);
+            if (getDefaultPrivacyList(Utils::getBareJid(from)).isEmpty())
+            {
+                setDefaultPrivacyList(Utils::getBareJid(from), privacyListName);
+                //m_userDefaultList.insert(Utils::getBareJid(from), privacyListName);
+                return generateIQResult(from, id);
+            }
+            // default list is in use by another resource
+            else
+            {
+                return Error::generateError("", "iq", "cancel", "conflict", "", from, id, query);
+            }
         }
         else if (firstChildTagName == "list")
         {
@@ -84,19 +95,19 @@ QByteArray PrivacyListManager::privacyListReply(QDomDocument document, QString i
                     privacyListItem.setItemChildElements(itemChildName);
                     privacyListItems << privacyListItem;
                 }
-                if (addItemsToPrivacyList(Utils::getBareJid(from), firstChildAttributeName, privacyListItems))
+                if (addItemsToPrivacyList(Utils::getBareJid(from), privacyListName, privacyListItems))
                 {
-                    emit sigPrivacyListPush(Utils::getBareJid(from), generatePrivacyPush(from, firstChildAttributeName, id));
+                    emit sigPrivacyListPush(Utils::getBareJid(from), generatePrivacyPush(from, privacyListName, id));
                     return generateIQResult(from, id);
                 }
                 else
                 {
-                    // Return internal server error
+                    return Error::generateInternalServerError();
                 }
             }
             else
             {
-                deletePrivacyList(Utils::getBareJid(from), firstChildAttributeName);
+                deletePrivacyList(Utils::getBareJid(from), privacyListName);
                 return generateIQResult(from, id);
             }
         }
@@ -132,7 +143,8 @@ QByteArray PrivacyListManager::generatePrivacyListResult(QString to, QString id,
     return document.toByteArray();
 }
 
-QByteArray PrivacyListManager::privacyListNames(QString from, QString to, QString id)
+QByteArray PrivacyListManager::privacyListNames(QString from, QString to, QString id, QStringList privacyListNames,
+                                                QString activeListName, QString defaultListName)
 {
     QDomDocument document;
 
@@ -145,26 +157,29 @@ QByteArray PrivacyListManager::privacyListNames(QString from, QString to, QStrin
     QDomElement query = document.createElement("query");
     query.setAttribute("xmlns", "jabber:iq:privacy");
 
-    QDomElement active = document.createElement("active");
-    active.setAttribute("name", "private");
+    if (!activeListName.isEmpty())
+    {
+        QDomElement active = document.createElement("active");
+        active.setAttribute("name", activeListName);
+        query.appendChild(active);
+    }
 
-    QDomElement defaul = document.createElement("default");
-    defaul.setAttribute("name", "public");
+    if (!defaultListName.isEmpty())
+    {
+        QDomElement defaul = document.createElement("default");
+        defaul.setAttribute("name", defaultListName);
+        query.appendChild(defaul);
+    }
 
-    QDomElement list1 = document.createElement("list");
-    list1.setAttribute("name", "public");
-
-    QDomElement list2 = document.createElement("list");
-    list2.setAttribute("name", "private");
-
-    QDomElement list3 = document.createElement("list");
-    list3.setAttribute("name", "special");
-
-    query.appendChild(active);
-    query.appendChild(defaul);
-    query.appendChild(list1);
-    query.appendChild(list2);
-    query.appendChild(list3);
+    if (!privacyListNames.isEmpty())
+    {
+        foreach (QString privacyListName, privacyListNames)
+        {
+            QDomElement list = document.createElement("list");
+            list.setAttribute("name", privacyListName);
+            query.appendChild(list);
+        }
+    }
 
     iq.appendChild(query);
     document.appendChild(iq);
@@ -193,7 +208,7 @@ QByteArray PrivacyListManager::generateIQResult(QString to, QString id)
     return document.toByteArray();
 }
 
-QByteArray PrivacyListManager::generatePrivacyPush(QString to, QString privacyListName, QString id)
+QDomDocument PrivacyListManager::generatePrivacyPush(QString to, QString privacyListName, QString id)
 {
     QDomDocument document;
 
@@ -214,17 +229,165 @@ QByteArray PrivacyListManager::generatePrivacyPush(QString to, QString privacyLi
 
     // Request Acknowledgment of receipt
     sigSendReceiptRequest(to, document.toByteArray());
-    return document.toByteArray();
+    return document;
 }
 
-void PrivacyListManager::setPrivacyActiveList(QString activeList)
+QByteArray PrivacyListManager::isBlocked(QString from, QString to, QString stanzaType)
 {
-    m_privacyActiveListName = activeList;
+    // PrivacyList <message/> block
+    QString activeListName = getActivePrivacyList(Utils::getBareJid(to));
+    QString defaultListName = getDefaultPrivacyList(Utils::getBareJid(to));
+
+    QList<PrivacyListItem> privacyListDenyMessageItems;
+    if (!activeListName.isEmpty())
+        privacyListDenyMessageItems = getPrivacyListDenyItems(Utils::getBareJid(to), activeListName, stanzaType);
+    else if (!defaultListName.isEmpty())
+        privacyListDenyMessageItems = getPrivacyListDenyItems(Utils::getBareJid(to), defaultListName, stanzaType);
+    else
+        return QByteArray();
+
+    foreach (PrivacyListItem item, privacyListDenyMessageItems)
+    {
+        if (item.getType().isEmpty())
+        {
+            if ((stanzaType != "presence-in") || (stanzaType != "presenceOut"))
+            {
+                return Error::generateError("", "iq", "cancel", "service-unavalaible",
+                                             Utils::getHost(from), from, "", QDomElement());
+            }
+            else if ((stanzaType == "presence-in") || (stanzaType == "presenceOut"))
+            {
+                return QByteArray("a");
+            }
+        }
+        else if (item.getType() == "jid")
+        {
+            if ((item.getValue() == from) ||
+                    (item.getValue() == Utils::getBareJid(from)) ||
+                    (item.getValue() == Utils::getHost(from)) ||
+                    (item.getValue() == from.split("@").value(1)))
+            {
+                if ((stanzaType != "presence-in") || (stanzaType != "presenceOut"))
+                {
+                    return Error::generateError("", "iq", "cancel", "service-unavalaible",
+                                                 Utils::getHost(from), from, "", QDomElement());
+                }
+                else if ((stanzaType == "presence-in") || (stanzaType == "presenceOut"))
+                {
+                    return QByteArray("a");
+                }
+            }
+        }
+        else if (item.getType() == "group")
+        {
+            QList<QString> contactGroups = m_rosterMananager->getContactGroups(Utils::getBareJid(to), Utils::getBareJid(from)).toList();
+            if (contactGroups.contains(item.getValue()))
+            {
+                if ((stanzaType != "presence-in") || (stanzaType != "presenceOut"))
+                {
+                    return Error::generateError("", "iq", "cancel", "service-unavalaible",
+                                                 Utils::getHost(from), from, "", QDomElement());
+                }
+                else if ((stanzaType == "presence-in") || (stanzaType == "presenceOut"))
+                {
+                    return QByteArray("a");
+                }
+            }
+        }
+        else if (item.getType() == "subscription")
+        {
+            QString contactSubscription = m_rosterMananager->getContactSubscription(Utils::getBareJid(to), Utils::getBareJid(from));
+            if (contactSubscription == item.getValue())
+            {
+                if ((stanzaType != "presence-in") || (stanzaType != "presenceOut"))
+                {
+                    return Error::generateError("", "iq", "cancel", "service-unavalaible",
+                                                 Utils::getHost(from), from, "", QDomElement());
+                }
+                else if ((stanzaType == "presence-in") || (stanzaType == "presenceOut"))
+                {
+                    return QByteArray("a");
+                }
+            }
+        }
+    }
+    return QByteArray();
+}
+
+QByteArray PrivacyListManager::isBlocked(QString from, QString to,
+                                         QList<PrivacyListItem> privacyListDenyMessageItems)
+{
+    foreach (PrivacyListItem item, privacyListDenyMessageItems)
+    {
+        if (item.getType().isEmpty())
+        {
+            return QByteArray("a");
+        }
+        else if (item.getType() == "jid")
+        {
+            if ((item.getValue() == from) ||
+                    (item.getValue() == Utils::getBareJid(from)) ||
+                    (item.getValue() == Utils::getHost(from)) ||
+                    (item.getValue() == from.split("@").value(1)))
+            {
+
+                return QByteArray("a");
+            }
+        }
+        else if (item.getType() == "group")
+        {
+            QList<QString> contactGroups = m_rosterMananager->getContactGroups(Utils::getBareJid(to), Utils::getBareJid(from)).toList();
+            if (contactGroups.contains(item.getValue()))
+            {
+                return QByteArray("a");
+            }
+        }
+        else if (item.getType() == "subscription")
+        {
+            QString contactSubscription = m_rosterMananager->getContactSubscription(Utils::getBareJid(to), Utils::getBareJid(from));
+            if (contactSubscription == item.getValue())
+            {
+                return QByteArray("a");
+            }
+        }
+    }
+    return QByteArray();
 }
 
 QList<PrivacyListItem> PrivacyListManager::getPrivacyList(QString jid, QString privacyListName)
 {
     return m_storageManager->getStorage()->getPrivacyList(jid, privacyListName);
+}
+
+QStringList PrivacyListManager::getPrivacyListNames(QString jid)
+{
+    return m_storageManager->getStorage()->getPrivacyListNames(jid);
+}
+
+QString PrivacyListManager::getDefaultPrivacyList(QString jid)
+{
+    return m_storageManager->getStorage()->getDefaultPrivacyList(jid);
+}
+
+QString PrivacyListManager::getActivePrivacyList(QString jid)
+{
+    return m_storageManager->getStorage()->getActivePrivacyList(jid);
+}
+
+bool PrivacyListManager::setDefaultPrivacyList(QString jid, QString defaultList)
+{
+    return m_storageManager->getStorage()->setDefaultPrivacyList(jid, defaultList);
+}
+
+bool PrivacyListManager::setActivePrivacyList(QString jid, QString activeList)
+{
+    return m_storageManager->getStorage()->setActivePrivacyList(jid, activeList);
+}
+
+QList<PrivacyListItem> PrivacyListManager::getPrivacyListDenyItems(QString jid, QString privacyListName,
+                                                                   QString stanzaType)
+{
+    return m_storageManager->getStorage()->getPrivacyListDenyItems(jid, privacyListName, stanzaType);
 }
 
 bool PrivacyListManager::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
@@ -237,17 +400,7 @@ bool PrivacyListManager::deletePrivacyList(QString jid, QString privacyListName)
     return m_storageManager->getStorage()->deletePrivacyList(jid, privacyListName);
 }
 
-QString PrivacyListManager::getPrivacyActiveList()
+bool PrivacyListManager::privacyListExist(QString jid, QString privacyListName)
 {
-    return m_privacyActiveListName;
-}
-
-void PrivacyListManager::setPrivacyDefaultList(QString activeList)
-{
-    m_privacyActiveListName = activeList;
-}
-
-QString PrivacyListManager::getPrivacyDefaultList()
-{
-    return m_privacyActiveListName;
+    return m_storageManager->getStorage()->privacyListExist(jid, privacyListName);
 }

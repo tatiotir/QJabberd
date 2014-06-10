@@ -3,7 +3,6 @@ SOURCES += \
     Connection.cpp \
     ConnectionManager.cpp \
     Contact.cpp \
-    DataForm.cpp \
     IqManager.cpp \
     LastActivityManager.cpp \
     LocalStorage.cpp \
@@ -35,7 +34,11 @@ SOURCES += \
     OobDataManager.cpp \
     PgSqlStorage.cpp \
     BlockingCommandManager.cpp \
-    MucManager.cpp
+    MucManager.cpp \
+    Occupant.cpp \
+    DataFormManager.cpp \
+    ByteStreamsManager.cpp \
+    DataFormField.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -57,7 +60,6 @@ HEADERS += \
     UserManager.h \
     Utils.h \
     VcardManager.h \
-    DataForm.h \
     PrivacyListItem.h \
     PrivacyListManager.h \
     StorageManager.h \
@@ -73,6 +75,10 @@ HEADERS += \
     OobDataManager.h \
     PgSqlStorage.h \
     BlockingCommandManager.h \
-    MucManager.h
+    MucManager.h \
+    Occupant.h \
+    DataFormManager.h \
+    ByteStreamsManager.h \
+    DataFormField.h
 
 QT += xml network widgets sql

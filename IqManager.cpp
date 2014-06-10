@@ -15,17 +15,17 @@
  * \param streamNegotiationManager
  * \param oobDataManager
  */
-IqManager::IqManager(QMap<QString, QVariant> *serverConfigMap,
+IqManager::IqManager(QJsonObject *serverConfiguration,
                      UserManager *userManager,
                      PrivacyListManager *privacyListManager, RosterManager *rosterManager,
                      VCardManager *vcardManager, LastActivityManager *lastActivityManager,
                      EntityTimeManager *entityTimeManager, PrivateStorageManager *privateStorageManager,
                      ServiceDiscoveryManager *serviceDiscoveryManager,
                      OfflineMessageManager *offlineMessageManager,
-                     StreamNegotiationManager *streamNegotiationManager,
-                     OobDataManager *oobDataManager, BlockingCommandManager *blockingCmdManager)
+                     StreamNegotiationManager *streamNegotiationManager, BlockingCommandManager *blockingCmdManager,
+                     MucManager *mucManager, ByteStreamsManager *byteStreamManager)
 {
-    m_serverConfigMap = serverConfigMap;
+    m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;
     m_privacyListManager = privacyListManager;
     m_vCardManager = vcardManager;
@@ -36,8 +36,9 @@ IqManager::IqManager(QMap<QString, QVariant> *serverConfigMap,
     m_serviceDiscoveryManager = serviceDiscoveryManager;
     m_offlineMessageManager = offlineMessageManager;
     m_streamNegotiationManager = streamNegotiationManager;
-    m_oobDataManager = oobDataManager;
     m_blockingCmdManager = blockingCmdManager;
+    m_mucManager = mucManager;
+    m_byteStreamManager = byteStreamManager;
 }
 
 /*!
@@ -52,11 +53,11 @@ IqManager::IqManager(QMap<QString, QVariant> *serverConfigMap,
  * \return QByteArray
  */
 QByteArray IqManager::authenticate(QString streamId, QString id, QString username, QString password,
-                                     QString resource, QString digest, QString host)
+                                   QString resource, QString digest, QString host)
 {
     if (username.isEmpty() || resource.isEmpty())
     {
-        return Error::generateError("iq", "modify", "not-acceptable", "", "", id, QDomElement());
+        return Error::generateError("", "iq", "modify", "not-acceptable", "", "", id, QDomElement());
     }
 
     if (!digest.isEmpty())
@@ -67,7 +68,7 @@ QByteArray IqManager::authenticate(QString streamId, QString id, QString usernam
         QString userDigest = Utils::digestCalculator(id, password);
         if ((userDigest != digest))
         {
-            Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
+            Error::generateError("", "iq", "auth", "not-authorized", "", "", id, QDomElement());
         }
         else
         {
@@ -82,7 +83,7 @@ QByteArray IqManager::authenticate(QString streamId, QString id, QString usernam
 
         if (userPassword != password)
         {
-            return Error::generateError("iq", "auth", "not-authorized", "", "", id, QDomElement());
+            return Error::generateError("", "iq", "auth", "not-authorized", "", "", id, QDomElement());
         }
         else
         {
@@ -137,11 +138,26 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
 {
     QDomElement iq = document.firstChild().toElement();
     QString iqFrom = iq.attribute("from", from);
+    QString iqTo = iq.attribute("to");
     QString id = iq.attribute("id", Utils::generateId());
+
+    // Checking for privacy list
+    QByteArray privacyListError = m_privacyListManager->isBlocked(iqFrom, iqTo, "iq");
+    if (!privacyListError.isEmpty())
+        return privacyListError;
+
+    QByteArray privacyListError1 = m_privacyListManager->isBlocked(iqTo, iqFrom, "iq");
+    if (!privacyListError1.isEmpty())
+        return privacyListError1;
+
+    // Checking for block list
+    QByteArray blockListError = m_blockingCmdManager->isBlocked(iqFrom, iqTo, "iq");
+    if (!blockListError.isEmpty())
+        return blockListError;
 
     if (iq.attribute("type") == "set")
     {
-        QDomElement firstChild = iq.firstChild().toElement();
+        QDomElement firstChild = iq.firstChildElement();
         QString firstChildTagName = firstChild.tagName();
 
         if (firstChildTagName == "session")
@@ -174,7 +190,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
         {
             QString xmlns = firstChild.attribute("xmlns");
 
-            if ((xmlns == "jabber:iq:auth") && m_serverConfigMap->value("modules").toMap().value("nonsaslauth").toBool())
+            if ((xmlns == "jabber:iq:auth") && m_serverConfiguration->value("modules").toObject().value("nonsaslauth").toBool())
             {
                 return authenticate(streamId, id,
                                     document.documentElement().elementsByTagName("username").item(0).toElement().text(),
@@ -183,7 +199,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                     document.documentElement().elementsByTagName("digest").item(0).toElement().text(),
                                     document.documentElement().attribute("to"));
             }
-            if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
+            if ((xmlns == "jabber:iq:roster") && m_serverConfiguration->value("modules").toObject().value("roster").toBool())
             {
                 // We check if there are errors.
                 QDomNodeList groupNodes = firstChild.firstChild().toElement().elementsByTagName("group");
@@ -193,19 +209,19 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                     QDomElement groupElement = groupNodes.item(i).toElement();
                     if ((groupElement.text().isEmpty()) || (groupElement.text().count() > 100))
                     {
-                        return Error::generateError("iq", "modify", "not-acceptable", iqFrom, "", id, QDomElement());
+                        return Error::generateError("", "iq", "modify", "not-acceptable", iqFrom, "", id, QDomElement());
                     }
                 }
 
                 if (firstChild.elementsByTagName("item").count() > 1)
                 {
-                    return Error::generateError("iq", "modify", "bad-request", iqFrom, "", id, QDomElement());
+                    return Error::generateError("", "iq", "modify", "bad-request", iqFrom, "", id, QDomElement());
                 }
 
                 // the name attribute is too long
                 if (firstChild.firstChild().toElement().attribute("name").count() > 100)
                 {
-                    return Error::generateError("iq", "modify", "not-acceptable", iqFrom, "", id, QDomElement());
+                    return Error::generateError("", "iq", "modify", "not-acceptable", iqFrom, "", id, QDomElement());
                 }
                 // Unauthorized entity
 
@@ -221,7 +237,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                 {
                     if (!m_rosterManager->contactExists(Utils::getBareJid(iqFrom), jid))
                     {
-                        return Error::generateError("iq", "cancel", "item-not-found", iqFrom, "", id, QDomElement());
+                        return Error::generateError("", "iq", "cancel", "item-not-found", iqFrom, "", id, QDomElement());
                     }
 
                     Contact userContact = m_rosterManager->getContact(Utils::getBareJid(iqFrom), jid);
@@ -271,7 +287,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                                                                    "", "", ""));
 
                         }
-                        return generateIQResult(iqFrom, id);
+                        return generateIQResult("", iqFrom, id);
                     }
                 }
                 else
@@ -299,7 +315,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                                                          userContact.getApproved(),
                                                                          userContact.getGroups()));
 
-                            return generateIQResult(iqFrom, id);
+                            return generateIQResult("", iqFrom, id);
                         }
                         else
                         {
@@ -308,146 +324,547 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                     }
                 }
             }
-            else if ((xmlns == "jabber:iq:register") && m_serverConfigMap->value("modules").toMap().value("register").toBool())
+            else if ((xmlns == "jabber:iq:register") && m_serverConfiguration->value("modules").toObject().value("register").toBool())
             {
-                // Data form
-                if (firstChild.firstChild().toElement().tagName() == "x")
+                // Registering with room
+                if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(Utils::getHost(iqTo)))
                 {
-                    QMultiHash<QString, QString> dataFormValue = DataForm::parseDataForm(
+                    QMap<QString, QVariant> dataFormValue = DataFormManager::parseDataForm(
                                 firstChild.firstChild().toElement());
 
-                    QString formType = dataFormValue.value("FORM_TYPE");
+                    if (dataFormValue.value("muc#register_roomnick").toString().isEmpty())
+                    {
+                        return Error::generateError("", "iq", "modify", "bad-request",
+                                                    iqTo, iqFrom, id, QDomElement());
+                    }
+
+                    QString mucJid = iqTo + "/" + dataFormValue.value("muc#register_roomnick").toString();
+                    if (m_mucManager->nicknameOccuped(iqTo, mucJid))
+                    {
+                        return Error::generateError("", "iq", "cancel", "conflict", iqTo, iqFrom,
+                                                    id, QDomElement());
+                    }
+
+                    // Registered user
+                    if (m_mucManager->registerUser(iqTo, Occupant(iqFrom, mucJid, "member", "participant", "", "")))
+                    {
+                        QList<Occupant> occupantList = m_mucManager->getOccupants(iqTo);
+                        foreach (Occupant occupant, occupantList)
+                        {
+                            emit sigMucPresenceBroadCast(occupant.jid(), Utils::generatePresence("", mucJid, occupant.jid(), Utils::generateId(), "member",
+                                                                                "participant", iqFrom, "", QList<int>(), "", ""));
+
+                        }
+                        return generateIQResult(iqTo, iqFrom, id);
+                    }
+                    return QByteArray();
+                }
+
+                if (firstChild.firstChildElement().tagName() != "x")
+                {
+                    QString username = firstChild.elementsByTagName("username").item(0).toElement().text();
+                    QString password = firstChild.elementsByTagName("password").item(0).toElement().text();
+                    QString jid = username + "@" + host;
+
+                    return registerUserReply(username, password, jid, id, firstChild, iqFrom);
+                }
+                // Registration using data form
+                else
+                {
+                    QMap<QString, QVariant> dataFormValue = DataFormManager::parseDataForm(firstChild.firstChildElement());
+
+                    QString formType = dataFormValue.value("FORM_TYPE").toString();
                     if (formType == "jabber:iq:register")
                     {
+                        QString username = dataFormValue.value("username").toString();
+                        QString password = dataFormValue.value("password").toString();
+                        QString jid = username + "@" + host;
 
+                        return registerUserReply(username, password, jid, id, firstChild, iqFrom);
                     }
                     else if (formType == "jabber:iq:register:changepassword")
                     {
+                        QString username = dataFormValue.value("username").toString();
+                        QString password = dataFormValue.value("password").toString();
+                        QString jid = username + "@" + host;
 
+                        if (m_userManager->changePassword(jid, password))
+                        {
+                            return generateIQResult("", "", id);
+                        }
+                        else
+                        {
+                            return Error::generateInternalServerError();
+                        }
                     }
                 }
-                else if (firstChild.firstChild().toElement().tagName() == "remove")
+            }
+            else if (firstChild.firstChild().toElement().tagName() == "remove")
+            {
+                if (firstChild.elementsByTagName("remove").count() > 1)
                 {
-                    if (firstChild.elementsByTagName("remove").count() > 1)
-                    {
-                        return Error::generateError("iq", "modify", "bad-request", Utils::getHost(iqFrom), "", id, QDomElement());
-                    }
-                    // We verify others errors
+                    return Error::generateError("", "iq", "modify", "bad-request", Utils::getHost(iqFrom), "", id, QDomElement());
+                }
+                // We verify others errors
 
-                    if (m_userManager->deleteUser(Utils::getBareJid(from)))
+                if (m_userManager->deleteUser(Utils::getBareJid(iqFrom)))
+                {
+                    return generateIQResult("", iqFrom, id);
+                }
+                else
+                {
+                    return Error::generateInternalServerError();
+                }
+            }
+            else if ((xmlns == "jabber:iq:privacy") && m_serverConfiguration->value("modules").toObject().value("privacy").toBool())
+            {
+                return m_privacyListManager->privacyListReply(document, iqFrom);
+            }
+            else if ((xmlns == "jabber:iq:private") && m_serverConfiguration->value("modules").toObject().value("private").toBool())
+            {
+                return m_privateStorageManager->privateStorageManagerReply(document, iqFrom);
+            }
+            else if ((xmlns == "jabber:iq:oob") && m_serverConfiguration->value("modules").toObject().value("oob").toBool())
+            {
+                emit sigApplicationRequest(iqTo, document);
+                return QByteArray();
+            }
+            else if (xmlns == "http://jabber.org/protocol/muc#owner")
+            {
+                if (firstChild.firstChildElement().tagName() == "destroy")
+                {
+                    QString roomName = iqTo;
+                    if (!m_mucManager->getRoomOwnersList(roomName).contains(Utils::getBareJid(iqFrom)))
                     {
-                        return generateIQResult(iqFrom, id);
+                        return Error::generateError("", "iq", "auth", "forbidden", iqTo, iqFrom,
+                                                    Utils::generateId(), firstChild);
                     }
                     else
                     {
+                        //QString ownerMucJid = m_mucManager->getOccupantMucJid(roomName, iqFrom);
+                        QList<Occupant> occupantList = m_mucManager->getOccupants(roomName);
 
+                        // Destroy the room
+                        m_mucManager->destroyRoom(roomName);
+
+                        foreach (Occupant occupant, occupantList)
+                        {
+                            QDomDocument presenceDocument = Utils::generatePresence("unavailable", occupant.mucJid(), occupant.jid(),
+                                                                                    Utils::generateId(), "none",
+                                                                                    "none", "", "",
+                                                                                    QList<int>(), "", "");
+                            presenceDocument.firstChildElement().appendChild(firstChild.firstChildElement());
+                            emit sigMucPresenceBroadCast(occupant.jid(), presenceDocument);
+                        }
+                    }
+                    return generateIQResult(iqTo, iqFrom, id);
+                }
+
+                QDomElement xElement = firstChild.firstChildElement();
+                if (!xElement.hasChildNodes())
+                {
+                    if ((xElement.attribute("xmlns") == "jabber:xdata") && (xElement.attribute("type") == "submit"))
+                    {
+                        m_mucManager->unlockRoom(iqTo);
                     }
                 }
                 else
                 {
-                    QDomElement usernameNode = firstChild.elementsByTagName("username").item(0).toElement();
-                    QDomElement passwordNode = firstChild.elementsByTagName("password").item(0).toElement();
+                    QMap<QString, QVariant> dataFormValue = DataFormManager::parseDataForm(xElement);
 
-                    QString username = usernameNode.text();
-                    QString password = passwordNode.text();
-                    QString jid = username + "@" + host;
-
-                    if (usernameNode.isNull() || passwordNode.isNull())
+                    if (((dataFormValue.value("muc#roomconfig_passwordprotectedroom").toBool()) &&
+                            dataFormValue.value("muc#roomconfig_roomsecret").toString().isEmpty()) ||
+                            ((!dataFormValue.value("muc#roomconfig_passwordprotectedroom").toBool()) &&
+                                                        !dataFormValue.value("muc#roomconfig_roomsecret").toString().isEmpty()))
                     {
-                        return Error::generateError("iq", "modify", "not-acceptable", "", "", id, firstChild);
+                        return Error::generateError("", "iq", "cancel", "not-acceptable",
+                                                         iqTo, iqFrom, id, QDomElement());
                     }
 
-                    // If this user already exist
-                    if (m_userManager->userExists(jid))
+                    if (m_mucManager->submitConfigForm(iqTo, dataFormValue))
                     {
-                        QString oldPassword = m_userManager->getPassword(jid);
-                        if (username.isNull() || username.isEmpty())
-                        {
-                            return Error::generateError("iq", "modify", "bad-request", Utils::getHost(iqFrom), iqFrom, id,
-                                                        firstChild);
-                        }
+                        // Unlock the room
+                        if (m_mucManager->isLockedRoom(iqTo))
+                            m_mucManager->unlockRoom(iqTo);
 
-                        if (!password.isEmpty() || !password.isNull())
+                        QList<Occupant> occupantList = m_mucManager->getOccupants(iqTo);
+                        foreach (Occupant occupant, occupantList)
                         {
-                            if (oldPassword != password)
-                            {
-                                return DataForm::getPasswordChangeForm(Utils::getHost(iqFrom),
-                                                                       iqFrom, id);
-                            }
+                            emit sigGroupchatMessage(occupant.jid(), Utils::generateMucNotificationMessage("groupchat", iqTo, occupant.jid(),
+                                                                                                           Utils::generateId(), QList<int>()));
                         }
-                        return Error::generateError("iq", "cancel", "conflict",  "", "", id, firstChild);
-                    }
-                    else
-                    {
-                        if (m_userManager->createUser(jid, password))
-                        {
-                            return generateIQResult("", id);
-                        }
-                        else
-                        {
-                            return Error::generateInternalServerError();
-                        }
+                        return generateIQResult(iqTo, iqFrom, id);
                     }
                 }
             }
-            else if ((xmlns == "jabber:iq:privacy") && m_serverConfigMap->value("modules").toMap().value("privacy").toBool())
+            else if (xmlns == "http://jabber.org/protocol/muc#admin")
             {
-                return m_privacyListManager->privacyListReply(document, iqFrom);
+
+                QDomNodeList itemList = firstChild.childNodes();
+                for (int i = 0; i < itemList.count(); ++i)
+                {
+                    QString nick = itemList.item(i).toElement().attribute("nick");
+                    QString mucJid = iqTo + "/" + nick;
+                    QString role = itemList.item(i).toElement().attribute("role");
+                    QString affiliation = itemList.item(i).toElement().attribute("affiliation");
+
+                    if (!role.isEmpty())
+                    {
+                        // kicking himself
+                        if (mucJid == m_mucManager->getOccupantMucJid(iqTo, iqFrom))
+                        {
+                            return Error::generateError("", "iq", "cancel", "conflict", iqTo, iqFrom,
+                                                        id, QDomElement());
+                        }
+
+                        Occupant kickerOccupant = m_mucManager->getOccupant(iqTo, iqFrom);
+                        Occupant kickedOccupant = m_mucManager->getOccupantFromMucJid(iqTo, mucJid);
+
+                        // Can't kick user with higher affiliation
+                        if (Utils::affiliationIntValue(kickerOccupant.affiliation())
+                                < Utils::affiliationIntValue(kickedOccupant.affiliation()))
+                        {
+                            return Error::generateError("", "iq", "cancel", "not-allowed", iqTo, iqFrom, id,
+                                                        QDomElement());
+                        }
+
+                        // kicking an occupant
+                        if (role == "none")
+                        {
+                            QString kickedJid = m_mucManager->getOccupantJid(iqTo, mucJid);
+                            emit sigMucPresenceBroadCast(kickedJid, Utils::generatePresence("unavailable", mucJid, kickedJid, "", "none", "none",
+                                                                                            "", "", QList<int>() << 307, "", ""));
+                        }
+
+                        // Update role
+                        m_mucManager->changeRole(iqTo, mucJid, role);
+
+                        QList<Occupant> occupantList = m_mucManager->getOccupants(iqTo);
+
+                        QDomDocument document;
+                        // Informs Remaning occupant
+                        if (role == "none")
+                        {
+                            document = Utils::generatePresence("unavailable", mucJid, mucJid,
+                                                               Utils::generateId(), "none", "none", "", "",
+                                                               QList<int>() << 307, "", "");
+                        }
+                        else if (role == "participant")
+                        {
+                            document = Utils::generatePresence("", mucJid, mucJid, Utils::generateId(),
+                                                               kickedOccupant.affiliation(),
+                                                               "participant", "", nick,
+                                                               QList<int>(), "", "");
+                        }
+                        else if (role == "visitor")
+                        {
+                            document = Utils::generatePresence("", mucJid, mucJid, Utils::generateId(),
+                                                               kickedOccupant.affiliation(), "visitor",
+                                                               kickedOccupant.jid(),
+                                                               "", QList<int>(), "", "");
+                        }
+                        else if (role == "moderator")
+                        {
+                            document = Utils::generatePresence("", mucJid, mucJid, Utils::generateId(),
+                                                               kickerOccupant.affiliation(),
+                                                               "moderator", kickerOccupant.jid(),
+                                                               "", QList<int>(), "", "");
+                        }
+
+                        foreach (Occupant occupant, occupantList)
+                        {
+                            document.firstChildElement().setAttribute("to", occupant.jid());
+                            emit sigMucPresenceBroadCast(occupant.jid(), document);
+                        }
+
+                        return generateIQResult(iqTo, iqFrom, id);
+                    }
+                    else if (!affiliation.isEmpty())
+                    {
+                        QString userJid = itemList.item(i).toElement().attribute("jid");
+
+                        QList<QString> ownersList = m_mucManager->getRoomOwnersList(iqTo);
+
+                        // Only owners can modify affiliation for an user
+                        if (!ownersList.contains(Utils::getBareJid(iqFrom)))
+                        {
+                            return Error::generateError("", "iq", "auth", "forbidden", iqTo, iqFrom,
+                                                        Utils::generateId(), QDomElement());
+                        }
+
+
+                        // There is no other owner than this user
+                        if ((ownersList.count() == 1) && (ownersList.contains(Utils::getBareJid(iqFrom)))
+                                && (affiliation != "owner"))
+                        {
+                            return Error::generateError("", "iq", "cancel", "conflict", iqTo, iqFrom,
+                                                        id, QDomElement());
+                        }
+
+                        // Change occupant affiliation
+                        m_mucManager->changeAffiliation(iqTo, userJid, affiliation);
+                        if (affiliation == "member")
+                        {
+                            // Send invitation to this user
+                            emit sigGroupchatMessage(userJid,
+                                                     Utils::generateMucInvitationMessage(iqTo, userJid,
+                                                                                         Utils::generateId(),
+                                                                                         Utils::getBareJid(iqFrom),
+                                                                                         m_mucManager->getRoomPassword(iqTo), ""));
+
+
+                            QList<Occupant> userOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+                            if (!userOccupantList.isEmpty())
+                            {
+                                QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant occupant, occupantsList)
+                                {
+                                    foreach (Occupant userOccupant, userOccupantList)
+                                    {
+                                        emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                     Utils::generatePresence("", userOccupant.mucJid(), occupant.jid(),
+                                                                                             "", "member", "", userOccupant.jid(),
+                                                                                             "", QList<int>(), "", ""));
+                                    }
+                                }
+                            }
+                        }
+                        else if (affiliation == "admin")
+                        {
+                            QList<Occupant> userOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+                            if (!userOccupantList.isEmpty())
+                            {
+                                QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant occupant, occupantsList)
+                                {
+                                    foreach (Occupant userOccupant, userOccupantList)
+                                    {
+                                        emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                     Utils::generatePresence("", userOccupant.mucJid(),
+                                                                                             occupant.jid(),
+                                                                                             "", "admin",
+                                                                                             userOccupant.role(),
+                                                                                             userOccupant.jid(), "", QList<int>(), "", ""));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant occupant, occupantsList)
+                                {
+                                    emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                 Utils::generatePresence("", iqTo, occupant.jid(),
+                                                                                         "", "admin", "", userJid,
+                                                                                         "", QList<int>(), "", ""));
+                                }
+                            }
+                        }
+                        else if (affiliation == "none")
+                        {
+                            if (m_mucManager->getRoomTypes(iqTo).contains("membersonly"))
+                            {
+                                QList<Occupant> removedOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+
+                                // Remove banned user to the occupants list
+                                m_mucManager->removeOccupants(iqTo, Utils::getBareJid(userJid));
+
+                                QList<Occupant> remaningOccupantList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant remaningOccupant, remaningOccupantList)
+                                {
+                                    foreach (Occupant removedOccupant, removedOccupantList)
+                                    {
+                                        emit sigMucPresenceBroadCast(remaningOccupant.jid(),
+                                                                     Utils::generatePresence("unavailable",
+                                                                                             removedOccupant.mucJid(),
+                                                                                             remaningOccupant.jid(), "",
+                                                                                             "none", "none", "",
+                                                                                             "", QList<int>() << 321,
+                                                                                             "", ""));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                QList<Occupant> userOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+                                if (!userOccupantList.isEmpty())
+                                {
+                                    QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                    foreach (Occupant occupant, occupantsList)
+                                    {
+                                        foreach (Occupant userOccupant, userOccupantList)
+                                        {
+                                            emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                         Utils::generatePresence("", userOccupant.mucJid(),
+                                                                                                 occupant.jid(),
+                                                                                                 "", "none",
+                                                                                                 userOccupant.role(),
+                                                                                                 userOccupant.jid(), "", QList<int>(), "", ""));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                    foreach (Occupant occupant, occupantsList)
+                                    {
+                                        emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                     Utils::generatePresence("", iqTo, occupant.jid(),
+                                                                                             "", "none", "", userJid,
+                                                                                             "", QList<int>(), "", ""));
+                                    }
+                                }
+                            }
+                        }
+                        else if (affiliation == "outcast")
+                        {
+                            QList<Occupant> bannedOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+                            foreach (Occupant bannedOccupant, bannedOccupantList)
+                            {
+                                emit sigMucPresenceBroadCast(bannedOccupant.jid(),
+                                                             Utils::generatePresence("unavailable",
+                                                                                     bannedOccupant.mucJid(),
+                                                                                     bannedOccupant.jid(), "",
+                                                                                     "outcast", "none", "",
+                                                                                     "", QList<int>() << 301,
+                                                                                     "", ""));
+                            }
+
+                            // Remove banned user to the occupants list
+                            m_mucManager->removeOccupants(iqTo, Utils::getBareJid(userJid));
+
+                            QList<Occupant> remaningOccupantList = m_mucManager->getOccupants(iqTo);
+                            foreach (Occupant remaningOccupant, remaningOccupantList)
+                            {
+                                foreach (Occupant bannedOccupant, bannedOccupantList)
+                                {
+                                    emit sigMucPresenceBroadCast(remaningOccupant.jid(),
+                                                                 Utils::generatePresence("unavailable",
+                                                                                         bannedOccupant.mucJid(),
+                                                                                         remaningOccupant.jid(), "",
+                                                                                         "outcast", "none", "",
+                                                                                         "", QList<int>() << 301,
+                                                                                         "", ""));
+                                }
+                            }
+                        }
+                        else if (affiliation == "owner")
+                        {
+                            QList<Occupant> userOccupantList = m_mucManager->getOccupants(iqTo, Utils::getBareJid(userJid));
+                            if (!userOccupantList.isEmpty())
+                            {
+                                QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant occupant, occupantsList)
+                                {
+                                    foreach (Occupant userOccupant, userOccupantList)
+                                    {
+                                        emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                     Utils::generatePresence("", userOccupant.mucJid(),
+                                                                                             occupant.jid(),
+                                                                                             "", "owner",
+                                                                                             userOccupant.role(),
+                                                                                             userOccupant.jid(), "", QList<int>(), "", ""));
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                QList<Occupant> occupantsList = m_mucManager->getOccupants(iqTo);
+                                foreach (Occupant occupant, occupantsList)
+                                {
+                                    emit sigMucPresenceBroadCast(occupant.jid(),
+                                                                 Utils::generatePresence("", iqTo, occupant.jid(),
+                                                                                         "", "owner", "", userJid,
+                                                                                         "", QList<int>(), "", ""));
+                                }
+                            }
+                        }
+                        return generateIQResult(iqTo, iqFrom, id);
+                    }
+                }
             }
-            else if ((xmlns == "jabber:iq:private") && m_serverConfigMap->value("modules").toMap().value("private").toBool())
+            else if (xmlns == "storage:client:avatar")
             {
-                return m_privateStorageManager->privateStorageManagerReply(document, iqFrom);
+                QString nodeData;
+                QTextStream stream(&nodeData);
+
+                QMultiHash<QString, QString> nodeMap;
+
+                firstChild.firstChildElement().save(stream, 4);
+                nodeMap.insert(xmlns, nodeData);
+                m_privateStorageManager->storePrivateData(Utils::getBareJid(iqFrom), nodeMap);
+                return QByteArray();
             }
-            else if (xmlns == "jabber:iq:oob" && m_serverConfigMap->value("modules").toMap().value("oob").toBool())
+            else if ((xmlns == "http://jabber.org/protocol/bytestreams") && m_serverConfiguration->value("modules").toObject().value("bytestreams").toBool())
             {
-                return m_oobDataManager->oobDataManagerReply(document, iqFrom);
-            }
-            else
-            {
-                return Error::generateError("iq", "cancel", "service-unavalaible",
-                                                              Utils::getHost(iqFrom), iqFrom, "", QDomElement());
+                emit sigApplicationRequest(iqTo, document);
+                return QByteArray();
             }
         }
-        else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfigMap->value("modules").toMap().value("vcard-temp").toBool())
+        else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfiguration->value("modules").toObject().value("vcard-temp").toBool())
         {
             return m_vCardManager->vCardManagerReply(document, iqFrom);
         }
-        else if (firstChildTagName == "offline" && m_serverConfigMap->value("modules").toMap().value("msgoffline").toBool())
+        else if (firstChildTagName == "offline" && m_serverConfiguration->value("modules").toObject().value("msgoffline").toBool())
         {
             return m_offlineMessageManager->offlineMessageManagerReply(document, iqFrom);
         }
-        else if ((firstChildTagName == "block") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        else if ((firstChildTagName == "block") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
         {
             return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
         }
-        else if ((firstChildTagName == "unblock") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        else if ((firstChildTagName == "unblock") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
         {
             return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
+        }
+        else if (firstChildTagName == "env:Envelope")
+        {
+            emit sigApplicationRequest(iqTo, document);
+            return QByteArray();
+        }
+        else if (firstChildTagName == "si")
+        {
+            document.firstChildElement().setAttribute("from", iqFrom);
+            emit sigApplicationRequest(iqTo, document);
+            return QByteArray();
+        }
+        else if ((firstChildTagName == "open") || (firstChildTagName == "close") || (firstChildTagName == "data"))
+        {
+            if ((firstChild.attribute("xmlns") == "http://jabber.org/protocol/ibb") && m_serverConfiguration->value("modules").toObject().value("ibb").toBool())
+            {
+                emit sigApplicationRequest(iqTo, document);
+                return QByteArray();
+            }
+        }
+        else if (firstChildTagName == "feature")
+        {
+            emit sigApplicationRequest(iqTo, document);
+            return QByteArray();
         }
         else
         {
-            return Error::generateError("iq", "cancel", "service-unavalaible",
-                                               Utils::getHost(iqFrom), iqFrom, "", QDomElement());
+            return Error::generateError("", "iq", "cancel", "service-unavailable",
+                                        Utils::getHost(iqFrom), iqFrom, "", QDomElement());
         }
     }
     else if (iq.attribute("type") == "get")
     {
-        QDomElement firstChild = iq.firstChild().toElement();
+        QDomElement firstChild = iq.firstChildElement();
         QString firstChildTagName = firstChild.tagName();
 
         if (firstChildTagName == "query")
         {
             QString xmlns = firstChild.attribute("xmlns");
-            if ((xmlns == "jabber:iq:auth") && m_serverConfigMap->value("modules").toMap().value("nonsaslauth").toBool())
+            if ((xmlns == "jabber:iq:auth") && m_serverConfiguration->value("modules").toObject().value("nonsaslauth").toBool())
             {
-                if (m_serverConfigMap->value("virtualHost").toList().contains(document.documentElement().attribute("to")))
+                if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(document.documentElement().attribute("to")))
                 {
                     emit sigStreamNegotiationError(streamId);
                     return Error::generateStreamError("host-unknown");
                 }
                 return authentificationFields(id);
             }
-            else if ((xmlns == "jabber:iq:roster") && m_serverConfigMap->value("modules").toMap().value("roster").toBool())
+            else if ((xmlns == "jabber:iq:roster") && m_serverConfiguration->value("modules").toObject().value("roster").toBool())
             {
                 if (firstChild.text().isEmpty())
                 {
@@ -455,11 +872,50 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                     return generateRosterGetResultReply(iqFrom, id, contactList);
                 }
             }
-            else if ((xmlns == "jabber:iq:register") && m_serverConfigMap->value("modules").toMap().value("register").toBool())
+            else if ((xmlns == "jabber:iq:register") && m_serverConfiguration->value("modules").toObject().value("register").toBool())
             {
-                return generateRegistrationFieldsReply(id);
+                // Registering with room
+                if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(Utils::getHost(iqTo)))
+                {
+                    if (!m_mucManager->chatRoomExist(iqTo))
+                    {
+                        return Error::generateError("", "iq", "cancel", "item-not-found",
+                                                    iqTo, iqFrom, id, QDomElement());
+                    }
+
+                    if (m_mucManager->getOccupantAffiliation(iqTo, iqFrom) != "admin")
+                    {
+                        return Error::generateError("", "iq", "cancel", "not-allowed", iqTo, iqFrom, id,
+                                                    QDomElement());
+                    }
+
+                    if (m_mucManager->isRegistered(iqTo, Utils::getBareJid(iqFrom)))
+                    {
+                        QDomDocument document;
+                        QDomElement iqElement = document.createElement("iq");
+                        iqElement.setAttribute("from", iqTo);
+                        iqElement.setAttribute("to", iqFrom);
+
+                        QDomElement query = document.createElement("query");
+                        query.setAttribute("xmlns", "jabber:iq:register");
+                        query.appendChild(document.createElement("registered"));
+
+                        QDomElement usernameElement = document.createElement("username");
+                        usernameElement.appendChild(document.createTextNode(m_mucManager->getOccupantMucJid(iqTo, iqFrom).split("/").value(1)));
+
+                        query.appendChild(usernameElement);
+                        iqElement.appendChild(query);
+                        document.appendChild(iqElement);
+
+                        return document.toByteArray();
+                    }
+
+                    // Return registration form
+                    return DataFormManager::getRoomRegistrationForm(iqTo, iqFrom, id, m_mucManager->getRoomName(iqTo)).toByteArray();
+                }
+                return DataFormManager::getRegistrationForm(id).toByteArray();
             }
-            else if (xmlns.contains("http://jabber.org/protocol/disco") && m_serverConfigMap->value("modules").toMap().value("disco").toBool())
+            else if (xmlns.contains("http://jabber.org/protocol/disco") && m_serverConfiguration->value("modules").toObject().value("disco").toBool())
             {
                 if (xmlns == "http://jabber.org/protocol/disco#info")
                 {
@@ -470,51 +926,260 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                     return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(document, iqFrom);
                 }
             }
-            else if ((xmlns == "jabber:iq:privacy") && m_serverConfigMap->value("modules").toMap().value("privacy").toBool())
+            else if ((xmlns == "jabber:iq:privacy") && m_serverConfiguration->value("modules").toObject().value("privacy").toBool())
             {
                 return m_privacyListManager->privacyListReply(document, iqFrom);
             }
-            else if (xmlns == "jabber:iq:last")
+            else if ((xmlns == "jabber:iq:last") && m_serverConfiguration->value("modules").toObject().value("lastActivity").toBool())
             {
                 return m_lastActivityManager->lastActivityReply(document, iqFrom);
             }
-            else if ((xmlns == "jabber:iq:private") && m_serverConfigMap->value("modules").toMap().value("private").toBool())
+            else if ((xmlns == "jabber:iq:private") && m_serverConfiguration->value("modules").toObject().value("private").toBool())
             {
                 return m_privateStorageManager->privateStorageManagerReply(document, iqFrom);
             }
+            else if (xmlns == "http://jabber.org/protocol/muc#owner")
+            {
+                if (!m_mucManager->getRoomOwnersList(iqTo).contains(Utils::getBareJid(iqFrom)))
+                {
+                    return Error::generateError("", "iq", "auth", "forbidden", iqTo, iqFrom,
+                                                Utils::generateId(), firstChild);
+                }
+                else
+                {
+                    return DataFormManager::getRoomConfigForm("form", iqTo, iqFrom, id, m_mucManager->getRoomConfig(iqTo)).toByteArray();
+                }
+            }
+            else if (xmlns == "http://jabber.org/protocol/muc#admin")
+            {
+                QString roomName = iqTo;
+                if ((m_mucManager->getRoomTypes(roomName).contains("membersonly")) &&
+                        !m_mucManager->getRoomAdminsList(roomName).contains(Utils::getBareJid(iqFrom)))
+                {
+                    return Error::generateError("", "iq", "cancel", "not-allowed", iqTo, iqFrom, id,
+                                                QDomElement());
+                }
+                else
+                {
+                    QString affiliation = firstChild.firstChildElement().attribute("affiliation");
+                    QString role = firstChild.firstChildElement().attribute("role");
+
+                    if (!affiliation.isEmpty())
+                    {
+                        if (affiliation == "owner")
+                        {
+                            return generateRoomAffiliationList(iqTo, iqFrom, id,
+                                                               m_mucManager->getRoomOwnersList(iqTo), "owner");
+                        }
+                        else if (affiliation == "admin")
+                        {
+                            return generateRoomAffiliationList(iqTo, iqFrom, id,
+                                                               m_mucManager->getRoomAdminsList(iqTo), "admin");
+                        }
+                        else if (affiliation == "member")
+                        {
+                            return generateRoomAffiliationList(iqTo, iqFrom, id, m_mucManager->getRoomRegisteredMembersList(iqTo), "member");
+                        }
+                        else if (affiliation == "outcast")
+                        {
+                            return generateRoomAffiliationList(iqTo, iqFrom, id,
+                                                               m_mucManager->getBannedList(iqTo), "outcast");
+                        }
+                    }
+                    else
+                    {
+                        if (!role.isEmpty())
+                        {
+                            if (role == "moderator")
+                            {
+                                return generateRoomRoleList(iqTo, iqFrom, id,
+                                                                   m_mucManager->getRoomModeratorsJid(iqTo), "moderator");
+                            }
+                        }
+                    }
+                }
+            }
+            else if ((xmlns == "jabber:iq:avatar"))
+            {
+                document.firstChildElement().setAttribute("from", iqFrom);
+                emit sigIqAvatarQuery(iqTo, document);
+                return QByteArray();
+            }
+            else if (xmlns == "storage:client:avatar")
+            {
+                QDomDocument document;
+                document.setContent(m_privateStorageManager->getPrivateData(Utils::getBareJid(iqTo),
+                                                                           "storage:client:avatar"));
+                emit sigIqAvatarQuery(iqFrom, generateStorageAvatarDocument(iqTo, iqFrom, document.firstChildElement()));
+                return QByteArray();
+            }
+            else if ((xmlns == "http://jabber.org/protocol/bytestreams") && m_serverConfiguration->value("modules").toObject().value("bytestreams").toBool())
+            {
+                return m_byteStreamManager->byteStreamManagerReply(document, iqFrom);
+            }
             else
             {
-                return Error::generateError("iq", "cancel", "service-unavalaible",
-                                                              Utils::getHost(iqFrom), iqFrom, "", QDomElement());
+                return Error::generateError("", "iq", "cancel", "service-unavailable",
+                                            Utils::getHost(iqFrom), iqFrom, "", QDomElement());
             }
         }
-        else if (firstChildTagName == "ping" && m_serverConfigMap->value("modules").toMap().value("ping").toBool())
+        else if (firstChildTagName == "ping" && m_serverConfiguration->value("modules").toObject().value("ping").toBool())
         {
             return generatePongReply(Utils::getHost(iqFrom), iqFrom, id);
         }
-        else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfigMap->value("modules").toMap().value("vcard-temp").toBool())
+        else if (((firstChildTagName == "vCard") || (firstChildTagName == "VCARD")) && m_serverConfiguration->value("modules").toObject().value("vcard-temp").toBool())
         {
             return m_vCardManager->vCardManagerReply(document, iqFrom);
         }
-        else if ((firstChildTagName == "time") && m_serverConfigMap->value("modules").toMap().value("time").toBool())
+        else if ((firstChildTagName == "time") && m_serverConfiguration->value("modules").toObject().value("time").toBool())
         {
             return m_entityTimeManager->entityTimeManagerReply(document, iqFrom);
         }
-        else if ((firstChildTagName == "offline") && m_serverConfigMap->value("modules").toMap().value("msgoffline").toBool())
+        else if ((firstChildTagName == "offline") && m_serverConfiguration->value("modules").toObject().value("msgoffline").toBool())
         {
             return m_offlineMessageManager->offlineMessageManagerReply(document, iqFrom);
         }
-        else if ((firstChildTagName == "blocklist") && m_serverConfigMap->value("modules").toMap().value("blockingcmd").toBool())
+        else if ((firstChildTagName == "blocklist") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
         {
             return m_blockingCmdManager->blockingCommandManagerReply(document, iqFrom);
         }
+        else if (firstChildTagName == "start")
+        {
+            if (firstChild.attribute("xmlns") == "http://jabber.org/protocol/sipub")
+            {
+                emit sigApplicationRequest(iqTo, document);
+            }
+            return QByteArray();
+        }
         else
         {
-            return Error::generateError("iq", "cancel", "service-unavalaible",
-                                                          Utils::getHost(iqFrom), iqFrom, "", QDomElement());
+            return Error::generateError("", "iq", "cancel", "service-unavailable",
+                                        Utils::getHost(iqFrom), iqFrom, "", QDomElement());
+        }
+    }
+    else if (iq.attribute("type") == "result")
+    {
+        document.firstChildElement().setAttribute("from", iqFrom);
+        emit sigApplicationReply(iqTo, document);
+        return QByteArray();
+    }
+    else if (iq.attribute("type") == "error")
+    {
+        document.firstChildElement().setAttribute("from", iqFrom);
+        emit sigApplicationReply(iqTo, document);
+        return QByteArray();
+    }
+    return QByteArray();
+}
+
+QDomDocument IqManager::generateStorageAvatarDocument(QString from, QString to, QDomElement avatarElement)
+{
+    QDomDocument document;
+    QDomElement iqElement = document.createElement("iq");
+    iqElement.setAttribute("from", from);
+    iqElement.setAttribute("to", to);
+
+    QDomElement queryElement = document.createElement("query");
+    queryElement.setAttribute("xmlns", "storage:client:avatar");
+
+    queryElement.appendChild(avatarElement);
+    iqElement.appendChild(queryElement);
+    document.appendChild(iqElement);
+
+    return document;
+}
+
+QByteArray IqManager::registerUserReply(QString username, QString password, QString jid, QString id,
+                                        QDomElement firstChild, QString iqFrom)
+{
+    if (username.isEmpty() || password.isEmpty())
+    {
+        return Error::generateError("", "iq", "modify", "not-acceptable", "", "", id, firstChild);
+    }
+
+    // If this user already exist
+    if (m_userManager->userExists(jid))
+    {
+        QString oldPassword = m_userManager->getPassword(jid);
+        if (username.isNull() || username.isEmpty())
+        {
+            return Error::generateError("", "iq", "modify", "bad-request", Utils::getHost(iqFrom), iqFrom, id,
+                                        firstChild);
+        }
+
+        if (!password.isEmpty() || !password.isNull())
+        {
+            if (oldPassword != password)
+            {
+                return DataFormManager::getPasswordChangeForm(Utils::getHost(iqFrom), iqFrom, id).toByteArray();
+            }
+        }
+        return Error::generateError("", "iq", "cancel", "conflict",  "", "", id, firstChild);
+    }
+    else
+    {
+        if (m_userManager->createUser(jid, password))
+        {
+            return generateIQResult("", "", id);
+        }
+        else
+        {
+            return Error::generateInternalServerError();
         }
     }
     return QByteArray();
+}
+
+QByteArray IqManager::generateRoomAffiliationList(QString from, QString to, QString id, QList<QString> list,
+                                                  QString affiliation)
+{
+    QDomDocument document;
+    QDomElement iqElement = document.createElement("iq");
+    iqElement.setAttribute("from", from);
+    iqElement.setAttribute("to", to);
+    iqElement.setAttribute("id", id);
+    iqElement.setAttribute("type", "result");
+
+    QDomElement query = document.createElement("query");
+    query.setAttribute("xmlns", "http://jabber.org/protocol/muc#admin");
+    foreach (QString jid, list)
+    {
+        QDomElement item = document.createElement("item");
+        item.setAttribute("affiliation", affiliation);
+        item.setAttribute("jid", jid);
+
+        query.appendChild(item);
+    }
+    iqElement.appendChild(query);
+    document.appendChild(iqElement);
+
+    return document.toByteArray();
+}
+
+QByteArray IqManager::generateRoomRoleList(QString from, QString to, QString id, QList<QString> list,
+                                                  QString role)
+{
+    QDomDocument document;
+    QDomElement iqElement = document.createElement("iq");
+    iqElement.setAttribute("from", from);
+    iqElement.setAttribute("to", to);
+    iqElement.setAttribute("id", id);
+    iqElement.setAttribute("type", "result");
+
+    QDomElement query = document.createElement("query");
+    query.setAttribute("xmlns", "http://jabber.org/protocol/muc#admin");
+    foreach (QString jid, list)
+    {
+        QDomElement item = document.createElement("item");
+        item.setAttribute("role", role);
+        item.setAttribute("jid", jid);
+
+        query.appendChild(item);
+    }
+    iqElement.appendChild(query);
+    document.appendChild(iqElement);
+
+    return document.toByteArray();
 }
 
 /*!
@@ -600,10 +1265,15 @@ QByteArray IqManager::generateIqSessionReply(QString id, QString from)
  * \param id
  * \return QByteArray
  */
-QByteArray IqManager::generateIQResult(QString to, QString id)
+QByteArray IqManager::generateIQResult(QString from, QString to, QString id)
 {
     QDomDocument document;
     QDomElement iq = document.createElement("iq");
+
+    if (!from.isEmpty())
+    {
+        iq.setAttribute("from", from);
+    }
 
     if (!to.isEmpty())
     {

@@ -10,8 +10,7 @@ class StreamManager : public QThread
 public:
     StreamManager(QObject *parent = 0, StorageManager *storageManager = 0,
                   UserManager *userManager = 0, RosterManager *rosterManager = 0,
-                  LastActivityManager *lastActivityManager = 0,
-                  BlockingCommandManager *blockingCmdManager = 0);
+                  LastActivityManager *lastActivityManager = 0);
 
 public slots:
     void newConnection(Connection *connection, IqManager *iqManager,
@@ -55,10 +54,14 @@ public slots:
     void resumeStream(Connection *connection, QString prevId, int h);
     void clientServiceDiscoveryQuery(QString to, QByteArray request);
     void clientServiceDiscoveryResponse(QString to, QByteArray response);
-    void oobRequest(QString to, QByteArray request);
+    void requestRedirection(QString to, QDomDocument document);
     void blockPush(QString to, QList<QString> items);
     void unblockPush(QString to, QList<QString> items);
-
+    void mucPresenceBroadCast(QString to, QDomDocument document);
+    void roomHistory(QString to, QList<QDomDocument> messageList);
+    void roomSubject(QString to, QByteArray subjectMessage);
+    void groupchatMessage(QString to, QDomDocument document);
+    void directMucInvitation(QString to, QDomDocument document);
 
 signals:
     void sigPresenceSubscribedSended();
@@ -83,7 +86,6 @@ private:
     RosterManager *m_rosterManager;
     QMultiHash<QString, User* > *m_userMap;
     QMultiHash<QString, Stream* > *m_notNegotiatedStream;
-    BlockingCommandManager *m_blockingCmdManager;
     QStringList *m_resourceDefaultList; // this list contain the resource who has set a default list
 };
 

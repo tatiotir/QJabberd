@@ -15,7 +15,7 @@ class StreamNegotiationManager : public QObject
 {
     Q_OBJECT
 public:
-    StreamNegotiationManager(QMap<QString, QVariant> *serverConfigMap = 0, UserManager *userManager = 0);
+    StreamNegotiationManager(QJsonObject *serverConfiguration = 0, UserManager *userManager = 0);
 
 public slots:
     QByteArray reply(QDomDocument document, QString streamId);
@@ -43,7 +43,7 @@ private:
 
     UserManager *m_userManager;
     QMultiHash<QString, StreamNegotiationData* > *m_streamNegotiationVariableMap;
-    QMap<QString, QVariant> *m_serverConfigMap;
+    QJsonObject *m_serverConfiguration;
 };
 
 #endif // STREAMNEGOTIATIONMANAGER_H

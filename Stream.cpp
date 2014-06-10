@@ -186,122 +186,32 @@ void Stream::requestTreatment(QDomDocument document)
     else if (document.documentElement().tagName() == "iq")
     {
         qDebug() << "Client : " << document.toByteArray();
+        emit sigInboundStanzaReceived(m_fullJid);
+        QByteArray answer = m_iqManager->parseIQ(document, m_fullJid, m_host, m_streamId);
 
-        QList<QString> fromBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(m_fullJid));
-        QList<QString> toBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(document.documentElement().attribute("to")));
-
-
-        // Check block list items
-        if (fromBlockList.contains(document.documentElement().attribute("to")) ||
-                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
-        {
-            QDomDocument document;
-            QDomElement blockedElement = document.createElement("blocked");
-            blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
-
-            streamReply(Error::generateError("message", "cancel", "not-acceptable",
-                                             document.documentElement().attribute("from"),
-                                             document.documentElement().attribute("to"),
-                                             "", blockedElement));
-        }
-        else if (toBlockList.contains(m_fullJid) ||
-                 toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
-                 toBlockList.contains(Utils::getHost(m_fullJid)) ||
-                 toBlockList.contains(m_fullJid.split("@").value(1)))
-        {
-            streamReply(Error::generateError("iq", "cancel", "service-unavalaible",
-                                             Utils::getHost(m_fullJid), m_fullJid, "", QDomElement()));
-        }
-        else
-        {
-            emit sigInboundStanzaReceived(m_fullJid);
-            QByteArray answer = m_iqManager->parseIQ(document, m_fullJid, m_host, m_streamId);
-
-            // We send iq reply
-            streamReply(answer);
-            ++m_inboundStanzaCount;
-        }
+        // We send iq reply
+        streamReply(answer);
+        ++m_inboundStanzaCount;
     }
     else if (document.documentElement().tagName() == "presence")
     {
         qDebug() << "Client : " << document.toByteArray();
+        emit sigInboundStanzaReceived(m_fullJid);
+        QByteArray answer = m_presenceManager->parsePresence(document, m_fullJid);
 
-        QList<QString> fromBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(m_fullJid));
-        QList<QString> toBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(document.documentElement().attribute("to")));
-
-        // Check block list items
-        if (fromBlockList.contains(document.documentElement().attribute("to")) ||
-                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
-        {
-            QDomDocument document;
-            QDomElement blockedElement = document.createElement("blocked");
-            blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
-
-            streamReply(Error::generateError("message", "cancel", "not-acceptable",
-                                             document.documentElement().attribute("from"),
-                                             document.documentElement().attribute("to"),
-                                             "", blockedElement));
-        }
-
-        if (!toBlockList.contains(m_fullJid) ||
-                !toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
-                !toBlockList.contains(Utils::getHost(m_fullJid)) ||
-                !toBlockList.contains(m_fullJid.split("@").value(1)))
-        {
-            emit sigInboundStanzaReceived(m_fullJid);
-            QByteArray answer = m_presenceManager->parsePresence(document, m_fullJid);
-
-            // We send presence reply
-            streamReply(answer);
-            ++m_inboundStanzaCount;
-        }
+        // We send presence reply
+        streamReply(answer);
+        ++m_inboundStanzaCount;
     }
     else if (document.documentElement().tagName() == "message")
     {
         qDebug() << "Client : " << document.toByteArray();
+        emit sigInboundStanzaReceived(m_fullJid);
+        QByteArray answer = m_messageManager->parseMessage(document, m_fullJid);
 
-        QList<QString> fromBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(m_fullJid));
-        QList<QString> toBlockList = m_blockingCmdManager->getUserBlockList(Utils::getBareJid(document.documentElement().attribute("to")));
-
-        qDebug() << "blockList from : " << fromBlockList;
-        qDebug() << "blockList to : " << toBlockList;
-
-        // Check block list items
-        if (fromBlockList.contains(document.documentElement().attribute("to")) ||
-                fromBlockList.contains(Utils::getBareJid(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(Utils::getHost(document.documentElement().attribute("to"))) ||
-                fromBlockList.contains(document.documentElement().attribute("to").split("@").value(1)))
-        {
-            QDomDocument document;
-            QDomElement blockedElement = document.createElement("blocked");
-            blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
-
-            streamReply(Error::generateError("message", "cancel", "not-acceptable",
-                                             document.documentElement().attribute("from"),
-                                             document.documentElement().attribute("to"),
-                                             "", blockedElement));
-        }
-        else if (toBlockList.contains(m_fullJid) ||
-                 toBlockList.contains(Utils::getBareJid(m_fullJid)) ||
-                 toBlockList.contains(Utils::getHost(m_fullJid)) ||
-                 toBlockList.contains(m_fullJid.split("@").value(1)))
-        {
-            streamReply(Error::generateError("iq", "cancel", "service-unavalaible",
-                                             Utils::getHost(m_fullJid), m_fullJid, "", QDomElement()));
-        }
-        else
-        {
-            emit sigInboundStanzaReceived(m_fullJid);
-            QByteArray answer = m_messageManager->parseMessage(document, m_fullJid);
-
-            // We send presence reply
-            streamReply(answer);
-            ++m_inboundStanzaCount;
-        }
+        // We send presence reply
+        streamReply(answer);
+        ++m_inboundStanzaCount;
     }
     else if (document.documentElement().tagName() == "r")
     {

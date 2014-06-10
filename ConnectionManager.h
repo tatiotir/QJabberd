@@ -9,7 +9,7 @@ class ConnectionManager : public QTcpServer
 {
     Q_OBJECT
 public:
-    ConnectionManager(QObject *parent = 0, int port = 5222, QMap<QString, QVariant> *serverConfigMap = 0);
+    ConnectionManager(QObject *parent = 0, int port = 5222, QJsonObject *serverConfiguration = 0);
 
 public slots:
     int getPort();
@@ -28,6 +28,8 @@ protected:
     void incomingConnection(qintptr socketDescriptor);
 
 private:
+    void createNetworkProxy(QJsonObject *serverConfiguration);
+    QList<QNetworkProxy> m_networkProxyList;
     int m_port;
     QList<Connection *> *m_listConnection;
     StreamManager *m_streamManager;
@@ -45,9 +47,9 @@ private:
     ServiceDiscoveryManager *m_serviceDiscoveryManager;
     StreamNegotiationManager *m_streamNegotiationManager;
     StorageManager *m_storageManager;
-    OobDataManager *m_oobDataManager;
     BlockingCommandManager *m_blockingCmdManager;
-    QMap<QString, QVariant> *m_serverConfigMap;
+    MucManager *m_mucManager;
+    ByteStreamsManager *m_bytestreamsManager;
 };
 
 #endif // CONNECTIONMANAGER_H

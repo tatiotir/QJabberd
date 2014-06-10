@@ -15,9 +15,9 @@ public:
 
     QByteArray blockingCommandManagerReply(QDomDocument document, QString iqFrom);
     QByteArray blockingCommandManagerResult(QString id, QList<QString> blocklist);
-    QList<QString> getUserBlockList(QString jid);
     static QDomDocument generateBlockPush(QString to, QString id, QList<QString> items);
     static QDomDocument generateUnblockPush(QString to, QString id, QList<QString> items);
+    QByteArray isBlocked(QString from, QString to, QString stanzaType);
 
 signals:
     void sigUnavailablePresenceBroadCast(QString to, QString from);
@@ -32,6 +32,7 @@ private:
     bool addUserBlockListItems(QString jid, QList<QString> items);
     bool deleteUserBlockListItems(QString jid, QList<QString> items);
     bool emptyUserBlockList(QString jid);
+    QList<QString> getUserBlockList(QString jid);
 
     StorageManager *m_storageManager;
     RosterManager *m_rosterManager;

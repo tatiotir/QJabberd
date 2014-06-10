@@ -14,7 +14,7 @@ QByteArray PrivateStorageManager::privateStorageManagerReply(QDomDocument docume
 
     if ((node.indexOf("http://jabber.org") == 0) || (node.indexOf("jabber:") == 0) || (node == "vcard-temp"))
     {
-        return Error::generateError("iq", "modify", "not-acceptable", "", "", id, iq.firstChildElement());
+        return Error::generateError("", "iq", "modify", "not-acceptable", "", "", id, iq.firstChildElement());
     }
 
     if (iqType == "get")
@@ -38,12 +38,12 @@ QByteArray PrivateStorageManager::privateStorageManagerReply(QDomDocument docume
     {
         if (!iq.attribute("to").isEmpty())
         {
-            return Error::generateError("iq", "auth", "forbidden", "", "", id, iq.firstChildElement());
+            return Error::generateError("", "iq", "auth", "forbidden", "", "", id, iq.firstChildElement());
         }
 
         if (iq.firstChildElement().childNodes().isEmpty())
         {
-            return Error::generateError("iq", "cancel", "bad-format", "", "", id, iq.firstChildElement());
+            return Error::generateError("", "iq", "cancel", "bad-format", "", "", id, iq.firstChildElement());
         }
 
         if (node == "storage:metacontacts")

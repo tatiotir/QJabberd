@@ -11,11 +11,11 @@ class Error
 public:
     Error();
 
-    static QByteArray generateError(QString stanzaType, QString errorType, QString errorCause,
+    static QByteArray generateError(QString by, QString stanzaType, QString errorType, QString errorCause,
                                     QString from, QString to, QString id, QDomElement request);
     static QByteArray generateStreamError(QString errorCause);
     static QByteArray generateSmError(QString childName);
-    static QByteArray generateSaslError(QString childName);
+    static QByteArray generateFailureError(QString xmlns, QString errorCause);
     static QByteArray generateInternalServerError();
 };
 

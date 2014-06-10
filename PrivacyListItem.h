@@ -43,5 +43,6 @@ private:
 };
 
 bool operator <(PrivacyListItem item1, PrivacyListItem item2);
+bool operator ==(PrivacyListItem item1, PrivacyListItem item2);
 
 #endif // PRIVACYLISTITEM_H

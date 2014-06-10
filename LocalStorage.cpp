@@ -16,11 +16,11 @@ QString LocalStorage::getPassword(QString jid)
     QFile userFile(filename);
 
     if (!userFile.open(QIODevice::ReadOnly))
-        return "";
+        return QString();
 
-    QString password = QJsonDocument::fromJson(userFile.readAll()).object().value("password").toString();
+    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QString password = document.object().value("password").toString();
     userFile.close();
-
     return password;
 }
 
@@ -64,7 +64,7 @@ bool LocalStorage::createUser(QString jid, QString password)
     QJsonDocument document;
 
     QJsonObject userObject;
-    userObject.insert("jid", QJsonValue(jid));
+    userObject.insert("jid", QJsonValue(jid.replace("_", "@")));;
     userObject.insert("password", QJsonValue(password));
     document.setObject(userObject);
 
@@ -94,7 +94,8 @@ QList<Contact> LocalStorage::getContactsList(QString jid)
         if (!contactFile.open(QIODevice::ReadOnly))
             return QList<Contact>();
 
-        contactList << Contact::fromJsonObject(QJsonDocument::fromJson(contactFile.readAll()).object());
+        QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+        contactList << Contact::fromJsonObject(document.object());
         contactFile.close();
     }
     return contactList;
@@ -310,6 +311,23 @@ Contact LocalStorage::getContact(QString jid, QString contactJid)
     return contact;
 }
 
+QString LocalStorage::getContactSubscription(QString jid, QString contactJid)
+{
+    QString contactsDirPath = "roster/" + jid.replace("@", "_") + "/";
+    QString filename = contactsDirPath + contactJid.replace("@", "_") + ".qjc";
+
+    Contact contact;
+    QFile contactFile(filename);
+    if (!contactFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonObject contactObject = document.object();
+
+    contactFile.close();
+    return contactObject.value("subscription").toString();
+}
+
 QSet<QString> LocalStorage::getContactGroups(QString jid, QString contactJid)
 {
     QString contactsDirPath = "roster/" + jid.replace("@", "_") + "/";
@@ -340,7 +358,7 @@ QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacy
     QJsonArray privacyList = userObject.value("privacyList").toObject().value(privacyListName).toArray();
 
     QList<PrivacyListItem> itemList;
-    for (int i = 0, c = privacyList.count(); i < c; ++c)
+    for (int i = 0, c = privacyList.count(); i < c; ++i)
     {
         QJsonObject jsonPrivacyListItem = privacyList[i].toObject();
         itemList << PrivacyListItem::fromJsonObject(jsonPrivacyListItem);
@@ -353,24 +371,19 @@ QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacy
 
 bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
-    if (privacyListName == "default")
-    {
-        /* Map the default privacy list to the block list */
-        QList<QString> blocklist;
-        foreach (PrivacyListItem item, items)
-        {
-            blocklist << item.getValue();
-        }
-        addUserBlockListItems(jid, blocklist);
-    }
+//    if (privacyListName == "default")
+//    {
+//        /* Map the default privacy list to the block list */
+//        QList<QString> blocklist;
+//        foreach (PrivacyListItem item, items)
+//        {
+//            blocklist << item.getValue();
+//        }
+//        addUserBlockListItems(jid, blocklist);
+//    }
 
-    QString privacyListDirPath = "privacyList/";
-    QDir dir(privacyListDirPath);
-    if (!dir.exists())
-    {
-        QDir dir;
-        dir.mkdir(privacyListDirPath);
-    }
+    QDir dir;
+    dir.mkdir("privacyList");
 
     QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
     QFile privacyListFile(filename);
@@ -386,7 +399,10 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     {
         privacyListItems.append(items.value(i).toJsonObject());
     }
-    userObject.value("privacyList").toObject().insert(privacyListName, privacyListItems);
+
+    QJsonObject privacyListObject = userObject.value("privacyList").toObject();
+    privacyListObject.insert(privacyListName, privacyListItems);
+    userObject.insert("privacyList", privacyListObject);
     document.setObject(userObject);
 
     privacyListFile.resize(0);
@@ -397,16 +413,16 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
 
 bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
-    if (privacyListName == "default")
-    {
-        /* Map the block list to the default privacy list */
-        QList<QString> blocklist;
-        foreach (PrivacyListItem item, getPrivacyList(jid, privacyListName))
-        {
-            blocklist << item.getValue();
-        }
-        deleteUserBlockListItems(jid, blocklist);
-    }
+//    if (privacyListName == "default")
+//    {
+//        /* Map the block list to the default privacy list */
+//        QList<QString> blocklist;
+//        foreach (PrivacyListItem item, getPrivacyList(jid, privacyListName))
+//        {
+//            blocklist << item.getValue();
+//        }
+//        deleteUserBlockListItems(jid, blocklist);
+//    }
 
     QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
     QFile privacyListFile(filename);
@@ -416,13 +432,156 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
 
     QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
     QJsonObject userObject = document.object();
-    userObject.remove(privacyListName);
+
+    if (userObject.value("default").toString() == privacyListName)
+        userObject.insert("default", QString());
+
+    if (userObject.value("active").toString() == privacyListName)
+        userObject.insert("active", QString());
+
+    QJsonObject privacyListObject = userObject.value("privacyList").toObject();
+    privacyListObject.remove(privacyListName);
+
+    userObject.insert("privacyList", privacyListObject);
     document.setObject(userObject);
 
     privacyListFile.resize(0);
     quint64 ok = privacyListFile.write(document.toJson());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::privacyListExist(QString jid, QString privacyListName)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    bool listExist = userObject.value("privacyList").toObject().value(privacyListName).toArray().isEmpty();
+    privacyListFile.close();
+    return !listExist;
+}
+
+QString LocalStorage::getDefaultPrivacyList(QString jid)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    QString defaultList = userObject.value("default").toString();
+    privacyListFile.close();
+
+    return defaultList;
+}
+
+QString LocalStorage::getActivePrivacyList(QString jid)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    QString activeList = userObject.value("active").toString();
+    privacyListFile.close();
+
+    return activeList;
+}
+
+bool LocalStorage::setDefaultPrivacyList(QString jid, QString defaultList)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    userObject.insert("default", defaultList);
+    document.setObject(userObject);
+
+    privacyListFile.resize(0);
+    quint64 ok = privacyListFile.write(document.toJson());
+    privacyListFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::setActivePrivacyList(QString jid, QString activeList)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    userObject.insert("active", activeList);
+    document.setObject(userObject);
+
+    privacyListFile.resize(0);
+    quint64 ok = privacyListFile.write(document.toJson());
+    privacyListFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+QList<PrivacyListItem> LocalStorage::getPrivacyListDenyItems(QString jid, QString privacyListName,
+                                                              QString stanzaType)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadOnly))
+        return QList<PrivacyListItem>();
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    QJsonArray privacyList = userObject.value("privacyList").toObject().value(privacyListName).toArray();
+
+    QList<PrivacyListItem> itemList;
+    for (int i = 0, c = privacyList.count(); i < c; ++i)
+    {
+        QStringList childs = privacyList[i].toObject().value("childs").toVariant().toStringList();
+        if (childs.contains(stanzaType) || childs.isEmpty())
+            itemList << PrivacyListItem::fromJsonObject(privacyList[i].toObject());
+    }
+
+    privacyListFile.close();
+    return itemList;
+}
+
+QStringList LocalStorage::getPrivacyListNames(QString jid)
+{
+    QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
+    QFile privacyListFile(filename);
+
+    if (!privacyListFile.open(QIODevice::ReadWrite))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonObject userObject = document.object();
+
+    QStringList privacyListNames = userObject.value("privacyList").toObject().toVariantMap().keys();
+    privacyListFile.close();
+
+    return privacyListNames;
 }
 
 QString LocalStorage::getVCard(QString jid)
@@ -433,7 +592,8 @@ QString LocalStorage::getVCard(QString jid)
     if (!vCardFile.open(QIODevice::ReadOnly))
         return "";
 
-    QString vCard = QJsonDocument::fromJson(vCardFile.readAll()).object().value("vCard").toString();
+    QJsonDocument document = QJsonDocument::fromJson(vCardFile.readAll());
+    QString vCard = document.object().value("vCard").toString();
     vCardFile.close();
 
     return vCard;
@@ -475,7 +635,8 @@ QString LocalStorage::getLastLogoutTime(QString jid)
     if (!userFile.open(QIODevice::ReadWrite))
         return "";
 
-    QString logoutTime = QJsonDocument::fromJson(userFile.readAll()).object().value("lastLogoutTime").toString();
+    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QString logoutTime = document.object().value("lastLogoutTime").toString();
     userFile.close();
 
     return logoutTime;
@@ -511,7 +672,8 @@ QString LocalStorage::getLastStatus(QString jid)
     if (!userFile.open(QIODevice::ReadWrite))
         return "";
 
-    QString lastStatus = QJsonDocument::fromJson(userFile.readAll()).object().value("lastStatus").toString();
+    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QString lastStatus = document.object().value("lastStatus").toString();
     userFile.close();
 
     return lastStatus;
@@ -627,15 +789,13 @@ QList<MetaContact> LocalStorage::getPrivateData(QString jid)
         return QList<MetaContact>();
 
     QJsonDocument document = QJsonDocument::fromJson(userPrivateDataFile.readAll());
-
-    userPrivateDataFile.close();
-
     QJsonArray metaContactArray = document.object().value("storage:metacontacts").toArray();
     QList<MetaContact> metaContactList;
     for (int i = 0; i < metaContactArray.count(); ++i)
     {
         metaContactList << MetaContact::fromJsonObject(metaContactArray[i].toObject());
     }
+    userPrivateDataFile.close();
     return metaContactList;
 }
 
@@ -710,6 +870,7 @@ int LocalStorage::getOfflineMessagesNumber(QString jid)
         return -1;
 
     QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    userOfflineMessageFile.close();
     return offlineMessageDocument.object().toVariantMap().values().count();
 }
 
@@ -727,7 +888,8 @@ QByteArray LocalStorage::getOfflineMessage(QString jid, QString stamp)
         return QByteArray();
 
     QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
-    QString messageNumberKey = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll()).object().value(stamp).toString();
+    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+    QString messageNumberKey = offlineMessageFileIndexDocument.object().value(stamp).toString();
 
     QJsonObject messageObject = offlineMessageDocument.object().value(messageNumberKey).toObject();
 
@@ -770,10 +932,8 @@ QMultiHash<QString, QByteArray> LocalStorage::getOfflineMessageFrom(QString jid,
         return QMultiHash<QString, QByteArray>();
 
     QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
-    QJsonArray messageNumberKeyList = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll()).object().value(from).toArray();
-
-    userOfflineMessageFile.close();
-    userOfflineMessageFileIndex.close();
+    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+    QJsonArray messageNumberKeyList = offlineMessageFileIndexDocument.object().value(from).toArray();
 
     QMultiHash<QString, QByteArray> offlineMessageList;
     for (int i = 0; i < messageNumberKeyList.count(); ++i)
@@ -799,6 +959,8 @@ QMultiHash<QString, QByteArray> LocalStorage::getOfflineMessageFrom(QString jid,
         document.appendChild(messageElement);
         offlineMessageList.insert(messageObject.value("stamp").toVariant().toString(), document.toByteArray());
     }
+    userOfflineMessageFile.close();
+    userOfflineMessageFileIndex.close();
     return offlineMessageList;
 }
 
@@ -858,7 +1020,8 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
 
     if (key.contains("@"))
     {
-        QJsonArray messageNumberKeyList = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll()).object().value(key).toArray();
+        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+        QJsonArray messageNumberKeyList = offlineMessageFileIndexDocument.object().value(key).toArray();
         for (int i = 0; i < messageNumberKeyList.count(); ++i)
         {
             offlineMessageObject.remove(messageNumberKeyList[i].toString());
@@ -866,7 +1029,8 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
     }
     else
     {
-        offlineMessageObject.remove(QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll()).object().value(key).toString());
+        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+        offlineMessageObject.remove(offlineMessageFileIndexDocument.object().value(key).toString());
     }
 
     offlineMessageDocument.setObject(offlineMessageObject);
@@ -968,21 +1132,24 @@ QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
     QString filename4 = "offlinePresenceSubscription/unsubscribed/" + jid.replace("@", "_") + ".qjo";
 
     QFile subscribeFile(filename1);
-    subscribeFile.open(QIODevice::ReadOnly);
+    QJsonDocument subscribeDocument;
+    if (subscribeFile.open(QIODevice::ReadOnly))
+        subscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
 
     QFile subscribedFile(filename2);
-    subscribedFile.open(QIODevice::ReadOnly);
+    QJsonDocument subscribedDocument;
+    if (subscribedFile.open(QIODevice::ReadOnly))
+        subscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
 
     QFile unsubscribeFile(filename3);
-    unsubscribeFile.open(QIODevice::ReadOnly);
+    QJsonDocument unsubscribeDocument;
+    if (unsubscribeFile.open(QIODevice::ReadOnly))
+        unsubscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
 
     QFile unsubscribedFile(filename4);
-    unsubscribedFile.open(QIODevice::ReadOnly);
-
-    QJsonDocument subscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
-    QJsonDocument subscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
-    QJsonDocument unsubscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
-    QJsonDocument unsubscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
+    QJsonDocument unsubscribedDocument;
+    if (unsubscribedFile.open(QIODevice::ReadOnly))
+        unsubscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
 
     QList<QVariant> subscriptionList;
     subscriptionList << subscribeDocument.object().toVariantMap().values()
@@ -1032,11 +1199,14 @@ QList<QString> LocalStorage::getUserBlockList(QString jid)
     if (!blocklistFile.open(QIODevice::ReadOnly))
         return QList<QString>();
 
-    QJsonArray array = QJsonDocument::fromJson(blocklistFile.readAll()).object().value("blocklist").toArray();
+    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonArray array = document.object().value("blocklist").toArray();
     QList<QString> blocklist;
 
     for (int i = 0; i < array.count(); ++i)
         blocklist << array[i].toString();
+
+    blocklistFile.close();
     return blocklist;
 }
 
@@ -1112,23 +1282,1448 @@ bool LocalStorage::emptyUserBlockList(QString jid)
     return file.remove(filename);
 }
 
+bool LocalStorage::createRoom(QString roomName, QString ownerJid)
+{
+    QString roomService = Utils::getHost(roomName);
+
+    QDir dir;
+    dir.mkdir(roomService);
+
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document;
+    QJsonObject roomObject;
+    roomObject.insert("roomName", roomName.replace("_", "@"));
+    roomObject.insert("locked", true);
+
+    QJsonArray ownerArray;
+    ownerArray.append(ownerJid);
+
+    QMap<QString, QVariant> initialConfiguration;
+    initialConfiguration.insert("muc#roomconfig_roomname", Utils::getUsername(roomName));
+    initialConfiguration.insert("muc#roomconfig_roomdesc", "");
+    initialConfiguration.insert("muc#roomconfig_lang", "en");
+    initialConfiguration.insert("muc#roomconfig_changesubject", false);
+    initialConfiguration.insert("muc#roomconfig_allowinvites", false);
+    initialConfiguration.insert("muc#roomconfig_allowpm", "anyone");
+    initialConfiguration.insert("muc#roomconfig_maxusers", 10);
+    initialConfiguration.insert("muc#roomconfig_presencebroadcast",
+                                QVariant(QList<QString>() << "moderator" << "participant" << "visitor"));
+    initialConfiguration.insert("muc#roomconfig_getmemberlist",
+                                QVariant(QList<QString>() << "moderator" << "participant" << "visitor"));
+    initialConfiguration.insert("muc#roomconfig_publicroom", true);
+    initialConfiguration.insert("muc#roomconfig_persistentroom", false);
+    initialConfiguration.insert("muc#roomconfig_moderatedroom", false);
+    initialConfiguration.insert("muc#roomconfig_membersonly", false);
+    initialConfiguration.insert("muc#roomconfig_passwordprotectedroom", false);
+    initialConfiguration.insert("muc#roomconfig_roomsecret", "");
+    initialConfiguration.insert("muc#maxhistoryfetch", 20);
+    initialConfiguration.insert("muc#roomconfig_roomadmins", QVariant(QList<QString>() << ownerJid));
+    initialConfiguration.insert("muc#roomconfig_roomowners", QVariant(QList<QString>() << ownerJid));
+
+    roomObject.insert("roomConfig", QJsonObject::fromVariantMap(initialConfiguration));
+    document.setObject(roomObject);
+
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
 QMultiHash<QString, QString> LocalStorage::getChatRoomNameList(QString roomService)
 {
-    return QMultiHash<QString, QString>();
+    QDir dir(roomService);
+    QStringList roomFilenameList = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+
+    QMultiHash<QString, QString> map;
+    foreach (QString roomFilename, roomFilenameList)
+    {
+        QFile roomFile(roomService + "/" + roomFilename);
+        roomFile.open(QIODevice::ReadOnly);
+
+        QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+
+        if (document.object().value("roomConfig").toObject().value("muc#roomconfig_publicroom").toVariant().toBool())
+        {
+            QString roomName = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomname").toString();
+            if (roomName.isEmpty())
+                roomName = Utils::getUsername(document.object().value("roomName").toString());
+
+            map.insert(QFileInfo(roomFilename).completeBaseName().replace("_", "@"), roomName);
+        }
+        roomFile.close();
+    }
+    return map;
 }
 
 bool LocalStorage::chatRoomExist(QString roomName)
 {
-    return false;
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    return QFile::exists(filename);
 }
 
-
-QList<QString> LocalStorage::getChatRoomOccupants(QString roomName)
+QStringList LocalStorage::getOccupantsMucJid(QString roomName)
 {
-    return QList<QString>();
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QList<QString>();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QStringList occupantMucJid;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        occupantMucJid << occupantArray[i].toObject().value("mucJid").toString();
+    }
+    roomFile.close();
+    return occupantMucJid;
 }
 
 bool LocalStorage::isPrivateOccupantsList(QString roomName)
 {
     return false;
 }
+
+QList<Occupant> LocalStorage::getOccupants(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QList<Occupant>();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QList<Occupant> occupantsList;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        occupantsList << Occupant::fromJsonObject(occupantArray[i].toObject());
+    }
+    roomFile.close();
+    return occupantsList;
+}
+
+QList<Occupant> LocalStorage::getOccupants(QString roomName, QString bareJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QList<Occupant>();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QList<Occupant> occupantsList;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (Utils::getBareJid(occupantArray[i].toObject().value("jid").toString()) == bareJid)
+        {
+            occupantsList << Occupant::fromJsonObject(occupantArray[i].toObject());
+        }
+    }
+    roomFile.close();
+    return occupantsList;
+}
+
+QString LocalStorage::getOccupantMucJid(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantMucJid;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("jid").toString() == jid)
+        {
+            occupantMucJid = occupantArray[i].toObject().value("mucJid").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantMucJid;
+}
+
+QString LocalStorage::getOccupantJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantJid;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantJid = occupantArray[i].toObject().value("jid").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantJid;
+}
+
+QString LocalStorage::getOccupantRole(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantRole;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("jid").toString() == jid)
+        {
+            occupantRole = occupantArray[i].toObject().value("role").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantRole;
+}
+
+QString LocalStorage::getOccupantRoleFromMucJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantRole;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantRole = occupantArray[i].toObject().value("role").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantRole;
+}
+
+QString LocalStorage::getOccupantAffiliation(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantAffiliation;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("jid").toString() == jid)
+        {
+            occupantAffiliation = occupantArray[i].toObject().value("affiliation").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantAffiliation;
+}
+
+QString LocalStorage::getOccupantAffiliationFromMucJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QString occupantAffiliation;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantAffiliation = occupantArray[i].toObject().value("affiliation").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return occupantAffiliation;
+}
+
+Occupant LocalStorage::getOccupant(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return Occupant();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    Occupant occupant;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("jid").toString() == jid)
+        {
+            occupant = Occupant::fromJsonObject(occupantArray[i].toObject());
+            break;
+        }
+    }
+    roomFile.close();
+    return occupant;
+}
+
+bool LocalStorage::addUserToRoom(QString roomName, Occupant occupant)
+{
+//    if (getOccupantMucJid(roomName, occupant.jid()) == occupant.mucJid())
+//        return true;
+
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject roomObject = document.object();
+
+    QJsonArray occupantsArray = roomObject.value("occupants").toArray();
+    occupantsArray.append(occupant.toJsonObject());
+
+    roomObject.insert("occupants", occupantsArray);
+    document.setObject(roomObject);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+QStringList LocalStorage::getRoomTypes(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QStringList roomType = document.object().value("roomTypes").toVariant().toStringList();
+    roomFile.close();
+    return roomType;
+}
+
+QString LocalStorage::getRoomName(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QString naturalRoomName = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomName").toString();
+    roomFile.close();
+    return naturalRoomName;
+}
+
+bool LocalStorage::isRegistered(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool registered = document.object().value("memberList").toVariant().toStringList().contains(jid);
+    roomFile.close();
+    return registered;
+}
+
+QStringList LocalStorage::getRoomRegisteredMembersList(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QStringList registerdMemberMist = document.object().value("memberList").toVariant().toStringList();
+    roomFile.close();
+    return registerdMemberMist;
+}
+
+bool LocalStorage::isBannedUser(QString roomName, QString jid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool banned = document.object().value("bannedList").toVariant().toStringList().contains(jid);
+    roomFile.close();
+    return banned;
+}
+
+bool LocalStorage::nicknameOccuped(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    bool occuped = false;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occuped = true;
+            break;
+        }
+    }
+    roomFile.close();
+    return occuped;
+}
+
+bool LocalStorage::maxOccupantsLimit(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    int maxUsersConfig = document.object().value("roomConfig").toObject().value("muc#roomconfig_maxusers").toString().toInt();
+    int numberOccupants = document.object().value("occupants").toArray().count();
+
+    roomFile.close();
+    return (numberOccupants == maxUsersConfig);
+}
+
+bool LocalStorage::isLockedRoom(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool locked = document.object().value("locked").toBool();
+    roomFile.close();
+    return locked;
+}
+
+bool LocalStorage::isPasswordProtectedRoom(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool passwordprotected = document.object().value("roomConfig").toObject().value("muc#roomconfig_passwordprotectedroom").toVariant().toBool();
+    roomFile.close();
+    return passwordprotected;
+}
+
+QString LocalStorage::getRoomPassword(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QString password = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomsecret").toString();
+    roomFile.close();
+    return password;
+}
+
+bool LocalStorage::canBroadcastPresence(QString roomName, QString occupantRole)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool canbroadcast = document.object().value("roomConfig").toObject()
+            .value("muc#roomconfig_presencebroadcast").toVariant().toStringList().contains(occupantRole);
+    roomFile.close();
+    return canbroadcast;
+}
+
+bool LocalStorage::loggedDiscussion(QString roomName)
+{
+    return false;
+}
+
+//QByteArray LocalStorage::getMaxcharsHistory(QString roomName, int maxchar)
+//{
+//    QString roomService = Utils::getHost(roomName);
+//    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+
+//    QFile historyFile(historyFilename);
+//    if (!historyFile.open(QIODevice::ReadOnly))
+//        return false;
+
+//    QJsonDocument document = QJsonDocument::fromJson(historyFile.readAll());
+
+//    QByteArray data;
+//    QList<QVariant> historyList = document.object().toVariantMap().values();
+//    for (int i = 0; i < historyList.count(); ++i)
+//    {
+//        data.append(historyList.value(i).toByteArray());
+//    }
+//    return data.left(maxchar);
+//}
+
+QList<QDomDocument> LocalStorage::getMaxstanzaHistory(QString roomName, int maxstanza)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+
+    QFile historyFile(historyFilename);
+    if (!historyFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QJsonDocument document = QJsonDocument::fromJson(historyFile.readAll());
+
+    QList<QVariant> historyList = document.object().toVariantMap().values();
+
+    QList<QDomDocument> historiesDocument;
+    for (int i = 0; i < maxstanza; ++i)
+    {
+        QDomDocument document;
+        document.setContent(historyList.value(i).toByteArray());
+        historiesDocument << document;
+    }
+    return historiesDocument;
+}
+
+QList<QDomDocument> LocalStorage::getLastsecondsHistory(QString roomName, int seconds)
+{
+    QString roomService = Utils::getHost(roomName);
+
+    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+    QString historyIndexFilename = roomService + "/loggedMessage/" + roomName + ".qji";
+
+    QFile historyFile(historyFilename);
+    if (!historyFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QFile historyIndexFile(historyIndexFilename);
+    if (!historyIndexFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+
+    QDateTime leftDateTime = QDateTime::currentDateTimeUtc().addSecs(seconds);
+    QDateTime rightDateTime = QDateTime::currentDateTimeUtc();
+
+    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
+
+    QList<QDomDocument> historiesDocument;
+    foreach (QString key, indexKeys)
+    {
+        QDateTime date = QDateTime::fromString(key, "yyyy-MM-ddThh:mm:ss.zzzZ");
+        if ((leftDateTime <= date) && (date <= rightDateTime))
+        {
+            QDomDocument document;
+            document.setContent(historyDocument.object().value(historyIndexDocument.object().value(key).toVariant().toByteArray()).toVariant().toByteArray());
+            historiesDocument << document;
+        }
+    }
+    historyFile.close();
+    historyIndexFile.close();
+    return historiesDocument;
+}
+
+QList<QDomDocument> LocalStorage::getHistorySince(QString roomName, QString since)
+{
+    QString roomService = Utils::getHost(roomName);
+
+    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+    QString historyIndexFilename = roomService + "/loggedMessage/" + roomName + ".qji";
+
+    QFile historyFile(historyFilename);
+    if (!historyFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QFile historyIndexFile(historyIndexFilename);
+    if (!historyIndexFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+
+    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
+
+    QList<QDomDocument> historiesDocument;
+
+    QDateTime sinceDate = QDateTime::fromString(since, "yyyy-MM-ddThh:mm:ss.zzzZ");
+    foreach (QString key, indexKeys)
+    {
+        QDateTime date = QDateTime::fromString(key, "yyyy-MM-ddThh:mm:ss.zzzZ");
+        if (date >= sinceDate)
+        {
+            QDomDocument document;
+            document.setContent(historyDocument.object().value(historyIndexDocument.object().value(key).toVariant().toByteArray()).toVariant().toByteArray());
+            historiesDocument << document;
+        }
+    }
+    historyFile.close();
+    historyIndexFile.close();
+    return historiesDocument;
+}
+
+QList<QDomDocument> LocalStorage::getHistorySinceMaxstanza(QString roomName, QString since, int maxstanza)
+{
+    QString roomService = Utils::getHost(roomName);
+
+    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+    QString historyIndexFilename = roomService + "/loggedMessage/" + roomName + ".qji";
+
+    QFile historyFile(historyFilename);
+    if (!historyFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QFile historyIndexFile(historyIndexFilename);
+    if (!historyIndexFile.open(QIODevice::ReadOnly))
+        return QList<QDomDocument>();
+
+    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+
+    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
+
+    QList<QDomDocument> historiesDocument;
+    QDateTime sinceDate = QDateTime::fromString(since, "yyyy-MM-ddThh:mm:ss.zzzZ");
+    for (int i = 0; i < maxstanza; ++i)
+    {
+        QString key = indexKeys.value(i);
+        QDateTime date = QDateTime::fromString(key, "yyyy-MM-ddThh:mm:ss.zzzZ");
+        if (date >= sinceDate)
+        {
+            QDomDocument document;
+            document.setContent(historyDocument.object().value(historyIndexDocument.object().value(key).toVariant().toByteArray()).toVariant().toByteArray());
+            historiesDocument << document;
+        }
+    }
+    historyFile.close();
+    historyIndexFile.close();
+    return historiesDocument;
+}
+
+//QList<QDomDocument> LocalStorage::getHistorySinceMaxchar(QString roomName, QString since, int maxchar)
+//{
+//    QList<QDomDocument>();
+//}
+
+//QList<QDomDocument> LocalStorage::getHistorySinceSeconds(QString roomName, QString since, int seconds)
+//{
+//    QString roomService = Utils::getHost(roomName);
+
+//    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+//    QString historyIndexFilename = roomService + "/loggedMessage/" + roomName + ".qji";
+
+//    QFile historyFile(historyFilename);
+//    if (!historyFile.open(QIODevice::ReadOnly))
+//        return QList<QDomDocument>();
+
+//    QFile historyIndexFile(historyIndexFilename);
+//    if (!historyIndexFile.open(QIODevice::ReadOnly))
+//        return QList<QDomDocument>();
+
+//    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+//    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+
+//    QDateTime leftDateTime = QDateTime::currentDateTimeUtc().addSecs(seconds);
+//    QDateTime rightDateTime = QDateTime::currentDateTimeUtc();
+
+//    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
+
+//    QList<QDomDocument> historiesDocument;
+//    QDateTime sinceDate = QDateTime::fromString(since, "yyyy-MM-ddThh:mm:ss.zzzZ");
+//    foreach (QString key, indexKeys)
+//    {
+//        QDateTime date = QDateTime::fromString(since, "yyyy-MM-ddThh:mm:ss.zzzZ");
+//        if (key.contains(since))
+//        {
+//            QDateTime date = QDateTime::fromString(key, "yyyy-MM-ddThh:mm:ss.zzzZ");
+//            if ((leftDateTime <= date) && (date <= rightDateTime))
+//            {
+//                QDomDocument document;
+//                document.setContent(historyDocument.object().value(historyIndexDocument.object().value(key).toVariant().toByteArray()).toVariant().toByteArray());
+//                historiesDocument << document;
+//            }
+//        }
+//    }
+//    historyFile.close();
+//    historyIndexFile.close();
+//    return historiesDocument;
+//}
+
+QString LocalStorage::getRoomSubject(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QString subject = document.object().value("roomSubject").toString();
+    roomFile.close();
+    return subject;
+}
+
+bool LocalStorage::hasVoice(QString roomName, QString mucJid)
+{
+    QString role = getOccupantRoleFromMucJid(roomName, mucJid);
+    if ((role == "none") || (role == "visitor"))
+        return false;
+    return true;
+}
+
+bool LocalStorage::changeRoomNickname(QString roomName, QString jid, QString nickname)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QJsonObject occupantObject;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("jid").toString() == jid)
+        {
+            occupantObject = occupantArray[i].toObject();
+            occupantArray.removeAt(i);
+            break;
+        }
+    }
+
+    occupantObject.insert("mucJid", roomName.replace("_", "@") + "/" + nickname);
+    occupantArray.append(occupantObject);
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::changeRole(QString roomName, QString mucJid, QString newRole)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QJsonObject occupantObject;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantObject = occupantArray[i].toObject();
+            occupantArray.removeAt(i);
+            break;
+        }
+    }
+
+    occupantObject.insert("role", newRole);
+    occupantArray.append(occupantObject);
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::registerUser(QString roomName, Occupant occupant)
+{
+    addUserToRoom(roomName, occupant);
+
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+
+    QStringList memberList = object.value("memberList").toVariant().toStringList();
+    memberList << Utils::getBareJid(occupant.jid());
+
+    object.insert("memberList", QJsonArray::fromStringList(memberList));
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::unlockRoom(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    object.insert("locked", false);
+
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    object.insert("roomConfig", QJsonObject::fromVariantMap(dataFormValue));
+
+    QStringList roomTypes = object.value("roomTypes").toVariant().toStringList();
+    if (dataFormValue.value("muc#roomconfig_membersonly").toBool())
+    {
+        roomTypes << "membersonly";
+        object.insert("roomTypes", QJsonArray::fromStringList(roomTypes));
+    }
+    if (dataFormValue.value("muc#roomconfig_moderatedroom").toBool())
+    {
+        roomTypes << "moderatedroom";
+        object.insert("roomTypes", QJsonArray::fromStringList(roomTypes));
+    }
+    if (dataFormValue.value("muc#roomconfig_passwordprotectedroom").toBool())
+    {
+        roomTypes << "passwordprotectedroom";
+        object.insert("roomTypes", QJsonArray::fromStringList(roomTypes));
+    }
+
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    return (true ? (ok >= 0) : false);
+}
+
+QStringList LocalStorage::getRoomOwnersList(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QList<QString>();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QStringList ownersList = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomowners").toVariant().toStringList();
+    roomFile.close();
+    return ownersList;
+}
+
+QMap<QString, QVariant> LocalStorage::getRoomConfig(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QMap<QString, QVariant>();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QMap<QString, QVariant> roomConfig = document.object().value("roomConfig").toVariant().toMap();
+    roomFile.close();
+    return roomConfig;
+}
+
+bool LocalStorage::destroyRoom(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile;
+    return roomFile.remove(filename);
+}
+
+QStringList LocalStorage::getRoomModeratorsJid(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    QStringList moderatorList;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("role").toString() == "moderator")
+            moderatorList << occupantArray[i].toObject().value("role").toString();
+    }
+    roomFile.close();
+    return moderatorList;
+}
+
+bool LocalStorage::removeOccupant(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    QJsonArray occupantArray = object.value("occupants").toArray();
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantArray.removeAt(i);
+            break;
+        }
+    }
+
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::removeOccupants(QString roomName, QString bareJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+
+    QJsonArray occupantArray = object.value("occupants").toArray();
+    QList<int> index;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (Utils::getBareJid(occupantArray[i].toObject().value("jid").toString()) == bareJid)
+            index << i;
+    }
+
+    for (int i = 0; i < index.count(); ++i)
+        occupantArray.removeAt(index[i]);
+
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::changeRoomSubject(QString roomName, QString subject)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    object.insert("roomSubject", subject);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::canChangeRoomSubject(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool canChangeRoomSubject = document.object().value("roomConfig").toObject().value("muc#roomconfig_changesubject").toVariant().toBool();
+    roomFile.close();
+    return canChangeRoomSubject;
+}
+
+QStringList LocalStorage::getRoomAdminsList(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QStringList adminList = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomadmins").toVariant().toStringList();
+    roomFile.close();
+    return adminList;
+}
+
+bool LocalStorage::changeAffiliation(QString roomName, QString jid, QString newAffiliation)
+{
+    QStringList roomTypes = getRoomTypes(roomName);
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QList<int> occupantIndex;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if ((Utils::getBareJid(occupantArray[i].toObject().value("jid").toString()) == jid) ||
+                (occupantArray[i].toObject().value("jid").toString() == jid))
+            occupantIndex << i;
+    }
+
+    QList<QJsonObject> occupantObjectList;
+    for (int i = 0; i < occupantIndex.count(); ++i)
+    {
+        occupantObjectList << occupantArray[i].toObject();
+        occupantArray.removeAt(i);
+    }
+
+    QString oldAffiliation;
+    foreach (QJsonObject occupantObject, occupantObjectList)
+    {
+        oldAffiliation = occupantObject.value("affiliation").toString();
+        occupantObject.insert("affiliation", newAffiliation);
+        occupantArray.append(occupantObject);
+    }
+    object.insert("occupants", occupantArray);
+
+    // add user to the admin list
+    if (newAffiliation == "admin")
+    {
+        QJsonObject roomConfigObject = object.value("roomConfig").toObject();
+        QJsonArray adminList = roomConfigObject.value("muc#roomconfig_roomadmins").toArray();
+
+        if (!adminList.contains(Utils::getBareJid(jid)))
+            adminList.append(Utils::getBareJid(jid));
+
+        roomConfigObject.insert("muc#roomconfig_roomadmins", adminList);
+        object.insert("roomConfig", roomConfigObject);
+    }
+    else if ((newAffiliation == "member") && roomTypes.contains("membersonly"))
+    {
+        QStringList memberList = object.value("memberList").toVariant().toStringList();
+
+        if (!memberList.contains(Utils::getBareJid(jid)))
+            memberList << Utils::getBareJid(jid);
+
+        object.insert("memberList", QJsonArray::fromStringList(memberList));
+    }
+    else if (newAffiliation == "owner")
+    {
+        QJsonObject roomConfigObject = object.value("roomConfig").toObject();
+        QStringList ownerList = roomConfigObject.value("muc#roomconfig_roomowners").toVariant().toStringList();
+
+        if (!ownerList.contains((Utils::getBareJid(jid))))
+            ownerList << Utils::getBareJid(jid);
+
+        roomConfigObject.insert("muc#roomconfig_roomowners", QJsonArray::fromStringList(ownerList));
+        object.insert("roomConfig", roomConfigObject);
+    }
+    else if ((newAffiliation == "none") || (newAffiliation == "outcast"))
+    {
+        if (newAffiliation == "outcast")
+        {
+            QStringList bannedList = object.value("bannedList").toVariant().toStringList();
+            bannedList << jid;
+            object.insert("bannedList", QJsonArray::fromStringList(bannedList));
+        }
+
+        if (oldAffiliation == "owner")
+        {
+            QJsonObject roomConfigObject = object.value("roomConfig").toObject();
+            QStringList ownerList = roomConfigObject.value("muc#roomconfig_roomowners").toVariant().toStringList();
+            ownerList.removeOne(Utils::getBareJid(jid));
+
+            roomConfigObject.insert("muc#roomconfig_roomowners", QJsonArray::fromStringList(ownerList));
+            object.insert("roomConfig", roomConfigObject);
+        }
+        else if (oldAffiliation == "admin")
+        {
+            QJsonObject roomConfigObject = object.value("roomConfig").toObject();
+            QStringList ownerList = roomConfigObject.value("muc#roomconfig_roomadmins").toVariant().toStringList();
+            ownerList.removeOne(Utils::getBareJid(jid));
+
+            roomConfigObject.insert("muc#roomconfig_roomadmins", QJsonArray::fromStringList(ownerList));
+            object.insert("roomConfig", roomConfigObject);
+        }
+        else if ((oldAffiliation == "member") && roomTypes.contains("membersonly"))
+        {
+            QStringList memberList = object.value("memberList").toVariant().toStringList();
+            memberList.removeOne(Utils::getBareJid(jid));
+
+            object.insert("memberList", QJsonArray::fromStringList(memberList));
+        }
+    }
+
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::isPersistentRoom(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    bool isPersistent = document.object().value("roomConfig").toObject().value("muc#roomconfig_persistentroom").toVariant().toBool();
+    roomFile.close();
+    return isPersistent;
+}
+
+bool LocalStorage::changeOccupantStatus(QString roomName, QString mucJid, QString status)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QJsonObject occupantObject;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantObject = occupantArray[i].toObject();
+            occupantArray.removeAt(i);
+            break;
+        }
+    }
+    occupantObject.insert("status", status);
+    occupantArray.append(occupantObject);
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+bool LocalStorage::changeOccupantShow(QString roomName, QString mucJid, QString show)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QJsonObject occupantObject;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupantObject = occupantArray[i].toObject();
+            occupantArray.removeAt(i);
+            break;
+        }
+    }
+    occupantObject.insert("show", show);
+    occupantArray.append(occupantObject);
+    object.insert("occupants", occupantArray);
+    document.setObject(object);
+
+    roomFile.resize(0);
+    quint64 ok = roomFile.write(document.toJson());
+    roomFile.close();
+    return (true ? (ok >= 0) : false);
+}
+
+QString LocalStorage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QString status;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            status = occupantArray[i].toObject().value("status").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return status;
+}
+
+QString LocalStorage::getOccupantShowFromMucJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonObject object = document.object();
+    QJsonArray occupantArray = object.value("occupants").toArray();
+
+    QString show;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            show = occupantArray[i].toObject().value("show").toString();
+            break;
+        }
+    }
+    roomFile.close();
+    return show;
+}
+
+Occupant LocalStorage::getOccupantFromMucJid(QString roomName, QString mucJid)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return Occupant();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QJsonArray occupantArray = document.object().value("occupants").toArray();
+
+    Occupant occupant;
+    for (int i = 0; i < occupantArray.count(); ++i)
+    {
+        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
+        {
+            occupant = Occupant::fromJsonObject(occupantArray[i].toObject());
+            break;
+        }
+    }
+    roomFile.close();
+    return occupant;
+}
+
+bool LocalStorage::saveMucMessage(QString roomName, QByteArray message, QString stamp)
+{
+    QString roomService = Utils::getHost(roomName);
+    QDir dir(roomService);
+    dir.mkdir("loggedMessage");
+
+    QString historyFilename = roomService + "/loggedMessage/" + roomName.replace("@", "_") + ".qjh";
+    QString historyIndexFilename = roomService + "/loggedMessage/" + roomName + ".qji";
+
+    QFile historyFile(historyFilename);
+    if (!historyFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+    QJsonObject object = historyDocument.object();
+
+    QList<QString> keys = object.toVariantMap().keys();
+    QString key = QString::number(keys.value(keys.count() - 1).toInt() + 1);
+
+    object.insert(key, QString(message));
+    historyDocument.setObject(object);
+
+    historyFile.resize(0);
+    bool ok = historyFile.write(historyDocument.toJson());
+    historyFile.close();
+
+    // Build index
+    QFile historyIndexFile(historyIndexFilename);
+    if (!historyIndexFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+    QJsonObject indexObject = historyIndexDocument.object();
+
+    indexObject.insert(stamp, key);
+    historyIndexDocument.setObject(indexObject);
+
+    historyIndexFile.resize(0);
+    bool ok1 = historyIndexFile.write(historyIndexDocument.toJson());
+    historyIndexFile.close();
+
+    return (ok && ok1);
+}
+
+int LocalStorage::getRoomMaxhistoryFetch(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return 0;
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    roomFile.close();
+
+
+    return document.object().value("roomConfig").toObject().value("muc#maxhistoryfetch").toVariant().toInt();
+}
+
+QStringList LocalStorage::getBannedList(QString roomName)
+{
+    QString roomService = Utils::getHost(roomName);
+    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+    QFile roomFile(filename);
+
+    if (!roomFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+    QStringList bannedList = document.object().value("bannedList").toVariant().toStringList();
+    roomFile.close();
+
+    return bannedList;
+}
+

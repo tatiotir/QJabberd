@@ -21,7 +21,7 @@ QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument docu
             QDomNodeList itemListElement = document.firstChildElement().elementsByTagName("item");
             if (itemListElement.isEmpty())
             {
-                return Error::generateError("iq", "modify", "bad-request", iqFrom, "", iq.attribute("id"), QDomElement());
+                return Error::generateError("", "iq", "modify", "bad-request", iqFrom, "", iq.attribute("id"), QDomElement());
             }
 
             QList<QString> itemList;
@@ -173,6 +173,41 @@ QDomDocument BlockingCommandManager::generateUnblockPush(QString to, QString id,
     return document;
 }
 
+QByteArray BlockingCommandManager::isBlocked(QString from, QString to, QString stanzaType)
+{
+    QList<QString> fromBlockList = getUserBlockList(Utils::getBareJid(from));
+    QList<QString> toBlockList = getUserBlockList(Utils::getBareJid(to));
+
+    // Check block list items
+    if (fromBlockList.contains(to) ||
+            fromBlockList.contains(Utils::getBareJid(to)) ||
+            fromBlockList.contains(Utils::getHost(to)) ||
+            fromBlockList.contains(to.split("@").value(1)))
+    {
+        QDomDocument document;
+        QDomElement blockedElement = document.createElement("blocked");
+        blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
+
+        return Error::generateError("", "message", "cancel", "not-acceptable",
+                                         from, to, "", blockedElement);
+    }
+    else if (toBlockList.contains(from) ||
+             toBlockList.contains(Utils::getBareJid(from)) ||
+             toBlockList.contains(Utils::getHost(from)) ||
+             toBlockList.contains(from.split("@").value(1)))
+    {
+        if (stanzaType != "presence")
+        {
+            return Error::generateError("", "iq", "cancel", "service-unavalaible",
+                                         Utils::getHost(from), from, "", QDomElement());
+        }
+        else
+        {
+            return QByteArray("a");
+        }
+    }
+    return QByteArray();
+}
 
 QList<QString> BlockingCommandManager::getUserBlockList(QString jid)
 {

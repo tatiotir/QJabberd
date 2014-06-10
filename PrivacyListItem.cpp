@@ -118,3 +118,10 @@ bool operator <(PrivacyListItem item1, PrivacyListItem item2)
 {
     return (item1.getOrder() < item2.getOrder() ? true : false);
 }
+
+bool operator ==(PrivacyListItem item1, PrivacyListItem item2)
+{
+    return ((item1.getValue() == item2.getValue()) &&
+            (item1.getType() == item2.getType()) &&
+            (item1.getAction() == item2.getAction()));
+}

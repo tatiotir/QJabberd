@@ -500,6 +500,92 @@ QString Utils::getHost(QString fullJid)
     }
 }
 
+QDomDocument Utils::generateMucNotificationMessage(QString type, QString from, QString to, QString id, QList<int> statusCode)
+{
+    QDomDocument document;
+    QDomElement messageElement = document.createElement("presence");
+    messageElement.setAttribute("from", from);
+    messageElement.setAttribute("to", to);
+    messageElement.setAttribute("id", id);
+
+    if (!type.isEmpty())
+        messageElement.setAttribute("type", type);
+
+    QDomElement xElement = document.createElement("x");
+    xElement.setAttribute("xmlns", "http://jabber.org/protocol/muc#user");
+
+    if (!statusCode.isEmpty())
+    {
+        foreach (int code, statusCode)
+        {
+            QDomElement statusElement = document.createElement("status");
+            statusElement.setAttribute("code", QString::number(code));
+            xElement.appendChild(statusElement);
+        }
+    }
+
+    messageElement.appendChild(xElement);
+    document.appendChild(messageElement);
+    return document;
+}
+
+QDomDocument Utils::generatePresence(QString type, QString from, QString to, QString id, QString affiliation,
+                                     QString role, QString jid, QString nick, QList<int> statusCodes,
+                                     QString status, QString show)
+{
+    QDomDocument document;
+    QDomElement presenceElement = document.createElement("presence");
+    presenceElement.setAttribute("from", from);
+    presenceElement.setAttribute("to", to);
+    presenceElement.setAttribute("id", id);
+
+    if (!status.isEmpty())
+    {
+        QDomElement statusNode = document.createElement("status");
+        statusNode.appendChild(document.createTextNode(status));
+        presenceElement.appendChild(statusNode);
+    }
+
+    if (!show.isEmpty())
+    {
+        QDomElement showNode = document.createElement("show");
+        showNode.appendChild(document.createTextNode(show));
+        presenceElement.appendChild(showNode);
+    }
+
+    if (!type.isEmpty())
+        presenceElement.setAttribute("type", type);
+
+    QDomElement xElement = document.createElement("x");
+    xElement.setAttribute("xmlns", "http://jabber.org/protocol/muc#user");
+
+    QDomElement itemElement = document.createElement("item");
+    itemElement.setAttribute("affiliation", affiliation);
+    itemElement.setAttribute("role", role);
+
+    if (!jid.isEmpty())
+        itemElement.setAttribute("jid", jid);
+
+    if (!nick.isEmpty())
+        itemElement.setAttribute("nick", nick);
+
+    if (!statusCodes.isEmpty())
+    {
+        foreach (int code, statusCodes)
+        {
+            QDomElement statusElement = document.createElement("status");
+            statusElement.setAttribute("code", QString::number(code));
+            xElement.appendChild(statusElement);
+        }
+    }
+
+    xElement.appendChild(itemElement);
+    presenceElement.appendChild(xElement);
+    document.appendChild(presenceElement);
+
+    return document;
+}
+
 QDomDocument Utils::generatePresence(QString type, QString from, QString to, QString id, QString show,
                                    QString priority, QMultiHash<QString, QString> status)
 {
@@ -700,4 +786,47 @@ QByteArray Utils::digestCalculator(QString id, QString password)
     QString data = id + password;
     QByteArray hash = QCryptographicHash::hash(data.toUtf8(), QCryptographicHash::Sha1);
     return hash.toHex().toLower();
+}
+
+int Utils::affiliationIntValue(QString affiliation)
+{
+    if (affiliation == "none")
+        return 0;
+    if (affiliation == "outcast")
+        return 1;
+    if (affiliation == "member")
+        return 2;
+    if (affiliation == "admin")
+        return 3;
+    if (affiliation == "owner")
+        return 4;
+}
+
+QDomDocument Utils::generateMucInvitationMessage(QString from, QString to, QString id, QString inviterJid,
+                                                 QString roomPassword, QString reason)
+{
+    QDomDocument document;
+    QDomElement messageElement = document.createElement("message");
+    messageElement.setAttribute("from", from);
+    messageElement.setAttribute("to", to);
+    messageElement.setAttribute("id", id);
+
+    QDomElement xElement = document.createElement("x");
+    xElement.setAttribute("xmlns", "http://jabber.org/protocol/muc#user");
+
+    QDomElement inviteElement = document.createElement("invite");
+    inviteElement.setAttribute("from", inviterJid);
+
+    if (!roomPassword.isEmpty())
+    {
+        QDomElement passwordElement = document.createElement("password");
+        passwordElement.appendChild(document.createTextNode(roomPassword));
+        xElement.appendChild(passwordElement);
+    }
+
+    xElement.appendChild(inviteElement);
+    messageElement.appendChild(xElement);
+    document.appendChild(messageElement);
+
+    return document;
 }

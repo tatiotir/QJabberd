@@ -49,12 +49,12 @@ QByteArray LastActivityManager::lastActivityReply(QDomDocument document, QString
                 }
                 else
                 {
-                    return Error::generateError("iq", "auth", "forbidden", to, from, id, QDomElement());
+                    return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
                 }
             }
             else
             {
-                return Error::generateError("iq", "auth", "forbidden", to, from, id, QDomElement());
+                return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
             }
         }
     }
@@ -71,7 +71,7 @@ QByteArray LastActivityManager::lastActivityReply(QDomDocument document, QString
         }
         else
         {
-            return Error::generateError("iq", "auth", "forbidden", to, from, id, QDomElement());
+            return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
         }
     }
 }

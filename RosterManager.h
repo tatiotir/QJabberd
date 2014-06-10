@@ -14,6 +14,7 @@ public:
     QList<Contact> getContactsList(QString jid);
     QSet<QString> getContactGroups(QString jid, QString contactJid);
     Contact getContact(QString jid, QString contactJid);
+    QString getContactSubscription(QString jid, QString contactJid);
     bool addContactToRoster(QString jid, Contact contact);
     bool deleteContactToRoster(QString jid, QString contactJid);
     bool updateGroupToContact(QString jid, QString contactJid, QSet<QString> groups);

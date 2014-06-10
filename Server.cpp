@@ -10,14 +10,14 @@ Server::Server()
     else
     {
         QJsonDocument configDocument = QJsonDocument::fromJson(configFile.readAll());
-        m_configMap = new QMap<QString, QVariant>(configDocument.toVariant().toMap());
+        m_configuration = new QJsonObject(configDocument.object());
         configFile.close();
     }
 }
 
 void Server::start()
 {
-    m_conManager = new ConnectionManager(this, 5222, m_configMap);
+    m_conManager = new ConnectionManager(this, 5222, m_configuration);
     m_conManager->startManage();
 }
 

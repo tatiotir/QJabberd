@@ -15,8 +15,7 @@ public:
     QByteArray inbandByteStreamsManagerReply(QDomDocument document, QString iqFrom);
 
 signals:
-    void inbandByteStreamRequest(QString to, QByteArray data);
-
+    void sigInbandByteStreamRequest(QString to, QDomDocument document);
 
 };
 

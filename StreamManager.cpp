@@ -1,8 +1,7 @@
 #include "StreamManager.h"
 
 StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, UserManager *userManager, RosterManager *rosterManager,
-                             LastActivityManager *lastActivityManager,
-                             BlockingCommandManager *blockingCmdManager) :
+                             LastActivityManager *lastActivityManager) :
     QThread(parent)
 {
     m_userMap = new QMultiHash<QString, User* >();
@@ -11,7 +10,6 @@ StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, Us
     m_userManager = userManager;
     m_rosterManager = rosterManager;
     m_lastActivityManager = lastActivityManager;
-    m_blockingCmdManager = blockingCmdManager;
     m_serverTime.start();
 }
 
@@ -54,10 +52,83 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
     stream->start();
 }
 
-void StreamManager::oobRequest(QString to, QByteArray request)
+void StreamManager::requestRedirection(QString to, QDomDocument document)
 {
-    m_userMap->value(to, new User())->getStream()->getConnection()->write(request);
+    if (to.contains("/"))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
+    else
+    {
+        QStringList keyList = QStringList::fromSet(m_userMap->keys().toSet());
+        QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
+        foreach (QString toResource, toResourceList)
+        {
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
+        }
+    }
+}
+
+void StreamManager::mucPresenceBroadCast(QString to, QDomDocument document)
+{
+    if (to.contains("/"))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
+    else
+    {
+        QStringList keyList = QStringList::fromSet(m_userMap->keys().toSet());
+        QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
+        foreach (QString toResource, toResourceList)
+        {
+            document.firstChildElement().setAttribute("to", toResource);
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
+        }
+    }
+}
+
+void StreamManager::directMucInvitation(QString to, QDomDocument document)
+{
+    m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
     m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+}
+
+void StreamManager::groupchatMessage(QString to, QDomDocument document)
+{
+    if (to.contains("/"))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
+    else
+    {
+        QStringList keyList = QStringList::fromSet(m_userMap->keys().toSet());
+        QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
+        foreach (QString toResource, toResourceList)
+        {
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
+            m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
+        }
+    }
+}
+
+void StreamManager::roomSubject(QString to, QByteArray subjectMessage)
+{
+    m_userMap->value(to, new User())->getStream()->getConnection()->write(subjectMessage);
+    m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+}
+
+void StreamManager::roomHistory(QString to, QList<QDomDocument> messageList)
+{
+    foreach (QDomDocument document, messageList)
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
 }
 
 void StreamManager::unblockPush(QString to, QList<QString> items)
@@ -150,7 +221,7 @@ void StreamManager::nonSaslAuthentification(QString streamId, QString fullJid, Q
 {
     if (m_userMap->keys().contains(fullJid))
     {
-        m_notNegotiatedStream->value(streamId)->streamReply(Error::generateError("iq", "cancel", "conflict", "", "", id, QDomElement())
+        m_notNegotiatedStream->value(streamId)->streamReply(Error::generateError("", "iq", "cancel", "conflict", "", "", id, QDomElement())
                                                             + QByteArray("</stream:stream>"));
     }
     else
@@ -313,29 +384,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
 
     QDomElement presenceElement = document.documentElement();
     QString presenceType = presenceElement.attribute("type");
-
-    QString from = Utils::getBareJid(presenceElement.attribute("from"));
-    QStringList fromResourceList = keyList.filter(from, Qt::CaseInsensitive);
-    if (m_blockingCmdManager->getUserBlockList(from).contains(to) ||
-            m_blockingCmdManager->getUserBlockList(from).contains(Utils::getHost(to)) /*||
-            m_blockingCmdManager->getUserBlockList(to).contains(from) ||
-            m_blockingCmdManager->getUserBlockList(to).contains(Utils::getBareJid(from))*/)
-    {
-        QDomDocument document;
-        QDomElement blockedElement = document.createElement("blocked");
-        blockedElement.setAttribute("xmlns", "urn:xmpp:blocking:errors");
-
-        QByteArray error = Error::generateError("message", "cancel", "not-acceptable",
-                                         document.documentElement().attribute("from"),
-                                         document.documentElement().attribute("to"),
-                                         "", blockedElement);
-        foreach (QString fromResource, fromResourceList)
-        {
-            m_userMap->value(fromResource, new User())->getStream()->getConnection()->write(error);
-            m_userMap->value(fromResource, new User())->getStream()->getConnection()->flush();
-        }
-        return;
-    }
 
     if (!toResourceList.isEmpty())
     {
@@ -663,12 +711,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
 
 void StreamManager::presenceBroadCastFromContact(QString to, QString contactJid)
 {
-    if (/*m_blockingCmdManager->getUserBlockList(contactJid).contains(to) ||
-            m_blockingCmdManager->getUserBlockList(contactJid).contains(Utils::getHost(to)) ||*/
-            m_blockingCmdManager->getUserBlockList(to).contains(contactJid) ||
-            m_blockingCmdManager->getUserBlockList(to).contains(Utils::getBareJid(contactJid)))
-        return;
-
     QStringList keyList = QStringList::fromSet(m_userMap->keys().toSet());
     QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
     QStringList contactResourceList = keyList.filter(contactJid, Qt::CaseInsensitive);
@@ -753,7 +795,6 @@ void StreamManager::sendMessage(QString to, QDomDocument document)
 
     if (offlineUser)
     {
-        qDebug() << "offline message hiiiiiiiiiiiiiiiiiii";
         if (document.documentElement().elementsByTagName("body").count() != 0)
         {
             QDateTime dateTime(QDateTime::currentDateTime());
@@ -902,7 +943,7 @@ void StreamManager::defaultListNameSetReply(QString jid, QString to, QString def
         QDomElement defaultElement = document.createElement("default");
         defaultElement.setAttribute("name", defaultListName);
 
-        QByteArray errorData = Error::generateError("iq", "cancel", "conflict", "", "", id, defaultElement);
+        QByteArray errorData = Error::generateError("", "iq", "cancel", "conflict", "", "", id, defaultElement);
 
         m_userMap->value(to, new User())->getStream()->getConnection()->write(errorData);
         m_userMap->value(to, new User())->getStream()->getConnection()->flush();
@@ -967,7 +1008,7 @@ void StreamManager::lastActivityQuery(QString from, QString to, QString id, QStr
 
     if (userResourceList.isEmpty())
     {
-        QByteArray errorData = Error::generateError("iq", "auth", "forbidden", Utils::getBareJid(to),
+        QByteArray errorData = Error::generateError("", "iq", "auth", "forbidden", Utils::getBareJid(to),
                                                              from, id, QDomElement());
         m_userMap->value(from, new User())->getStream()->getConnection()->write(errorData);
         m_userMap->value(from, new User())->getStream()->getConnection()->flush();

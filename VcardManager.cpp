@@ -23,7 +23,7 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
             }
             else
             {
-                return Error::generateError("iq", "cancel", "item-not-found", from, "", id, iq.firstChildElement());
+                return Error::generateError("", "iq", "cancel", "item-not-found", from, "", id, iq.firstChildElement());
             }
         }
         else
@@ -35,7 +35,7 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
             }
             else
             {
-                return Error::generateError("iq", "cancel", "item-not-found", from, "", id, iq.firstChildElement());
+                return Error::generateError("", "iq", "cancel", "item-not-found", from, "", id, iq.firstChildElement());
             }
         }
 
@@ -44,7 +44,7 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
     {
         if (from != iqFrom)
         {
-            return Error::generateError("iq", "cancel", "not-allowed", "", from, id, QDomElement());
+            return Error::generateError("", "iq", "cancel", "not-allowed", "", from, id, QDomElement());
         }
         else
         {

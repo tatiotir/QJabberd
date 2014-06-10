@@ -7,35 +7,39 @@
  * \param port
  * \param serverConfigMap
  */
-ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QVariant> *serverConfigMap) : QTcpServer(parent), m_port(port)
+ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *serverConfiguration) : QTcpServer(parent), m_port(port)
 {
-    m_serverConfigMap = serverConfigMap;
+    // Create network proxy
+    createNetworkProxy(serverConfiguration);
     m_listConnection = new QList<Connection *>();
 
-    m_storageManager = new StorageManager(serverConfigMap->value("storageType").toString(),
-                                          serverConfigMap->value(serverConfigMap->value("storageType").toString()).toMap());
+    m_storageManager = new StorageManager(serverConfiguration->value("storageType").toString(),
+                                          serverConfiguration->value(serverConfiguration->value("storageType").toString()).toObject());
     m_userManager = new UserManager(m_storageManager);
+    m_mucManager = new MucManager(m_storageManager);
+    m_bytestreamsManager = new ByteStreamsManager(serverConfiguration);
     m_offlineMessageManager = new OfflineMessageManager(m_storageManager);
-    m_streamNegotiationManager = new StreamNegotiationManager(m_serverConfigMap, m_userManager);
+    m_streamNegotiationManager = new StreamNegotiationManager(serverConfiguration, m_userManager);
     m_rosterManager = new RosterManager(m_storageManager);
     m_blockingCmdManager = new BlockingCommandManager(m_storageManager, m_rosterManager);
     m_vCardManager = new VCardManager(m_storageManager);
     m_privateStorageManager = new PrivateStorageManager(m_storageManager);
     m_entityTimeManager = new EntityTimeManager();
-    m_oobDataManager = new OobDataManager();
-    m_serviceDiscoveryManager = new ServiceDiscoveryManager(m_serverConfigMap, m_userManager);
-    m_privacyListManager = new PrivacyListManager(m_storageManager);
+    m_serviceDiscoveryManager = new ServiceDiscoveryManager(serverConfiguration, m_userManager, m_mucManager);
+    m_privacyListManager = new PrivacyListManager(m_storageManager, m_rosterManager);
     m_lastActivityManager= new LastActivityManager(m_userManager, m_rosterManager, m_storageManager);
-    m_iqManager = new IqManager(m_serverConfigMap, m_userManager, m_privacyListManager, m_rosterManager,
+    m_iqManager = new IqManager(serverConfiguration, m_userManager, m_privacyListManager, m_rosterManager,
                                 m_vCardManager, m_lastActivityManager, m_entityTimeManager,
                                 m_privateStorageManager, m_serviceDiscoveryManager, m_offlineMessageManager,
-                                m_streamNegotiationManager, m_oobDataManager, m_blockingCmdManager);
-    m_messageManager = new MessageManager(m_userManager, m_privacyListManager);
+                                m_streamNegotiationManager, m_blockingCmdManager, m_mucManager,
+                                m_bytestreamsManager);
+    m_messageManager = new MessageManager(serverConfiguration, m_userManager, m_privacyListManager, m_mucManager,
+                                          m_blockingCmdManager);
     m_presenceManager = new PresenceManager( m_userManager, m_rosterManager, m_lastActivityManager,
-                                            m_privacyListManager);
+                                            m_privacyListManager, m_mucManager, m_blockingCmdManager);
 
     m_streamManager = new StreamManager(this, m_storageManager, m_userManager, m_rosterManager,
-                                        m_lastActivityManager, m_blockingCmdManager);
+                                        m_lastActivityManager);
     m_streamManager->start();
 
     // Connect SessionManager to the signal newConnection(Connection *)
@@ -56,6 +60,15 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
 
     connect(m_iqManager, SIGNAL(sigNonSaslAuthentification(QString,QString,QString)),
             m_streamManager, SLOT(nonSaslAuthentification(QString,QString,QString)));
+
+    connect(m_iqManager, SIGNAL(sigApplicationReply(QString,QDomDocument)), m_streamManager,
+            SLOT(requestRedirection(QString,QDomDocument)));
+
+    connect(m_iqManager, SIGNAL(sigApplicationRequest(QString,QDomDocument)), m_streamManager,
+            SLOT(requestRedirection(QString,QDomDocument)));
+
+    connect(m_iqManager, SIGNAL(sigIqAvatarQuery(QString,QDomDocument)), m_streamManager,
+            SLOT(requestRedirection(QString,QDomDocument)));
 
     connect(m_presenceManager, SIGNAL(sigPresenceBroadCast(QString,QDomDocument)),
             m_streamManager, SLOT(presenceBroadCast(QString,QDomDocument)));
@@ -81,11 +94,35 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     connect(m_presenceManager, SIGNAL(sigDirectedPresence(QString,QString,QByteArray)), m_streamManager,
             SLOT(directedPresence(QString,QString,QByteArray)));
 
+    connect(m_presenceManager, SIGNAL(sigMucPresenceBroadCast(QString,QDomDocument)), m_streamManager,
+            SLOT(mucPresenceBroadCast(QString,QDomDocument)));
+
+    connect(m_presenceManager, SIGNAL(sigRoomHistory(QString,QList<QDomDocument>)), m_streamManager,
+            SLOT(roomHistory(QString,QList<QDomDocument>)));
+
+    connect(m_presenceManager, SIGNAL(sigRoomSubject(QString,QByteArray)), m_streamManager,
+            SLOT(roomSubject(QString,QByteArray)));
+
     connect(m_messageManager, SIGNAL(sigNewChatMessage(QString,QDomDocument)), m_streamManager,
             SLOT(sendMessage(QString,QDomDocument)));
 
+    connect(m_messageManager, SIGNAL(sigDirectMucInvitation(QString,QDomDocument)), m_streamManager,
+            SLOT(directMucInvitation(QString,QDomDocument)));
+
+    connect(m_messageManager, SIGNAL(sigGroupchatMessage(QString,QDomDocument)), m_streamManager,
+            SLOT(groupchatMessage(QString,QDomDocument)));
+
+    connect(m_messageManager, SIGNAL(sigMucPresenceBroadCast(QString,QDomDocument)), m_streamManager,
+            SLOT(mucPresenceBroadCast(QString,QDomDocument)));
+
+    connect(m_messageManager, SIGNAL(sigApplicationRequest(QString,QDomDocument)), m_streamManager,
+            SLOT(requestRedirection(QString,QDomDocument)));
+
     connect(m_privacyListManager, SIGNAL(sigSetDefaultListName(QString,QString,QString,QString)), m_streamManager,
             SLOT(defaultListNameSetReply(QString,QString,QString,QString)));
+
+    connect(m_privacyListManager, SIGNAL(sigPrivacyListPush(QString,QDomDocument)), m_streamManager,
+            SLOT(requestRedirection(QString,QDomDocument)));
 
     connect(m_iqManager, SIGNAL(sigStreamNegotiationError(QString)), m_streamManager,
             SLOT(streamNegotiationError(QString)));
@@ -110,6 +147,12 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
 
     connect(m_iqManager, SIGNAL(sigSendReceiptRequest(QString,QByteArray)), m_streamManager,
             SLOT(slotSendReceiptRequest(QString,QByteArray)));
+
+    connect(m_iqManager, SIGNAL(sigGroupchatMessage(QString,QDomDocument)), m_streamManager,
+            SLOT(groupchatMessage(QString,QDomDocument)));
+
+    connect(m_iqManager, SIGNAL(sigMucPresenceBroadCast(QString,QDomDocument)), m_streamManager,
+            SLOT(mucPresenceBroadCast(QString,QDomDocument)));
 
     connect(m_serviceDiscoveryManager, SIGNAL(sigAccountAvailableResourceQuery(QString,QString,QString)),
             m_streamManager, SLOT(accountAvailableResourceQuery(QString,QString,QString)));
@@ -138,9 +181,6 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
     connect(m_vCardManager, SIGNAL(sigSendReceiptRequest(QString,QByteArray)), m_streamManager,
             SLOT(slotSendReceiptRequest(QString,QByteArray)));
 
-    connect(m_oobDataManager, SIGNAL(sigOobRequest(QString,QByteArray)), m_streamManager,
-            SLOT(oobRequest(QString,QByteArray)));
-
     connect(m_blockingCmdManager, SIGNAL(sigBlockPush(QString,QList<QString>)), m_streamManager,
             SLOT(blockPush(QString,QList<QString>)));
 
@@ -152,6 +192,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QMap<QString, QV
 
     connect(m_blockingCmdManager, SIGNAL(sigPresenceBroadCastFromContact(QString,QString)), m_streamManager,
             SLOT(presenceBroadCastFromContact(QString,QString)));
+
 }
 
 /*!
@@ -199,6 +240,29 @@ void ConnectionManager::incomingConnection(qintptr socketDescriptor)
                           m_rosterManager,
                           m_streamNegotiationManager,
                           m_blockingCmdManager);
+}
+
+void ConnectionManager::createNetworkProxy(QJsonObject *serverConfiguration)
+{
+    foreach (QString host, serverConfiguration->value("services").toVariant().toMap().keys())
+    {
+        QJsonArray hostServiceList = serverConfiguration->value("services").toObject().value(host).toArray();
+        for (int i = 0; i < hostServiceList.count(); ++i)
+        {
+            QJsonObject proxyService = hostServiceList[i].toObject();
+            if (proxyService.value("type").toString() == "proxy")
+            {
+                QNetworkProxy networkProxy;
+                networkProxy.setHostName(proxyService.value("host").toString());
+                networkProxy.setPort(proxyService.value("port").toInt());
+                networkProxy.setUser(proxyService.value("username").toString());
+                networkProxy.setPassword(proxyService.value("password").toString());
+
+                setProxy(networkProxy);
+                m_networkProxyList.append(networkProxy);
+            }
+        }
+    }
 }
 
 /*!

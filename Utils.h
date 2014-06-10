@@ -30,8 +30,13 @@ public:
                                        QString priority, QMultiHash<QString, QString> status);
     static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString show,
                                        QString priority, QString status);
+    static QDomDocument generatePresence(QString type, QString from, QString to, QString id, QString affiliation,
+                                         QString role, QString jid, QString nick, QList<int> statusCodes, QString status, QString show);
     static QList<QByteArray> parseRequest(QByteArray data);
-    static QDomDocument generateMessage(QString type, QString from, QString to, QString body);
+    static QDomDocument generateMucInvitationMessage(QString from, QString to, QString id, QString inviterJid,
+                                               QString roomPassword, QString reason);
+    static QDomDocument generateMucNotificationMessage(QString type, QString from, QString to, QString id, QList<int> statusCode);
+    static int affiliationIntValue(QString affiliation);
 };
 
 #endif // UTILS_H

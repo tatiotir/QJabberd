@@ -259,6 +259,19 @@ Contact PgSqlStorage::getContact(QString jid, QString contactJid)
     }
 }
 
+QString PgSqlStorage::getContactSubscription(QString jid, QString contactJid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT subscription FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":jid", contactJid);
+    query.exec();
+
+    if (query.first())
+        return query.value(0).toString();
+    return QString();
+}
+
 QSet<QString> PgSqlStorage::getContactGroups(QString jid, QString contactJid)
 {
     QSqlQuery query;
@@ -266,6 +279,10 @@ QSet<QString> PgSqlStorage::getContactGroups(QString jid, QString contactJid)
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.exec();
+
+    if (query.first())
+        return QJsonDocument::fromJson(query.value(0).toByteArray()).object().value("groups").toVariant().toStringList().toSet();
+    return QSet<QString>();
 }
 
 QList<PrivacyListItem> PgSqlStorage::getPrivacyList(QString jid, QString privacyListName)
@@ -320,6 +337,99 @@ bool PgSqlStorage::deletePrivacyList(QString jid, QString privacyListName)
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":privacyListName", privacyListName);
     return query.exec();
+}
+
+bool PgSqlStorage::privacyListExist(QString jid, QString privacyListName)
+{
+    QSqlQuery query;
+    query.prepare("SELECT privacyListName FROM privacylist WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    while (query.next())
+    {
+        if (query.value(0).toString() == privacyListName)
+            return true;
+    }
+    return false;
+}
+
+QStringList PgSqlStorage::getPrivacyListNames(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT privacyListName FROM privacylist WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QStringList privacyListNames;
+    while (query.next())
+    {
+        privacyListNames << query.value(0).toString();
+    }
+    return privacyListNames;
+}
+
+QString PgSqlStorage::getDefaultPrivacyList(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT defaultPrivacyList FROM users WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
+
+    query.first();
+    return query.value(0).toString();
+}
+
+QString PgSqlStorage::getActivePrivacyList(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT activePrivacyList FROM users WHERE jid = :jid");
+    query.bindValue(":jid", jid);
+    query.exec();
+
+    query.first();
+    return query.value(0).toString();
+}
+
+bool PgSqlStorage::setDefaultPrivacyList(QString jid, QString defaultList)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE users SET defaultPrivacyList = :default WHERE jid = :jid");
+    query.bindValue(":default", defaultList);
+    query.bindValue(":jid", jid);
+    return query.exec();
+}
+
+bool PgSqlStorage::setActivePrivacyList(QString jid, QString activeList)
+{
+    QSqlQuery query;
+    query.prepare("UPDATE users SET activePrivacyList = :active WHERE jid = :jid");
+    query.bindValue(":active", activeList);
+    query.bindValue(":jid", jid);
+    return query.exec();
+}
+
+QList<PrivacyListItem> PgSqlStorage::getPrivacyListDenyItems(QString jid, QString privacyListName, QString stanzaType)
+{
+    QSqlQuery query;
+    query.prepare("SELECT type, value, action, order, child FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.bindValue(":user_id", getUserId(jid));
+    query.bindValue(":privacyListName", privacyListName);
+    query.exec();
+
+    QList<PrivacyListItem> itemList;
+    while (query.next())
+    {
+        QJsonDocument document = QJsonDocument::fromJson(query.value(4).toByteArray());
+        QStringList childs = document.object().value("childs").toVariant().toStringList();
+        if (childs.contains(stanzaType) || childs.isEmpty())
+        {
+            itemList << PrivacyListItem(query.value(0).toString(), query.value(1).toString(),
+                                        query.value(2).toString(), query.value(3).toInt(),
+                                        childs.toSet());
+        }
+    }
+    return itemList;
 }
 
 QString PgSqlStorage::getVCard(QString jid)
@@ -725,6 +835,11 @@ bool PgSqlStorage::emptyUserBlockList(QString jid)
     return true;
 }
 
+bool PgSqlStorage::createRoom(QString roomName, QString ownerJid)
+{
+    return false;
+}
+
 QMultiHash<QString, QString> PgSqlStorage::getChatRoomNameList(QString roomService)
 {
     return QMultiHash<QString, QString>();
@@ -735,10 +850,9 @@ bool PgSqlStorage::chatRoomExist(QString roomName)
     return false;
 }
 
-
-QList<QString> PgSqlStorage::getChatRoomOccupants(QString roomName)
+QStringList PgSqlStorage::getOccupantsMucJid(QString roomName)
 {
-    return QList<QString>();
+    return QStringList();
 }
 
 bool PgSqlStorage::isPrivateOccupantsList(QString roomName)
@@ -746,3 +860,277 @@ bool PgSqlStorage::isPrivateOccupantsList(QString roomName)
     return false;
 }
 
+QList<Occupant> PgSqlStorage::getOccupants(QString roomName)
+{
+    return QList<Occupant>();
+}
+
+QList<Occupant> PgSqlStorage::getOccupants(QString roomName, QString bareJid)
+{
+
+}
+
+QString PgSqlStorage::getOccupantMucJid(QString roomName, QString jid)
+{
+    return QString();
+}
+
+QString PgSqlStorage::getOccupantJid(QString roomName, QString mucJid)
+{
+    return QString();
+}
+
+QString PgSqlStorage::getOccupantRole(QString roomName, QString jid)
+{
+    return QString();
+}
+
+QString PgSqlStorage::getOccupantRoleFromMucJid(QString roomName, QString mucJid)
+{
+    return QString();
+}
+
+QString PgSqlStorage::getOccupantAffiliation(QString roomName, QString jid)
+{
+    return QString();
+}
+
+QString PgSqlStorage::getOccupantAffiliationFromMucJid(QString roomName, QString mucJid)
+{
+    return QString();
+}
+
+Occupant PgSqlStorage::getOccupant(QString roomName, QString jid)
+{
+    return Occupant();
+}
+
+bool PgSqlStorage::addUserToRoom(QString roomName, Occupant occupant)
+{
+    return false;
+}
+
+QStringList PgSqlStorage::getRoomTypes(QString roomName)
+{
+    return QStringList();
+}
+
+QString PgSqlStorage::getRoomName(QString roomName)
+{
+    return QString();
+}
+
+bool PgSqlStorage::isRegistered(QString roomName, QString jid)
+{
+    return false;
+}
+
+QStringList PgSqlStorage::getRoomRegisteredMembersList(QString roomName)
+{
+    return QStringList();
+}
+
+bool PgSqlStorage::isBannedUser(QString roomName, QString jid)
+{
+    return false;
+}
+
+bool PgSqlStorage::nicknameOccuped(QString roomName, QString mucJid)
+{
+    return false;
+}
+
+bool PgSqlStorage::maxOccupantsLimit(QString roomName)
+{
+    return false;
+}
+
+bool PgSqlStorage::isLockedRoom(QString roomName)
+{
+    return false;
+}
+
+bool PgSqlStorage::isPasswordProtectedRoom(QString roomName)
+{
+    return false;
+}
+
+QString PgSqlStorage::getRoomPassword(QString roomName)
+{
+    return QString();
+}
+
+bool PgSqlStorage::canBroadcastPresence(QString roomName, QString occupantRole)
+{
+    return false;
+}
+
+bool PgSqlStorage::loggedDiscussion(QString roomName)
+{
+    return false;
+}
+
+//QByteArray PgSqlStorage::getMaxcharsHistory(QString roomName, int maxchar)
+//{
+//    return QByteArray();
+//}
+
+QList<QDomDocument> PgSqlStorage::getMaxstanzaHistory(QString roomName, int maxstanza)
+{
+    return QList<QDomDocument>();
+}
+
+QList<QDomDocument> PgSqlStorage::getLastsecondsHistory(QString roomName, int seconds)
+{
+    return QList<QDomDocument>();
+}
+
+QList<QDomDocument> PgSqlStorage::getHistorySince(QString roomName, QString since)
+{
+    return QList<QDomDocument>();
+}
+
+QList<QDomDocument> PgSqlStorage::getHistorySinceMaxstanza(QString roomName, QString since, int maxstanza)
+{
+
+}
+
+//QList<QDomDocument> PgSqlStorage::getHistorySinceMaxchar(QString roomName, QString since, int maxchar)
+//{
+
+//}
+
+//QList<QDomDocument> PgSqlStorage::getHistorySinceSeconds(QString roomName, QString since, int seconds)
+//{
+
+//}
+
+QString PgSqlStorage::getRoomSubject(QString roomName)
+{
+    return QString();
+}
+
+bool PgSqlStorage::hasVoice(QString roomName, QString mucJid)
+{
+    return false;
+}
+
+bool PgSqlStorage::changeRoomNickname(QString roomName, QString jid, QString nickname)
+{
+    return false;
+}
+
+bool PgSqlStorage::changeRole(QString roomName, QString mucJid, QString newRole)
+{
+    return false;
+}
+
+bool PgSqlStorage::registerUser(QString roomName, Occupant occupant)
+{
+    return false;
+}
+
+bool PgSqlStorage::unlockRoom(QString roomName)
+{
+    return false;
+}
+
+bool PgSqlStorage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
+{
+    return false;
+}
+
+QStringList PgSqlStorage::getRoomOwnersList(QString roomName)
+{
+    return QStringList();
+}
+
+QMap<QString, QVariant> PgSqlStorage::getRoomConfig(QString roomName)
+{
+    return QMap<QString, QVariant>();
+}
+
+bool PgSqlStorage::destroyRoom(QString roomName)
+{
+    return false;
+}
+
+QStringList PgSqlStorage::getRoomModeratorsJid(QString roomName)
+{
+    return QStringList();
+}
+
+bool PgSqlStorage::removeOccupant(QString roomName, QString mucJid)
+{
+    return false;
+}
+
+bool PgSqlStorage::removeOccupants(QString roomName, QString bareJid)
+{
+
+}
+
+bool PgSqlStorage::changeRoomSubject(QString roomName, QString subject)
+{
+    return false;
+}
+
+bool PgSqlStorage::canChangeRoomSubject(QString roomName)
+{
+    return false;
+}
+
+QStringList PgSqlStorage::getRoomAdminsList(QString roomName)
+{
+    return QStringList();
+}
+
+bool PgSqlStorage::changeAffiliation(QString roomName, QString jid, QString newAffiliation)
+{
+    return false;
+}
+
+bool PgSqlStorage::isPersistentRoom(QString roomName)
+{
+    return false;
+}
+
+bool PgSqlStorage::changeOccupantStatus(QString roomName, QString mucJid, QString status)
+{
+
+}
+
+bool PgSqlStorage::changeOccupantShow(QString roomName, QString mucJid, QString show)
+{
+
+}
+
+QString PgSqlStorage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)
+{
+
+}
+
+QString PgSqlStorage::getOccupantShowFromMucJid(QString roomName, QString mucJid)
+{
+
+}
+
+Occupant PgSqlStorage::getOccupantFromMucJid(QString roomName, QString mucJid)
+{
+
+}
+
+bool PgSqlStorage::saveMucMessage(QString roomName, QByteArray message, QString stamp)
+{
+
+}
+
+int PgSqlStorage::getRoomMaxhistoryFetch(QString roomName)
+{
+
+}
+
+QStringList PgSqlStorage::getBannedList(QString roomName)
+{
+
+}

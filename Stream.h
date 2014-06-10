@@ -8,7 +8,6 @@
 #include "MessageManager.h"
 #include "IqManager.h"
 #include "PresenceManager.h"
-#include "BlockingCommandManager.h"
 #include "Connection.h"
 
 class Stream : public QThread
@@ -79,6 +78,7 @@ private:
     QString m_host;
     QString m_streamId;
     int m_inboundStanzaCount;
+    bool m_isCompressed;
 };
 
 #endif // SESSION_H

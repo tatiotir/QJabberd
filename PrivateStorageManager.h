@@ -17,6 +17,8 @@ public:
     QByteArray privateStorageManagerReply(QDomDocument document, QString from);
     QByteArray privateStorageManagerResult(QByteArray data, QString id);
     QByteArray privateStorageManagerResult(QList<MetaContact> metacontactList, QString id);
+    QByteArray getPrivateData(QString jid, QString node);
+    bool storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap);
 
 signals:
     void sigSendReceiptRequest(QString to, QByteArray data);
@@ -24,9 +26,7 @@ signals:
 public slots:
 
 private:
-    bool storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap);
     bool storePrivateData(QString jid, QList<MetaContact> metaContactList);
-    QByteArray getPrivateData(QString jid, QString node);
     QList<MetaContact> getPrivateData(QString jid);
 
     StorageManager *m_storageManager;

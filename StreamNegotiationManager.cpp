@@ -6,9 +6,9 @@
 
 #include "StreamNegotiationManager.h"
 
-StreamNegotiationManager::StreamNegotiationManager(QMap<QString, QVariant> *serverConfigMap, UserManager *userManager)
+StreamNegotiationManager::StreamNegotiationManager(QJsonObject *serverConfiguration, UserManager *userManager)
 {
-    m_serverConfigMap = serverConfigMap;
+    m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;
     m_streamNegotiationVariableMap = new QMultiHash<QString, StreamNegotiationData* >();
 }
@@ -32,7 +32,7 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
 
     if (document.documentElement().tagName() == "stream:stream")
     {
-        if (!m_serverConfigMap->value("virtualHost").toList().contains(document.documentElement().attribute("to")))
+        if (!m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(document.documentElement().attribute("to")))
         {
             emit sigStreamNegotiationError(streamId);
             return Error::generateStreamError("host-unknown");
@@ -50,6 +50,23 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
         }
         return generateFirstStreamReply(document, streamId);
     }
+//    else if (document.documentElement().tagName() == "compress")
+//    {
+//        QString method = document.firstChildElement().firstChildElement().text();
+//        if (method != "zlib")
+//        {
+//            return Error::generateFailureError("http://jabber.org/protocol/compress", "unsupported-method");
+//        }
+//        else
+//        {
+//            QDomDocument document;
+//            QDomElement compressedElement = document.createElement("compressed");
+//            compressedElement.setAttribute("xmlns", "http://jabber.org/protocol/compress");
+//            document.appendChild(compressedElement);
+
+//            return document.toByteArray();
+//        }
+//    }
     else if (document.documentElement().tagName() == "starttls")
     {
         return generateStartTlsReply();
@@ -60,13 +77,13 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
         if (mechanism.isEmpty() /*|| ((mechanism != "PLAIN") && (mechanism != "EXTERNAL")*/
                 && (mechanism != "DIGEST-MD5"))
         {
-            return Error::generateSaslError("invalid-mechanism");
+            return Error::generateFailureError("urn:ietf:params:xml:ns:xmpp-sasl", "invalid-mechanism");
         }
         return generateFirstChallengeReply(document, streamId);
     }
     else if (document.documentElement().tagName() == "abort")
     {
-        return Error::generateSaslError("aborted");
+        return Error::generateFailureError("urn:ietf:params:xml:ns:xmpp-sasl", "aborted");
     }
     else if (document.documentElement().tagName() == "response")
     {
@@ -83,7 +100,7 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
             else
             {
                 emit sigStreamNegotiationError(streamId);
-                return Error::generateSaslError("account-disabled");
+                return Error::generateFailureError("urn:ietf:params:xml:ns:xmpp-sasl", "account-disabled");
             }
         }
         else
@@ -113,7 +130,7 @@ QByteArray StreamNegotiationManager::firstFeatures()
     QDomElement starttls = document.createElement("starttls");
     starttls.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-tls");
 
-    if (m_serverConfigMap->value("modules").toMap().value("saslauth").toBool())
+    if (m_serverConfiguration->value("modules").toObject().value("saslauth").toBool())
     {
         QDomElement mechanisms = document.createElement("mechanisms");
         mechanisms.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
@@ -129,6 +146,18 @@ QByteArray StreamNegotiationManager::firstFeatures()
 
         streamFeatures.appendChild(mechanisms);
     }
+
+//    if (m_serverConfiguration->value("modules").toObject().value("compress").toBool())
+//    {
+//        QDomElement compressionElement = document.createElement("compression");
+//        compressionElement.setAttribute("xmlns", "http://jabber.org/features/compress");
+
+//        QDomElement methodElement = document.createElement("method");
+//        methodElement.appendChild(document.createElement("zlib"));
+
+//        compressionElement.appendChild(methodElement);
+//        streamFeatures.appendChild(compressionElement);
+//    }
 
     QDomElement sub = document.createElement("sub");
     sub.setAttribute("xmlns", "urn:xmpp:features:pre-approval");
@@ -276,8 +305,8 @@ QByteArray StreamNegotiationManager::generateStartTlsReply()
     document.appendChild(proceed);
 
     QByteArray reply = document.toByteArray() + QByteArray("#") +
-            m_serverConfigMap->value("ssl").toMap().value("certificate").toByteArray() + QByteArray("#") +
-            m_serverConfigMap->value("ssl").toMap().value("key").toByteArray();
+            m_serverConfiguration->value("ssl").toObject().value("certificate").toVariant().toByteArray() + QByteArray("#") +
+            m_serverConfiguration->value("ssl").toObject().value("key").toVariant().toByteArray();
     return reply;
 }
 

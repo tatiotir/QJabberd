@@ -15,7 +15,7 @@ Error::Error()
  * \param request
  * \return QByteArray
  */
-QByteArray Error::generateError(QString stanzaType, QString errorType, QString errorCause,
+QByteArray Error::generateError(QString by, QString stanzaType, QString errorType, QString errorCause,
                                 QString from, QString to, QString id, QDomElement request)
 {
     QDomDocument document;
@@ -39,6 +39,9 @@ QByteArray Error::generateError(QString stanzaType, QString errorType, QString e
 
     QDomElement errorElement = document.createElement("error");
     errorElement.setAttribute("type", errorType);
+
+    if (!by.isEmpty())
+        errorElement.setAttribute("by", by);
 
     QDomElement errorCauseElement = document.createElement(errorCause);
     errorCauseElement.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas");
@@ -75,13 +78,13 @@ QByteArray Error::generateSmError(QString childName)
  * \param childName
  * \return QByteArray
  */
-QByteArray Error::generateSaslError(QString childName)
+QByteArray Error::generateFailureError(QString xmlns, QString errorCause)
 {
     QDomDocument document;
     QDomElement failure = document.createElement("failure");
-    failure.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-sasl");
+    failure.setAttribute("xmlns", xmlns);
 
-    failure.appendChild(document.createElement(childName));
+    failure.appendChild(document.createElement(errorCause));
     document.appendChild(failure);
 
     return document.toByteArray();

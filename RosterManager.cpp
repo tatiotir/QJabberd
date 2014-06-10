@@ -59,6 +59,11 @@ Contact RosterManager::getContact(QString jid, QString contactJid)
     return m_storageManager->getStorage()->getContact(jid, contactJid);
 }
 
+QString RosterManager::getContactSubscription(QString jid, QString contactJid)
+{
+    return m_storageManager->getStorage()->getContactSubscription(jid, contactJid);
+}
+
 QSet<QString> RosterManager::getContactGroups(QString jid, QString contactJid)
 {
     return m_storageManager->getStorage()->getContactGroups(jid, contactJid);

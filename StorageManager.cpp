@@ -1,6 +1,6 @@
 #include "StorageManager.h"
 
-StorageManager::StorageManager(QString storageType, QMap<QString, QVariant> databaseSettings)
+StorageManager::StorageManager(QString storageType, QJsonObject databaseSettings)
 {
     if (storageType == "Local")
     {
