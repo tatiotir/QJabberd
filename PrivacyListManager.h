@@ -23,8 +23,9 @@ public slots:
     QByteArray generateIQResult(QString to, QString id);
     QDomDocument generatePrivacyPush(QString to, QString privacyListName, QString id);
     QByteArray isBlocked(QString from, QString to, QString stanzaType);
-    QByteArray isBlocked(QString from, QString to, QList<PrivacyListItem> privacyListDenyMessageItems);
-    QList<PrivacyListItem> getPrivacyListDenyItems(QString jid, QString privacyListName, QString stanzaType);
+    QByteArray isBlocked(QString from, QString to, QList<PrivacyListItem> privacyListAllowItems, QList<PrivacyListItem> privacyListDenyItems);
+    QList<PrivacyListItem> getPrivacyListItems(QString jid, QString privacyListName, QString stanzaType,
+                                               QString action);
     QString getDefaultPrivacyList(QString jid);
     QString getActivePrivacyList(QString jid);
 

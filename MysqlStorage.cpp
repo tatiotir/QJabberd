@@ -287,9 +287,9 @@ QSet<QString> MySqlStorage::getContactGroups(QString jid, QString contactJid)
 QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, order, child FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.prepare("SELECT type, value, action, iorder, child FROM privacylist WHERE user_id = :user_id AND privacylistname = :privacylistname");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacyListName", privacyListName);
+    query.bindValue(":privacylistname", privacyListName);
     query.exec();
 
     QList<PrivacyListItem> itemList;
@@ -301,22 +301,13 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacy
                                     query.value(3).toInt(),
                                     QJsonDocument::fromJson(query.value(4).toByteArray()).object().value("childs").toVariant().toStringList().toSet());
     }
+
+    qSort(itemList.begin(), itemList.end());
     return itemList;
 }
 
 bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
-//    if (privacyListName == "default")
-//    {
-//        /* Map the default privacy list to the block list */
-//        QList<QString> blocklist;
-//        foreach (PrivacyListItem item, items)
-//        {
-//            blocklist << item.getValue();
-//        }
-//        addUserBlockListItems(jid, blocklist);
-//    }
-
     m_database.transaction();
 
     QJsonDocument document;
@@ -327,14 +318,15 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
         document.setObject(object);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO privacylist(user_id, type, action, order, child, privacyListName)"
-                      "VALUES(:user_id, :type, :action, :order, :child, :privacyListName)");
+        query.prepare("INSERT INTO privacylist(user_id, type, value, action, iorder, child, privacylistname)"
+                      " VALUES(:user_id, :type, :value, :action, :iorder, :child, :privacylistname)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":type", item.getType());
         query.bindValue(":action", item.getAction());
-        query.bindValue(":order", item.getOrder());
+        query.bindValue(":value", item.getValue());
+        query.bindValue(":iorder", item.getOrder());
         query.bindValue(":child", document.toJson());
-        query.bindValue(":privacyListName", privacyListName);
+        query.bindValue(":privacylistname", privacyListName);
         query.exec();
     }
     return m_database.commit();
@@ -342,28 +334,17 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
 
 bool MySqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
-//    if (privacyListName == "default")
-//    {
-//        /* Map the block list to the default privacy list */
-//        QList<QString> blocklist;
-//        foreach (PrivacyListItem item, getPrivacyList(jid, privacyListName))
-//        {
-//            blocklist << item.getValue();
-//        }
-//        deleteUserBlockListItems(jid, blocklist);
-//    }
-
     QSqlQuery query;
-    query.prepare("DELETE FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.prepare("DELETE FROM privacylist WHERE user_id = :user_id AND privacylistname = :privacylistname");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacyListName", privacyListName);
+    query.bindValue(":privacylistname", privacyListName);
     return query.exec();
 }
 
 bool MySqlStorage::privacyListExist(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("SELECT privacyListName FROM privacylist WHERE user_id = :user_id");
+    query.prepare("SELECT privacylistname FROM privacylist WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -378,7 +359,7 @@ bool MySqlStorage::privacyListExist(QString jid, QString privacyListName)
 QStringList MySqlStorage::getPrivacyListNames(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT privacyListName FROM privacylist WHERE user_id = :user_id");
+    query.prepare("SELECT privacylistname FROM privacylist WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -393,7 +374,7 @@ QStringList MySqlStorage::getPrivacyListNames(QString jid)
 QString MySqlStorage::getDefaultPrivacyList(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT defaultPrivacyList FROM users WHERE jid = :jid");
+    query.prepare("SELECT defaultprivacylist FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -404,7 +385,7 @@ QString MySqlStorage::getDefaultPrivacyList(QString jid)
 QString MySqlStorage::getActivePrivacyList(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT activePrivacyList FROM users WHERE jid = :jid");
+    query.prepare("SELECT activeprivacylist FROM users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -415,7 +396,7 @@ QString MySqlStorage::getActivePrivacyList(QString jid)
 bool MySqlStorage::setDefaultPrivacyList(QString jid, QString defaultList)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET defaultPrivacyList = :default WHERE jid = :jid");
+    query.prepare("UPDATE users SET defaultprivacylist = :default WHERE jid = :jid");
     query.bindValue(":default", defaultList);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -424,18 +405,21 @@ bool MySqlStorage::setDefaultPrivacyList(QString jid, QString defaultList)
 bool MySqlStorage::setActivePrivacyList(QString jid, QString activeList)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET activePrivacyList = :active WHERE jid = :jid");
+    query.prepare("UPDATE users SET activeprivacylist = :active WHERE jid = :jid");
     query.bindValue(":active", activeList);
     query.bindValue(":jid", jid);
     return query.exec();
 }
 
-QList<PrivacyListItem> MySqlStorage::getPrivacyListDenyItems(QString jid, QString privacyListName, QString stanzaType)
+QList<PrivacyListItem> MySqlStorage::getPrivacyListItems(QString jid, QString privacyListName,
+                                                         QString stanzaType, QString action)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, order, child FROM privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.prepare("SELECT type, value, action, iorder, child FROM privacylist WHERE user_id = :user_id"
+                  " AND privacylistname = :privacylistname AND action = :action");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacyListName", privacyListName);
+    query.bindValue(":privacylistname", privacyListName);
+    query.bindValue(":action", action);
     query.exec();
 
     QList<PrivacyListItem> itemList;
@@ -546,10 +530,10 @@ bool MySqlStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     foreach (QString key, nodeMap.keys())
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO privatedata(user_id, nodeName, nodeValue)"
-                      " VALUES(:user_id, :nodeName, :nodeValue)");
+        query.prepare("INSERT INTO privatedata(user_id, nodename, nodeValue)"
+                      " VALUES(:user_id, :nodename, :nodeValue)");
         query.bindValue(":user_id", getUserId(jid));
-        query.bindValue(":nodeName", key);
+        query.bindValue(":nodename", key);
         query.bindValue(":nodeValue", nodeMap.value(key));
         query.exec();
     }
@@ -575,9 +559,9 @@ bool MySqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
 QByteArray MySqlStorage::getPrivateData(QString jid, QString node)
 {
     QSqlQuery query;
-    query.prepare("SELECT nodeValue FROM privatedata WHERE user_id = :user_id AND nodeName = :nodeName");
+    query.prepare("SELECT nodeValue FROM privatedata WHERE user_id = :user_id AND nodename = :nodename");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":nodeName", node);
+    query.bindValue(":nodename", node);
     query.exec();
 
     if (query.first())
@@ -830,328 +814,366 @@ bool MySqlStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
 
 QList<QString> MySqlStorage::getUserBlockList(QString jid)
 {
-    return QList<QString>();
+    int user_id = getUserId(jid);
+
+    QSqlQuery query;
+    query.prepare("SELECT jid FROM blocklist WHERE user_id = :user_id");
+    query.bindValue(":user_id", user_id);
+    query.exec();
+
+    QList<QString> items;
+    while (query.next())
+    {
+        items << query.value(0).toString();
+    }
+    return items;
 }
 
 bool MySqlStorage::addUserBlockListItems(QString jid, QList<QString> items)
 {
     /* Map the block list to the default privacy list */
-    QList<PrivacyListItem> privacyListItems;
+//    QList<PrivacyListItem> privacyListItems;
+//    foreach (QString item, items)
+//    {
+//        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+//    }
+//    addItemsToPrivacyList(jid, "default", privacyListItems);
+    int user_id = getUserId(jid);
+
+    m_database.transaction();
     foreach (QString item, items)
     {
-        privacyListItems << PrivacyListItem("", item, "deny", 0,QSet<QString>());
+        QSqlQuery query;
+        query.prepare("INSERT INTO blocklist(user_id, jid) VALUES(:user_id, :jid)");
+        query.bindValue(":user_id", user_id);
+        query.bindValue(":jid", item);
+        query.exec();
     }
-    addItemsToPrivacyList(jid, "default", privacyListItems);
-
-    return true;
+    return m_database.commit();
 }
 
 bool MySqlStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
 {
-    return true;
+    int user_id = getUserId(jid);
+
+    m_database.transaction();
+    foreach (QString item, items)
+    {
+        QSqlQuery query;
+        query.prepare("DELETE FROM blocklist WHERE user_id = :user_id AND jid = :jid");
+        query.bindValue(":user_id", user_id);
+        query.bindValue(":jid", item);
+        query.exec();
+    }
+    return m_database.commit();
 }
 
 bool MySqlStorage::emptyUserBlockList(QString jid)
 {
-    return true;
+    int user_id = getUserId(jid);
+
+    QSqlQuery query;
+    query.prepare("DELETE FROM blocklist WHERE user_id = :user_id");
+    query.bindValue(":user_id", user_id);
+    return query.exec();
 }
 
-bool MySqlStorage::createRoom(QString roomName, QString ownerJid)
-{
-    return false;
-}
-
-QMultiHash<QString, QString> MySqlStorage::getChatRoomNameList(QString roomService)
-{
-    return QMultiHash<QString, QString>();
-}
-
-bool MySqlStorage::chatRoomExist(QString roomName)
-{
-    return false;
-}
-
-QStringList MySqlStorage::getOccupantsMucJid(QString roomName)
-{
-    return QStringList();
-}
-
-bool MySqlStorage::isPrivateOccupantsList(QString roomName)
-{
-    return false;
-}
-
-QList<Occupant> MySqlStorage::getOccupants(QString roomName)
-{
-    return QList<Occupant>();
-}
-
-QList<Occupant> MySqlStorage::getOccupants(QString roomName, QString bareJid)
-{
-
-}
-
-QString MySqlStorage::getOccupantMucJid(QString roomName, QString jid)
-{
-    return QString();
-}
-
-QString MySqlStorage::getOccupantJid(QString roomName, QString mucJid)
-{
-    return QString();
-}
-
-QString MySqlStorage::getOccupantRole(QString roomName, QString jid)
-{
-    return QString();
-}
-
-QString MySqlStorage::getOccupantRoleFromMucJid(QString roomName, QString mucJid)
-{
-    return QString();
-}
-
-QString MySqlStorage::getOccupantAffiliation(QString roomName, QString jid)
-{
-    return QString();
-}
-
-QString MySqlStorage::getOccupantAffiliationFromMucJid(QString roomName, QString mucJid)
-{
-    return QString();
-}
-
-Occupant MySqlStorage::getOccupant(QString roomName, QString jid)
-{
-    return Occupant();
-}
-
-bool MySqlStorage::addUserToRoom(QString roomName, Occupant occupant)
-{
-    return false;
-}
-
-QStringList MySqlStorage::getRoomTypes(QString roomName)
-{
-    return QStringList();
-}
-
-QString MySqlStorage::getRoomName(QString roomName)
-{
-    return QString();
-}
-
-bool MySqlStorage::isRegistered(QString roomName, QString jid)
-{
-    return false;
-}
-
-QStringList MySqlStorage::getRoomRegisteredMembersList(QString roomName)
-{
-    return QStringList();
-}
-
-bool MySqlStorage::isBannedUser(QString roomName, QString jid)
-{
-    return false;
-}
-
-bool MySqlStorage::nicknameOccuped(QString roomName, QString mucJid)
-{
-    return false;
-}
-
-bool MySqlStorage::maxOccupantsLimit(QString roomName)
-{
-    return false;
-}
-
-bool MySqlStorage::isLockedRoom(QString roomName)
-{
-    return false;
-}
-
-bool MySqlStorage::isPasswordProtectedRoom(QString roomName)
-{
-    return false;
-}
-
-QString MySqlStorage::getRoomPassword(QString roomName)
-{
-    return QString();
-}
-
-bool MySqlStorage::canBroadcastPresence(QString roomName, QString occupantRole)
-{
-    return false;
-}
-
-bool MySqlStorage::loggedDiscussion(QString roomName)
-{
-    return false;
-}
-
-//QByteArray MySqlStorage::getMaxcharsHistory(QString roomName, int maxchar)
+//bool MySqlStorage::createRoom(QString roomName, QString ownerJid)
 //{
-//    return QByteArray();
+//    return false;
 //}
 
-QList<QDomDocument> MySqlStorage::getMaxstanzaHistory(QString roomName, int maxstanza)
-{
-    return QList<QDomDocument>();
-}
+//QMultiHash<QString, QString> MySqlStorage::getChatRoomNameList(QString roomService)
+//{
+//    return QMultiHash<QString, QString>();
+//}
 
-QList<QDomDocument> MySqlStorage::getLastsecondsHistory(QString roomName, int seconds)
-{
-    return QList<QDomDocument>();
-}
+//bool MySqlStorage::chatRoomExist(QString roomName)
+//{
+//    return false;
+//}
 
-QList<QDomDocument> MySqlStorage::getHistorySince(QString roomName, QString since)
-{
-    return QList<QDomDocument>();
-}
+//QStringList MySqlStorage::getOccupantsMucJid(QString roomName)
+//{
+//    return QStringList();
+//}
 
-QList<QDomDocument> MySqlStorage::getHistorySinceMaxstanza(QString roomName, QString since, int maxstanza)
-{
+//bool MySqlStorage::isPrivateOccupantsList(QString roomName)
+//{
+//    return false;
+//}
 
-}
+//QList<Occupant> MySqlStorage::getOccupants(QString roomName)
+//{
+//    return QList<Occupant>();
+//}
 
-//QList<QDomDocument> MySqlStorage::getHistorySinceMaxchar(QString roomName, QString since, int maxchar)
+//QList<Occupant> MySqlStorage::getOccupants(QString roomName, QString bareJid)
 //{
 
 //}
 
-//QList<QDomDocument> MySqlStorage::getHistorySinceSeconds(QString roomName, QString since, int seconds)
+//QString MySqlStorage::getOccupantMucJid(QString roomName, QString jid)
+//{
+//    return QString();
+//}
+
+//QString MySqlStorage::getOccupantJid(QString roomName, QString mucJid)
+//{
+//    return QString();
+//}
+
+//QString MySqlStorage::getOccupantRole(QString roomName, QString jid)
+//{
+//    return QString();
+//}
+
+//QString MySqlStorage::getOccupantRoleFromMucJid(QString roomName, QString mucJid)
+//{
+//    return QString();
+//}
+
+//QString MySqlStorage::getOccupantAffiliation(QString roomName, QString jid)
+//{
+//    return QString();
+//}
+
+//QString MySqlStorage::getOccupantAffiliationFromMucJid(QString roomName, QString mucJid)
+//{
+//    return QString();
+//}
+
+//Occupant MySqlStorage::getOccupant(QString roomName, QString jid)
+//{
+//    return Occupant();
+//}
+
+//bool MySqlStorage::addUserToRoom(QString roomName, Occupant occupant)
+//{
+//    return false;
+//}
+
+//QStringList MySqlStorage::getRoomTypes(QString roomName)
+//{
+//    return QStringList();
+//}
+
+//QString MySqlStorage::getRoomName(QString roomName)
+//{
+//    return QString();
+//}
+
+//bool MySqlStorage::isRegistered(QString roomName, QString jid)
+//{
+//    return false;
+//}
+
+//QStringList MySqlStorage::getRoomRegisteredMembersList(QString roomName)
+//{
+//    return QStringList();
+//}
+
+//bool MySqlStorage::isBannedUser(QString roomName, QString jid)
+//{
+//    return false;
+//}
+
+//bool MySqlStorage::nicknameOccuped(QString roomName, QString mucJid)
+//{
+//    return false;
+//}
+
+//bool MySqlStorage::maxOccupantsLimit(QString roomName)
+//{
+//    return false;
+//}
+
+//bool MySqlStorage::isLockedRoom(QString roomName)
+//{
+//    return false;
+//}
+
+//bool MySqlStorage::isPasswordProtectedRoom(QString roomName)
+//{
+//    return false;
+//}
+
+//QString MySqlStorage::getRoomPassword(QString roomName)
+//{
+//    return QString();
+//}
+
+//bool MySqlStorage::canBroadcastPresence(QString roomName, QString occupantRole)
+//{
+//    return false;
+//}
+
+//bool MySqlStorage::loggedDiscussion(QString roomName)
+//{
+//    return false;
+//}
+
+////QByteArray MySqlStorage::getMaxcharsHistory(QString roomName, int maxchar)
+////{
+////    return QByteArray();
+////}
+
+//QList<QDomDocument> MySqlStorage::getMaxstanzaHistory(QString roomName, int maxstanza)
+//{
+//    return QList<QDomDocument>();
+//}
+
+//QList<QDomDocument> MySqlStorage::getLastsecondsHistory(QString roomName, int seconds)
+//{
+//    return QList<QDomDocument>();
+//}
+
+//QList<QDomDocument> MySqlStorage::getHistorySince(QString roomName, QString since)
+//{
+//    return QList<QDomDocument>();
+//}
+
+//QList<QDomDocument> MySqlStorage::getHistorySinceMaxstanza(QString roomName, QString since, int maxstanza)
 //{
 
 //}
 
-QString MySqlStorage::getRoomSubject(QString roomName)
-{
-    return QString();
-}
+////QList<QDomDocument> MySqlStorage::getHistorySinceMaxchar(QString roomName, QString since, int maxchar)
+////{
 
-bool MySqlStorage::hasVoice(QString roomName, QString mucJid)
-{
-    return false;
-}
+////}
 
-bool MySqlStorage::changeRoomNickname(QString roomName, QString jid, QString nickname)
-{
-    return false;
-}
+////QList<QDomDocument> MySqlStorage::getHistorySinceSeconds(QString roomName, QString since, int seconds)
+////{
 
-bool MySqlStorage::changeRole(QString roomName, QString mucJid, QString newRole)
-{
-    return false;
-}
+////}
 
-bool MySqlStorage::registerUser(QString roomName, Occupant occupant)
-{
-    return false;
-}
+//QString MySqlStorage::getRoomSubject(QString roomName)
+//{
+//    return QString();
+//}
 
-bool MySqlStorage::unlockRoom(QString roomName)
-{
-    return false;
-}
+//bool MySqlStorage::hasVoice(QString roomName, QString mucJid)
+//{
+//    return false;
+//}
 
-bool MySqlStorage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
-{
-    return false;
-}
+//bool MySqlStorage::changeRoomNickname(QString roomName, QString jid, QString nickname)
+//{
+//    return false;
+//}
 
-QStringList MySqlStorage::getRoomOwnersList(QString roomName)
-{
-    return QStringList();
-}
+//bool MySqlStorage::changeRole(QString roomName, QString mucJid, QString newRole)
+//{
+//    return false;
+//}
 
-QMap<QString, QVariant> MySqlStorage::getRoomConfig(QString roomName)
-{
-    return QMap<QString, QVariant>();
-}
+//bool MySqlStorage::registerUser(QString roomName, Occupant occupant)
+//{
+//    return false;
+//}
 
-bool MySqlStorage::destroyRoom(QString roomName)
-{
-    return false;
-}
+//bool MySqlStorage::unlockRoom(QString roomName)
+//{
+//    return false;
+//}
 
-QStringList MySqlStorage::getRoomModeratorsJid(QString roomName)
-{
-    return QStringList();
-}
+//bool MySqlStorage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
+//{
+//    return false;
+//}
 
-bool MySqlStorage::removeOccupant(QString roomName, QString mucJid)
-{
-    return false;
-}
+//QStringList MySqlStorage::getRoomOwnersList(QString roomName)
+//{
+//    return QStringList();
+//}
 
-bool MySqlStorage::removeOccupants(QString roomName, QString bareJid)
-{
+//QMap<QString, QVariant> MySqlStorage::getRoomConfig(QString roomName)
+//{
+//    return QMap<QString, QVariant>();
+//}
 
-}
+//bool MySqlStorage::destroyRoom(QString roomName)
+//{
+//    return false;
+//}
 
-bool MySqlStorage::changeRoomSubject(QString roomName, QString subject)
-{
-    return false;
-}
+//QStringList MySqlStorage::getRoomModeratorsJid(QString roomName)
+//{
+//    return QStringList();
+//}
 
-bool MySqlStorage::canChangeRoomSubject(QString roomName)
-{
-    return false;
-}
+//bool MySqlStorage::removeOccupant(QString roomName, QString mucJid)
+//{
+//    return false;
+//}
 
-QStringList MySqlStorage::getRoomAdminsList(QString roomName)
-{
-    return QStringList();
-}
+//bool MySqlStorage::removeOccupants(QString roomName, QString bareJid)
+//{
 
-bool MySqlStorage::changeAffiliation(QString roomName, QString jid, QString newAffiliation)
-{
-    return false;
-}
+//}
 
-bool MySqlStorage::isPersistentRoom(QString roomName)
-{
-    return false;
-}
+//bool MySqlStorage::changeRoomSubject(QString roomName, QString subject)
+//{
+//    return false;
+//}
 
-bool MySqlStorage::changeOccupantStatus(QString roomName, QString mucJid, QString status)
-{
+//bool MySqlStorage::canChangeRoomSubject(QString roomName)
+//{
+//    return false;
+//}
 
-}
+//QStringList MySqlStorage::getRoomAdminsList(QString roomName)
+//{
+//    return QStringList();
+//}
 
-bool MySqlStorage::changeOccupantShow(QString roomName, QString mucJid, QString show)
-{
+//bool MySqlStorage::changeAffiliation(QString roomName, QString jid, QString newAffiliation)
+//{
+//    return false;
+//}
 
-}
+//bool MySqlStorage::isPersistentRoom(QString roomName)
+//{
+//    return false;
+//}
 
-QString MySqlStorage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)
-{
+//bool MySqlStorage::changeOccupantStatus(QString roomName, QString mucJid, QString status)
+//{
 
-}
+//}
 
-QString MySqlStorage::getOccupantShowFromMucJid(QString roomName, QString mucJid)
-{
+//bool MySqlStorage::changeOccupantShow(QString roomName, QString mucJid, QString show)
+//{
 
-}
+//}
 
-Occupant MySqlStorage::getOccupantFromMucJid(QString roomName, QString mucJid)
-{
+//QString MySqlStorage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)
+//{
 
-}
+//}
 
-bool MySqlStorage::saveMucMessage(QString roomName, QByteArray message, QString stamp)
-{
+//QString MySqlStorage::getOccupantShowFromMucJid(QString roomName, QString mucJid)
+//{
 
-}
+//}
 
-int MySqlStorage::getRoomMaxhistoryFetch(QString roomName)
-{
+//Occupant MySqlStorage::getOccupantFromMucJid(QString roomName, QString mucJid)
+//{
 
-}
+//}
 
-QStringList MySqlStorage::getBannedList(QString roomName)
-{
+//bool MySqlStorage::saveMucMessage(QString roomName, QByteArray message, QString stamp)
+//{
 
-}
+//}
+
+//int MySqlStorage::getRoomMaxhistoryFetch(QString roomName)
+//{
+
+//}
+
+//QStringList MySqlStorage::getBannedList(QString roomName)
+//{
+
+//}

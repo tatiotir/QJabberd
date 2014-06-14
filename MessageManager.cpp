@@ -237,6 +237,8 @@ QByteArray MessageManager::parseMessage(QDomDocument document, QString messageFr
                         passwordElement.appendChild(document.createTextNode(m_mucManager->getRoomPassword(to)));
                         xEle.appendChild(passwordElement);
                     }
+
+                    qDebug() << "invitation : " << invitationDocument.toByteArray();
                     // Send mediated invitation
                     emit sigGroupchatMessage(messageElement.attribute("to"), invitationDocument);
                 }

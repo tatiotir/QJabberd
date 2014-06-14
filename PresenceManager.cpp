@@ -243,11 +243,18 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
         QString activeListName = m_privacyListManager->getActivePrivacyList(from);
         QString defaultListName = m_privacyListManager->getDefaultPrivacyList(from);
 
-        QList<PrivacyListItem> privacyListDenyMessageItems;
+        QList<PrivacyListItem> privacyListDenyItems;
+        QList<PrivacyListItem> privacyListAllowItems;
         if (!activeListName.isEmpty())
-            privacyListDenyMessageItems = m_privacyListManager->getPrivacyListDenyItems(from, activeListName, "presence-out");
+        {
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, activeListName, "presence-out", "deny");
+            privacyListAllowItems = m_privacyListManager->getPrivacyListItems(from, activeListName, "presence-out", "allow");
+        }
         else if (!defaultListName.isEmpty())
-            privacyListDenyMessageItems = m_privacyListManager->getPrivacyListDenyItems(from, defaultListName, "presence-out");
+        {
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "deny");
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
+        }
 
         QString priority = presence.elementsByTagName("priority").item(0).toElement().text();
         emit sigPresencePriority(presenceFrom, priority.toInt());
@@ -262,7 +269,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                 if (privacyListError == "a")
                     return QByteArray();
 
-                QByteArray privacyListError1 = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListDenyMessageItems);
+                QByteArray privacyListError1 = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListAllowItems, privacyListDenyItems);
                 if (privacyListError1 == "a")
                     return QByteArray();
 
@@ -272,7 +279,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
             }
             if ((contact.getSubscription() == "to") || (contact.getSubscription() == "both"))
             {
-                QByteArray privacyListError = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListDenyMessageItems);
+                QByteArray privacyListError = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListAllowItems, privacyListDenyItems);
                 if (privacyListError == "a")
                     return QByteArray();
 
@@ -291,11 +298,18 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
         QString activeListName = m_privacyListManager->getActivePrivacyList(from);
         QString defaultListName = m_privacyListManager->getDefaultPrivacyList(from);
 
-        QList<PrivacyListItem> privacyListDenyMessageItems;
+        QList<PrivacyListItem> privacyListDenyItems;
+        QList<PrivacyListItem> privacyListAllowItems;
         if (!activeListName.isEmpty())
-            privacyListDenyMessageItems = m_privacyListManager->getPrivacyListDenyItems(from, activeListName, "presence-out");
+        {
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, activeListName, "presence-out", "deny");
+            privacyListAllowItems = m_privacyListManager->getPrivacyListItems(from, activeListName, "presence-out", "allow");
+        }
         else if (!defaultListName.isEmpty())
-            privacyListDenyMessageItems = m_privacyListManager->getPrivacyListDenyItems(from, defaultListName, "presence-out");
+        {
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "deny");
+            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
+        }
 
         emit sigCurrentPresence(presenceFrom, document.toByteArray());
 
@@ -309,7 +323,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                 if (privacyListError == "a")
                     return QByteArray();
 
-                QByteArray privacyListError1 = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListDenyMessageItems);
+                QByteArray privacyListError1 = m_privacyListManager->isBlocked(contact.getJid(), from, privacyListAllowItems, privacyListDenyItems);
                 if (privacyListError1 == "a")
                     return QByteArray();
 

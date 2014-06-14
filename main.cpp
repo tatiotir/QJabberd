@@ -1,5 +1,5 @@
 #include <QtWidgets/QApplication>
-#include "server.h"
+#include "Server.h"
 
 int main(int argc, char *argv[])
 {

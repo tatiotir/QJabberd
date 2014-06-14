@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QDomDocument>
 #include <QDomElement>
-#include "usermanager.h"
+#include "UserManager.h"
 #include "PrivacyListManager.h"
 #include "MucManager.h"
 #include "Error.h"

@@ -238,15 +238,58 @@ QByteArray PrivacyListManager::isBlocked(QString from, QString to, QString stanz
     QString activeListName = getActivePrivacyList(Utils::getBareJid(to));
     QString defaultListName = getDefaultPrivacyList(Utils::getBareJid(to));
 
-    QList<PrivacyListItem> privacyListDenyMessageItems;
+    QList<PrivacyListItem> privacyListDenyItems;
+    QList<PrivacyListItem> privacyListAllowItems;
     if (!activeListName.isEmpty())
-        privacyListDenyMessageItems = getPrivacyListDenyItems(Utils::getBareJid(to), activeListName, stanzaType);
+    {
+        privacyListDenyItems = getPrivacyListItems(Utils::getBareJid(to), activeListName, stanzaType, "deny");
+        privacyListAllowItems = getPrivacyListItems(Utils::getBareJid(to), activeListName, stanzaType, "allow");
+    }
     else if (!defaultListName.isEmpty())
-        privacyListDenyMessageItems = getPrivacyListDenyItems(Utils::getBareJid(to), defaultListName, stanzaType);
+    {
+        privacyListDenyItems = getPrivacyListItems(Utils::getBareJid(to), defaultListName, stanzaType, "deny");
+        privacyListAllowItems = getPrivacyListItems(Utils::getBareJid(to), defaultListName, stanzaType, "allow");
+    }
     else
         return QByteArray();
 
-    foreach (PrivacyListItem item, privacyListDenyMessageItems)
+    // Test the allow privacy list items
+    foreach (PrivacyListItem item, privacyListAllowItems)
+    {
+        if (item.getType().isEmpty())
+        {
+            return QByteArray();
+        }
+        else if (item.getType() == "jid")
+        {
+            if ((item.getValue() == from) ||
+                    (item.getValue() == Utils::getBareJid(from)) ||
+                    (item.getValue() == Utils::getHost(from)) ||
+                    (item.getValue() == from.split("@").value(1)))
+            {
+                return QByteArray();
+            }
+        }
+        else if (item.getType() == "group")
+        {
+            QList<QString> contactGroups = m_rosterMananager->getContactGroups(Utils::getBareJid(to), Utils::getBareJid(from)).toList();
+            if (contactGroups.contains(item.getValue()))
+            {
+                return QByteArray();
+            }
+        }
+        else if (item.getType() == "subscription")
+        {
+            QString contactSubscription = m_rosterMananager->getContactSubscription(Utils::getBareJid(to), Utils::getBareJid(from));
+            if (contactSubscription == item.getValue())
+            {
+                return QByteArray();
+            }
+        }
+    }
+
+    // Test the deny privacy list items
+    foreach (PrivacyListItem item, privacyListDenyItems)
     {
         if (item.getType().isEmpty())
         {
@@ -315,9 +358,46 @@ QByteArray PrivacyListManager::isBlocked(QString from, QString to, QString stanz
 }
 
 QByteArray PrivacyListManager::isBlocked(QString from, QString to,
-                                         QList<PrivacyListItem> privacyListDenyMessageItems)
+                                         QList<PrivacyListItem> privacyListAllowItems,
+                                         QList<PrivacyListItem> privacyListDenyItems)
 {
-    foreach (PrivacyListItem item, privacyListDenyMessageItems)
+    // Test the allow privacy list items
+    foreach (PrivacyListItem item, privacyListAllowItems)
+    {
+        if (item.getType().isEmpty())
+        {
+            return QByteArray();
+        }
+        else if (item.getType() == "jid")
+        {
+            if ((item.getValue() == from) ||
+                    (item.getValue() == Utils::getBareJid(from)) ||
+                    (item.getValue() == Utils::getHost(from)) ||
+                    (item.getValue() == from.split("@").value(1)))
+            {
+                return QByteArray();
+            }
+        }
+        else if (item.getType() == "group")
+        {
+            QList<QString> contactGroups = m_rosterMananager->getContactGroups(Utils::getBareJid(to), Utils::getBareJid(from)).toList();
+            if (contactGroups.contains(item.getValue()))
+            {
+                return QByteArray();
+            }
+        }
+        else if (item.getType() == "subscription")
+        {
+            QString contactSubscription = m_rosterMananager->getContactSubscription(Utils::getBareJid(to), Utils::getBareJid(from));
+            if (contactSubscription == item.getValue())
+            {
+                return QByteArray();
+            }
+        }
+    }
+
+    // Test the deny privacy list items
+    foreach (PrivacyListItem item, privacyListDenyItems)
     {
         if (item.getType().isEmpty())
         {
@@ -330,7 +410,6 @@ QByteArray PrivacyListManager::isBlocked(QString from, QString to,
                     (item.getValue() == Utils::getHost(from)) ||
                     (item.getValue() == from.split("@").value(1)))
             {
-
                 return QByteArray("a");
             }
         }
@@ -384,10 +463,10 @@ bool PrivacyListManager::setActivePrivacyList(QString jid, QString activeList)
     return m_storageManager->getStorage()->setActivePrivacyList(jid, activeList);
 }
 
-QList<PrivacyListItem> PrivacyListManager::getPrivacyListDenyItems(QString jid, QString privacyListName,
-                                                                   QString stanzaType)
+QList<PrivacyListItem> PrivacyListManager::getPrivacyListItems(QString jid, QString privacyListName,
+                                                                   QString stanzaType, QString action)
 {
-    return m_storageManager->getStorage()->getPrivacyListDenyItems(jid, privacyListName, stanzaType);
+    return m_storageManager->getStorage()->getPrivacyListItems(jid, privacyListName, stanzaType, action);
 }
 
 bool PrivacyListManager::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
