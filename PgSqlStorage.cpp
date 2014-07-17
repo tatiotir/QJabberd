@@ -8,12 +8,9 @@ PgSqlStorage::PgSqlStorage(QString host, int port, QString username, QString pas
     m_database.setUserName(username);
     m_database.setPassword(password);
     m_database.setDatabaseName(database);
-    if (m_database.open())
+    if (!m_database.open())
     {
-        qDebug() << "Database open";
-    }
-    else{
-        qDebug() << "Database not open";
+        qDebug() << "Database not open check database configuration";
     }
 }
 
@@ -102,7 +99,7 @@ bool PgSqlStorage::addContactToRoster(QString jid, Contact contact)
     }
     else
     {
-        qDebug() << "Je suis juste ici : " << getUserId(jid);
+        //qDebug() << "Je suis juste ici : " << getUserId(jid);
         QJsonDocument document;
         QJsonObject object;
         object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
@@ -496,7 +493,7 @@ QString PgSqlStorage::getLastLogoutTime(QString jid)
 
 bool PgSqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
-    qDebug() << "logout time : " << lastLogoutTime;
+    //qDebug() << "logout time : " << lastLogoutTime;
     QSqlQuery query;
     query.prepare("UPDATE users SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
     query.bindValue(":lastLogoutTime", lastLogoutTime);
@@ -1104,6 +1101,11 @@ bool PgSqlStorage::emptyUserBlockList(QString jid)
 //QStringList PgSqlStorage::getRoomModeratorsJid(QString roomName)
 //{
 //    return QStringList();
+//}
+
+//bool PgSqlStorage::removeOccupantJid(QString roomName, QString jid)
+//{
+//    return false;
 //}
 
 //bool PgSqlStorage::removeOccupant(QString roomName, QString mucJid)

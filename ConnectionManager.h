@@ -17,12 +17,17 @@ public slots:
     void stopManage();
     void deconnection();
 
+    void boshSessionInitiation(QString sid, QString host);
+    void boshSessionRequest(QString sid, QString fullJid, QString host, QList<QDomDocument> requests);
+
 
 signals:
     void sigNewConnection(Connection *connection, IqManager *iqManager,
                           PresenceManager *presenceManager, MessageManager *messageManager,
                           RosterManager *rosterManager, StreamNegotiationManager *streamNegotiationManager,
                           BlockingCommandManager *blockingCmdManager);
+    void sigConnectionManagerBoshSessionInitiationReply(QString sid, QDomDocument document);
+    void sigConnectionManagerBoshRequestReply(QString sid, QList<QDomDocument> listDocument);
 
 protected:
     void incomingConnection(qintptr socketDescriptor);

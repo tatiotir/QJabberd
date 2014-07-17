@@ -115,6 +115,7 @@ public:
 //    QMap<QString, QVariant> getRoomConfig(QString roomName);
 //    bool destroyRoom(QString roomName);
 //    QStringList getRoomModeratorsJid(QString roomName);
+//    bool removeOccupantJid(QString roomName, QString jid);
 //    bool removeOccupant(QString roomName, QString mucJid);
 //    bool removeOccupants(QString roomName, QString bareJid);
 //    bool changeRoomSubject(QString roomName, QString subject);

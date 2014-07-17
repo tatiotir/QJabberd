@@ -54,7 +54,7 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
 
 void StreamManager::requestRedirection(QString to, QDomDocument document)
 {
-    if (to.contains("/"))
+    if (m_userMap->keys().contains(to) && to.contains("/"))
     {
         m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
         m_userMap->value(to, new User())->getStream()->getConnection()->flush();
@@ -73,7 +73,7 @@ void StreamManager::requestRedirection(QString to, QDomDocument document)
 
 void StreamManager::mucPresenceBroadCast(QString to, QDomDocument document)
 {
-    if (to.contains("/"))
+    if (m_userMap->keys().contains(to) && to.contains("/"))
     {
         m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
         m_userMap->value(to, new User())->getStream()->getConnection()->flush();
@@ -93,13 +93,16 @@ void StreamManager::mucPresenceBroadCast(QString to, QDomDocument document)
 
 void StreamManager::directMucInvitation(QString to, QDomDocument document)
 {
-    m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
-    m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    if (m_userMap->keys().contains(to))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
 }
 
 void StreamManager::groupchatMessage(QString to, QDomDocument document)
 {
-    if (to.contains("/"))
+    if (m_userMap->keys().contains(to) && to.contains("/"))
     {
         m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
         m_userMap->value(to, new User())->getStream()->getConnection()->flush();
@@ -118,16 +121,22 @@ void StreamManager::groupchatMessage(QString to, QDomDocument document)
 
 void StreamManager::roomSubject(QString to, QByteArray subjectMessage)
 {
-    m_userMap->value(to, new User())->getStream()->getConnection()->write(subjectMessage);
-    m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    if (m_userMap->keys().contains(to))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(subjectMessage);
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
 }
 
 void StreamManager::roomHistory(QString to, QList<QDomDocument> messageList)
 {
-    foreach (QDomDocument document, messageList)
+    if (m_userMap->keys().contains(to))
     {
-        m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
-        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+        foreach (QDomDocument document, messageList)
+        {
+            m_userMap->value(to, new User())->getStream()->getConnection()->write(document.toByteArray());
+            m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+        }
     }
 }
 
@@ -207,11 +216,8 @@ void StreamManager::resourceBindingReply(QString streamId, QString fullJid, QStr
 
 void StreamManager::streamNegotiationError(QString streamId)
 {
-    // Send the close xml tag
-    m_notNegotiatedStream->value(streamId)->streamReply(QByteArray("</stream:stream>"));
-
-    // Close stream's thread
-    m_notNegotiatedStream->value(streamId)->exit(0);
+    // Close the stream
+    m_notNegotiatedStream->value(streamId)->closeStream();
 
     // Delete the stream
     m_notNegotiatedStream->remove(streamId);
@@ -243,7 +249,7 @@ void StreamManager::nonSaslAuthentification(QString streamId, QString fullJid, Q
 
 void StreamManager::enableStreamManagement(QString fullJid, QString smId)
 {
-    qDebug() << "enable presence management : from = " << fullJid << " smId = " << smId;
+    //qDebug() << "enable presence management : from = " << fullJid << " smId = " << smId;
     m_userMap->value(fullJid)->setSmId(smId);
 }
 
@@ -261,7 +267,7 @@ void StreamManager::clientServiceDiscoveryResponse(QString to, QByteArray respon
 
 void StreamManager::currentPresence(QString fullJid, QByteArray presenceData)
 {
-    qDebug() << "presence information : " << " jid = " << fullJid << " information = " << presenceData;
+    //qDebug() << "presence information : " << " jid = " << fullJid << " information = " << presenceData;
     m_userMap->value(fullJid)->setCurrentPresence(presenceData);
 
     QDomDocument document;
@@ -321,7 +327,7 @@ void StreamManager::sendUndeliveredPresence(QString to)
 {
     QList<QVariant> presenceSubscriptionList = getOfflinePresenceSubscription(Utils::getBareJid(to));
 
-    qDebug() << "Undelevered presence to : " << Utils::getBareJid(to) << " Presence : " << presenceSubscriptionList;
+    //qDebug() << "Undelevered presence to : " << Utils::getBareJid(to) << " Presence : " << presenceSubscriptionList;
     if (!presenceSubscriptionList.isEmpty())
     {
         foreach (QVariant presenceSubscription, presenceSubscriptionList)
@@ -361,14 +367,14 @@ void StreamManager::rosterPush(QString to, QDomDocument document)
         {
             sendReceiptRequest(toResource, document.toByteArray());
         }
-        qDebug() << "I send roster push to : " << toResource <<  " : push : " << document.toByteArray();
+        //qDebug() << "I send roster push to : " << toResource <<  " : push : " << document.toByteArray();
     }
 
 }
 
 void StreamManager::presencePriority(QString fullJid, int priority)
 {
-    qDebug() << "Presence priority : " << priority << " From : " << fullJid;
+    //qDebug() << "Presence priority : " << priority << " From : " << fullJid;
     m_userMap->value(fullJid)->setPresencePriority(priority);
 
     if (!m_userMap->value(fullJid)->getSmId().isEmpty())
@@ -392,7 +398,7 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
 
         if (presenceType.isEmpty() || (presenceType == "unavailable"))
         {
-            qDebug() << "presence broadcast data : " << document.toByteArray();
+            //qDebug() << "presence broadcast data : " << document.toByteArray();
             foreach (QString toResource, toResourceList)
             {
                 m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -424,8 +430,8 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
         }
         else if (presenceType == "subscribe")
         {
-            qDebug() << "presence subscribe : " << m_rosterManager->getContact(to, from).getSubscription()
-                     << " " << m_rosterManager->getContact(to, from).getApproved();
+//            qDebug() << "presence subscribe : " << m_rosterManager->getContact(to, from).getSubscription()
+//                     << " " << m_rosterManager->getContact(to, from).getApproved();
             // Chech if the contact who must receive this presence subscribe has pre-approved the presence
             // subscribe from this user
             if (m_rosterManager->contactExists(to, from))
@@ -435,7 +441,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
                 {
                     QDomDocument document = PresenceManager::generatePresence("subscribed", to, from, Utils::generateId(),
                                                                       "", "", "");
-                    qDebug() << "je suis ici oh oui : " << document.toByteArray();
                     QStringList fromResourceList = keyList.filter(from, Qt::CaseInsensitive);
                     if (!fromResourceList.isEmpty())
                     {
@@ -492,7 +497,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
                 }
                 else
                 {
-                    qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
                         m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -528,11 +532,8 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
             }
             else
             {
-                qDebug() << "J'entre ici";
                 // Create contact on the roster of this contact
                 m_rosterManager->addContactToRoster(to, Contact("", false, "", from, "", "none", QSet<QString>()));
-
-                qDebug() << "presence broadcast data : " << document.toByteArray();
                 foreach (QString toResource, toResourceList)
                 {
                     m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -573,7 +574,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
                 Contact userContact = m_rosterManager->getContact(to, from);
                 if ((userContact.getSubscription() == "from") || (userContact.getSubscription() == "both"))
                 {
-                    qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
                         m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -619,7 +619,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
                 if (((userContact.getSubscription() == "none") || (userContact.getSubscription() == "from"))
                      && (userContact.getAsk() == "subscribe"))
                 {
-                    qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
                         m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -660,7 +659,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
                 Contact userContact = m_rosterManager->getContact(to, from);
                 if ((userContact.getSubscription() == "to") || (userContact.getSubscription() == "both"))
                 {
-                    qDebug() << "presence broadcast data : " << document.toByteArray();
                     foreach (QString toResource, toResourceList)
                     {
                         m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
@@ -700,8 +698,6 @@ void StreamManager::presenceBroadCast(QString to, QDomDocument document)
     {
         QString from = presenceElement.attribute("from");
         QString to = presenceElement.attribute("to");
-
-        qDebug() << "offline presence : " << " from : " << from << " to : " << to;
 
         // Save this presence subscription
         if (!presenceType.isEmpty() && (presenceType != "unavailable"))
@@ -825,13 +821,9 @@ void StreamManager::presenceProbeReply(QString to, QString from,
 
     QStringList toResourceList = keyList.filter(to, Qt::CaseInsensitive);
 
-    qDebug() << "presence probe reply toResourceList : " << toResourceList;
-
     if (directedPresenceProbe)
     {
         QStringList fromResourceList = keyList.filter(Utils::getBareJid(from), Qt::CaseInsensitive);
-
-        qDebug() << "presence probe reply fromResourceList : " << fromResourceList;
         QDomDocument document = PresenceManager::generatePresence("", "", to, Utils::generateId(), "", "", "");
         QDomElement presenceElement = document.documentElement();
 
@@ -841,8 +833,6 @@ void StreamManager::presenceProbeReply(QString to, QString from,
             foreach (QString toResource, toResourceList)
             {
                 presenceElement.setAttribute("to", to);
-
-                qDebug() << "presence probe reply  : " << document.toByteArray();
                 m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
                 m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
 
@@ -888,7 +878,6 @@ void StreamManager::presenceProbeReply(QString to, QString from,
                                                   QMultiHash<QString, QString>());
         foreach (QString toResource, toResourceList)
         {
-            qDebug() << "offline contact's of user probe sender reply : " << document.toByteArray();
             m_userMap->value(toResource, new User())->getStream()->getConnection()->write(document.toByteArray());
             m_userMap->value(toResource, new User())->getStream()->getConnection()->flush();
 
@@ -905,7 +894,6 @@ void StreamManager::presenceProbeToContact(QString to, QString from, bool direct
 {
     if (m_userMap->value(from, new User())->getCurrentPresence().isEmpty())
     {
-        qDebug() << "presence probe to : " << to;
         presenceProbeReply(Utils::getBareJid(from), to, directedPresenceProbe);
     }
 }
@@ -1021,7 +1009,6 @@ void StreamManager::lastActivityQuery(QString from, QString to, QString id, QStr
     }
     else
     {
-        qDebug() << "last activity query : from = " << from << " to : " << to;
         QDomDocument document;
         QDomElement iq = document.createElement("iq");
         iq.setAttribute("from", to);
@@ -1216,7 +1203,6 @@ void StreamManager::resumeStream(Connection *connection, QString prevId, int h)
         // Create the user class with all its previous stream information.
     }
 }
-
 
 void StreamManager::run()
 {

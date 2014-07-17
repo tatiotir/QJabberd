@@ -15,13 +15,7 @@ User::User(Stream *stream, QString smId, int presencePriority, int inboundStanza
 
 //User::User()
 //{
-//    m_connection = new Connection(0);
-//    m_inboundStanzaReceivedCount = 0;
-//    m_presencePriority = 0;
-//    m_currentPresence = QByteArray();
-//    m_smId = "";
-//    m_connectedTime = QTime();
-//    m_connectedTime.start();
+//    m_stream = new Stream();
 //}
 
 Stream* User::getStream()

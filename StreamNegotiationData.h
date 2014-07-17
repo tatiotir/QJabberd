@@ -23,12 +23,20 @@ public:
     void setHost(QString host);
     void setClientFirstResponseDataMap(QMultiHash<QString, QByteArray> dataMap);
 
+    QString mechanism() const;
+    void setMechanism(const QString &mechanism);
+
+    QString nonce() const;
+    void setNonce(const QString &nonce);
+
 private:
     bool m_firstFeatureProceed;
     bool m_secondFeatureProceed;
     bool m_bindFeatureProceed;
     bool m_secondChallengeGenerated;
     QString m_host;
+    QString m_mechanism;
+    QString m_nonce;
     QMultiHash<QString, QByteArray> m_clientFirstResponseDataMap;
 };
 

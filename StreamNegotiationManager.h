@@ -28,11 +28,13 @@ public slots:
     QByteArray generateFirstStreamReply(QDomDocument document, QString streamId);
     QByteArray generateStartTlsReply();
     QByteArray generateFirstChallengeReply(QDomDocument document, QString streamId);
-    QByteArray generateSecondChallengeReply(QString streamId);
+    QByteArray generateSecondChallengeReply(QString mechanism, QString streamId);
     QByteArray generateSaslSuccessReply(QString streamId);
     void firstNegotiationSuccess(QString streamId);
     QString getUserJid(QString streamId);
     void resourceBind(QString streamId);
+
+    void setStreamNegotiationData(QString streamId, StreamNegotiationData *strData);
 
 signals:
     void sigStreamNegotiationError(QString streamId);

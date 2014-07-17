@@ -1,3 +1,12 @@
+QT       += core xml network sql
+QT       -= gui
+
+TARGET = QJabberd
+CONFIG   += console
+CONFIG   -= app_bundle
+
+TEMPLATE = app
+
 SOURCES += \
     EntityTimeManager.cpp \
     Connection.cpp \
@@ -38,7 +47,10 @@ SOURCES += \
     Occupant.cpp \
     DataFormManager.cpp \
     ByteStreamsManager.cpp \
-    DataFormField.cpp
+    DataFormField.cpp \
+    BoshManager.cpp \
+    BoshSession.cpp \
+    BoshSessionManager.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -79,6 +91,7 @@ HEADERS += \
     Occupant.h \
     DataFormManager.h \
     ByteStreamsManager.h \
-    DataFormField.h
-
-QT += xml network widgets sql
+    DataFormField.h \
+    BoshManager.h \
+    BoshSession.h \
+    BoshSessionManager.h

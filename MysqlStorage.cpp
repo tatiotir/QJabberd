@@ -8,12 +8,9 @@ MySqlStorage::MySqlStorage(QString host, int port, QString username, QString pas
     m_database.setUserName(username);
     m_database.setPassword(password);
     m_database.setDatabaseName(database);
-    if (m_database.open())
+    if (!m_database.open())
     {
-        qDebug() << "Database open";
-    }
-    else{
-        qDebug() << "Database not open";
+        qDebug() << "Database not open check database configuration";
     }
 }
 
@@ -1101,6 +1098,11 @@ bool MySqlStorage::emptyUserBlockList(QString jid)
 //QStringList MySqlStorage::getRoomModeratorsJid(QString roomName)
 //{
 //    return QStringList();
+//}
+
+//bool MySqlStorage::removeOccupantJid(QString roomName, QString jid)
+//{
+//    return false;
 //}
 
 //bool MySqlStorage::removeOccupant(QString roomName, QString mucJid)

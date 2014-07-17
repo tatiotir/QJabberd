@@ -69,3 +69,23 @@ void StreamNegotiationData::setClientFirstResponseDataMap(QMultiHash<QString, QB
 {
     m_clientFirstResponseDataMap = dataMap;
 }
+QString StreamNegotiationData::mechanism() const
+{
+    return m_mechanism;
+}
+
+void StreamNegotiationData::setMechanism(const QString &mechanism)
+{
+    m_mechanism = mechanism;
+}
+QString StreamNegotiationData::nonce() const
+{
+    return m_nonce;
+}
+
+void StreamNegotiationData::setNonce(const QString &nonce)
+{
+    m_nonce = nonce;
+}
+
+

@@ -238,7 +238,7 @@ QByteArray MessageManager::parseMessage(QDomDocument document, QString messageFr
                         xEle.appendChild(passwordElement);
                     }
 
-                    qDebug() << "invitation : " << invitationDocument.toByteArray();
+                    //qDebug() << "invitation : " << invitationDocument.toByteArray();
                     // Send mediated invitation
                     emit sigGroupchatMessage(messageElement.attribute("to"), invitationDocument);
                 }

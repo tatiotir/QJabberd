@@ -82,9 +82,15 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
         QDomElement identity1 = document.createElement("identity");
         identity1.setAttribute("category", "server");
         identity1.setAttribute("type", "im");
-        identity1.setAttribute("name", "Qjabber Host");
+        identity1.setAttribute("name", "QJabberd");
+
+        QDomElement identity2 = document.createElement("identity");
+        identity2.setAttribute("category", "pubsub");
+        identity2.setAttribute("type", "pep");
+        identity2.setAttribute("name", "QJabberd");
 
         query.appendChild(identity1);
+        query.appendChild(identity2);
 
         if (m_serverConfiguration->value("modules").toObject().value("disco").toBool())
         {

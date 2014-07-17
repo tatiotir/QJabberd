@@ -12,17 +12,6 @@
 
 class Stream : public QThread
 {
-    enum STREAM_ERROR
-    {
-        INVALID_NAMESPACE = 0,
-        HOST_UNKNOWN = 1,
-        BAD_NAMESPACE_PREFIX = 2,
-        CONFLICT = 3,
-        CONNECTION_TIMEOUT = 4,
-        HOST_GONE = 5,
-        INTERNAL_SERVER_ERROR = 6
-    };
-
     Q_OBJECT
 public:
     explicit Stream(QObject *parent = 0, QString streamId = QString(),
@@ -34,12 +23,12 @@ public:
 
 private slots:
     void dataReceived();
-    void closeStream();
     void sslError(QList<QSslError> errors);
     void streamEncrypted();
     void sendUnavailablePresence();
 
 public slots:
+    void closeStream();
     void streamReply(QByteArray answer);
     void bindFeatureNegotiated(QString fullJid);
     void setHost(QString host);
@@ -73,7 +62,6 @@ private:
 
     Connection *m_connection;
     QByteArray m_xmlPaquet;
-    QDomDocument *m_document;
     QString m_fullJid;
     QString m_host;
     QString m_streamId;

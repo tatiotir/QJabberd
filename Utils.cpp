@@ -4,6 +4,31 @@ Utils::Utils()
 {
 }
 
+QMap<QByteArray, QByteArray> Utils::parseHttpRequest(QByteArray postData)
+{
+    //qDebug() << "Post Data : " << postData;
+    QList<QByteArray> lines = postData.split('\n');
+
+    QMap<QByteArray, QByteArray> values;
+    for (int i = 1; i < lines.count() - 1; ++i)
+    {
+        QList<QByteArray> data = lines.value(i).split(':');
+        values.insert(data.value(0), data.value(1).trimmed());
+    }
+
+    values.insert("body", lines.value(lines.count() - 1));
+    return values;
+}
+
+QByteArray Utils::generateHttpResponseHeader(int contentLength)
+{
+    QByteArray header = "HTTP/1.1 200 OK\r\n";
+    header += "Content-Type: text/xml; charset=utf-8\r\n";
+    header += "Content-Length: ";
+    header += QByteArray::number(contentLength) + "\r\n\r\n";
+    return header;
+}
+
 QList<QByteArray> Utils::parseRequest(QByteArray data)
 {
 //    QDomDocument document;
@@ -22,6 +47,8 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
     int fromA = 0;
     int fromResume = 0;
     int fromAbort = 0;
+    int fromChallenge = 0;
+    int fromSuccess = 0;
 
     int dataCount = data.count();
     QList<int> indexDebutIq;
@@ -35,11 +62,14 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
     QList<int> indexDebutA;
     QList<int> indexDebutResume;
     QList<int> indexDebutAbort;
+    QList<int> indexDebutChallenge;
+    QList<int> indexDebutSuccess;
 
     while ((fromIq != dataCount) || (fromPresence != dataCount) || (fromMessage != dataCount)
            || (fromStream != dataCount) || (fromStartTls != dataCount) || (fromResponse != dataCount)
            || (fromAuth != dataCount) || (fromR != dataCount) || (fromA != dataCount)
-           || (fromResume != dataCount) || (fromAbort != dataCount))
+           || (fromResume != dataCount) || (fromAbort != dataCount) || (fromChallenge != dataCount)
+           || (fromSuccess != dataCount))
     {
         if (fromIq != dataCount)
         {
@@ -52,6 +82,34 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
             else
             {
                 fromIq = dataCount;
+            }
+        }
+
+        if (fromSuccess != dataCount)
+        {
+            int indexSuccess = data.indexOf("<success", fromSuccess);
+            if (indexSuccess >= 0)
+            {
+                indexDebutSuccess << indexSuccess;
+                fromSuccess = ++indexSuccess;
+            }
+            else
+            {
+                fromSuccess = dataCount;
+            }
+        }
+
+        if (fromChallenge != dataCount)
+        {
+            int indexChallenge = data.indexOf("<challenge", fromChallenge);
+            if (indexChallenge >= 0)
+            {
+                indexDebutChallenge << indexChallenge;
+                fromChallenge = ++indexChallenge;
+            }
+            else
+            {
+                fromChallenge = dataCount;
             }
         }
 
@@ -196,7 +254,6 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
         }
     }
 
-
     if (!indexDebutIq.isEmpty())
     {
         QList<QByteArray> iqList;
@@ -228,6 +285,39 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
             }
         }
         result << iqList;
+    }
+
+    if (!indexDebutChallenge.isEmpty())
+    {
+        QList<QByteArray> challengeList;
+        for (int i = 0; i < indexDebutChallenge.count(); ++i)
+        {
+            int indexFinChallenge = data.indexOf("</challenge>", indexDebutChallenge.value(i));
+
+            if (indexFinChallenge < 0)
+            {
+                indexFinChallenge = data.indexOf("/>", indexDebutChallenge.value(i)) + 2;
+                QByteArray challenge;
+                for (int j = indexDebutChallenge.value(i); j < indexFinChallenge; ++j)
+                {
+                    challenge += data.at(j);
+                }
+                challengeList << challenge;
+                //iqList << data.left(indexFinIq - indexDebutIq.value(i));
+            }
+            else
+            {
+                indexFinChallenge += 12;
+                QByteArray challenge;
+                for (int j = indexDebutChallenge.value(i); j < indexFinChallenge; ++j)
+                {
+                    challenge += data.at(j);
+                }
+                challengeList << challenge;
+                //iqList << data.left(indexFinIq - indexDebutIq.value(i));
+            }
+        }
+        result << challengeList;
     }
 
     if (!indexDebutPresence.isEmpty())
@@ -327,6 +417,22 @@ QList<QByteArray> Utils::parseRequest(QByteArray data)
             startTlsList << startTls;
         }
         result << startTlsList;
+    }
+
+    if (!indexDebutSuccess.isEmpty())
+    {
+        QList<QByteArray> successList;
+        for (int i = 0; i < indexDebutSuccess.count(); ++i)
+        {
+            int indexFinSuccess = data.indexOf("/>", indexDebutSuccess.value(i)) + 2;
+            QByteArray success;
+            for (int j = indexDebutSuccess.value(i); j < indexFinSuccess; ++j)
+            {
+                success += data.at(j);
+            }
+            successList << success;
+        }
+        result << successList;
     }
 
     if (!indexDebutResponse.isEmpty())
@@ -829,4 +935,41 @@ QDomDocument Utils::generateMucInvitationMessage(QString from, QString to, QStri
     document.appendChild(messageElement);
 
     return document;
+}
+
+QString Utils::hmac(QByteArray key, QByteArray baseString)
+{
+    return QMessageAuthenticationCode::hash(baseString, key, QCryptographicHash::Sha1).toHex();
+//    int blockSize = 64; // HMAC-SHA-1 block size, defined in SHA-1 standard
+//    if (key.length() > blockSize) { // if key is longer than block size (64), reduce key length with SHA-1 compression
+//        key = QCryptographicHash::hash(key, QCryptographicHash::Sha1);
+//    }
+
+//    QByteArray innerPadding(blockSize, char(0x36)); // initialize inner padding with char "6"
+//    QByteArray outerPadding(blockSize, char(0x5c)); // initialize outer padding with char "\"
+//    // ascii characters 0x36 ("6") and 0x5c ("\") are selected because they have large
+//    // Hamming distance (http://en.wikipedia.org/wiki/Hamming_distance)
+
+//    for (int i = 0; i < key.length(); i++) {
+//        innerPadding[i] = innerPadding[i] ^ key.at(i); // XOR operation between every byte in key and innerpadding, of key length
+//        outerPadding[i] = outerPadding[i] ^ key.at(i); // XOR operation between every byte in key and outerpadding, of key length
+//    }
+
+//    // result = hash ( outerPadding CONCAT hash ( innerPadding CONCAT baseString ) ).toBase64
+//    QByteArray total = outerPadding;
+//    QByteArray part = innerPadding;
+//    part.append(baseString);
+//    total.append(QCryptographicHash::hash(part, QCryptographicHash::Sha1));
+//    QByteArray hashed = QCryptographicHash::hash(total, QCryptographicHash::Sha1);
+//    return hashed.toBase64();
+}
+
+QString Utils::XOR(QByteArray a, QByteArray b)
+{
+    QString xo;
+    for (int i = 0; i < a.count(); ++i)
+    {
+        xo[i] = a[i] ^ b[i];
+    }
+    return xo;
 }

@@ -13,12 +13,25 @@ Server::Server()
         m_configuration = new QJsonObject(configDocument.object());
         configFile.close();
     }
+
+    m_conManager = new ConnectionManager(this, 5222, m_configuration);
+    m_boshManager = new BoshManager(5280, 5222);
+
+//    connect(m_boshManager, SIGNAL(sigBoshSessionInitiation(QString,QString)), m_conManager,
+//            SLOT(boshSessionInitiation(QString,QString)));
+//    connect(m_boshManager, SIGNAL(sigBoshSessionRequests(QString,QString,QString,QList<QDomDocument>)),
+//            m_conManager, SLOT(boshSessionRequest(QString,QString,QString,QList<QDomDocument>)));
+//    connect(m_conManager, SIGNAL(sigConnectionManagerBoshSessionInitiationReply(QString,QDomDocument)),
+//            m_boshManager, SLOT(boshSessionInitiationReply(QString,QDomDocument)));
+//    connect(m_conManager, SIGNAL(sigConnectionManagerBoshRequestReply(QString,QList<QDomDocument>)), m_boshManager,
+//            SLOT(boshSessionRequestReply(QString,QList<QDomDocument>)));
 }
 
 void Server::start()
 {
-    m_conManager = new ConnectionManager(this, 5222, m_configuration);
+    qDebug() << "Hello welcome to QJabberd XMPP server version 0.1";
     m_conManager->startManage();
+    m_boshManager->start();
 }
 
 void Server::stop()

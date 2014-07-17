@@ -75,7 +75,7 @@ QDomDocument DataFormManager::getRegistrationForm(QString id)
     QList<DataFormField> formFields;
     formFields << DataFormField("FORM_TYPE", "hidden", "", QVariant("jabber:iq:register"), QList<QPair<QString, QString> >(), false)
                   << DataFormField("username", "text-single", "Username", QVariant(""), QList<QPair<QString, QString> >(), true)
-                     << DataFormField("password", "text-single", "Password", QVariant(""), QList<QPair<QString, QString> >(), true);
+                     << DataFormField("password", "text-private", "Password", QVariant(""), QList<QPair<QString, QString> >(), true);
 
     QDomElement xElement = generateDataForm(formType, formTitle, formInstruction, formFields);
 
@@ -105,7 +105,7 @@ QDomDocument DataFormManager::getPasswordChangeForm(QString from, QString to, QS
 
     // Generate data form
     QString formType = "form";
-    QString formTitle = "Change user password for QJabber account";
+    QString formTitle = "Change user password for QJabberd account";
     QString formInstruction = "Use this form to change your password.";
 
     QList<DataFormField> formFields;
@@ -120,7 +120,7 @@ QDomDocument DataFormManager::getPasswordChangeForm(QString from, QString to, QS
     query.setAttribute("xmlns", "jabber:iq:register");
 
     QDomElement titleNode = document.createElement("title");
-    titleNode.appendChild(document.createTextNode("Change user password for QJabber account"));
+    titleNode.appendChild(document.createTextNode("Change user password for QJabberd account"));
 
     QDomElement instructionNode = document.createElement("instructions");
     QString instruction = "Use this form to change your password.";

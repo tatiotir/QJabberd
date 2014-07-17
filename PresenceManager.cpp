@@ -67,7 +67,6 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
         if ((m_rosterManager->contactExists(from, to)))
         {
             Contact userContact = m_rosterManager->getContact(from, to);
-            cout << userContact;
             if ((userContact.getSubscription() != "both") && (userContact.getSubscription() != "to"))
             {
                 // Stamp the outbound subscription
@@ -136,10 +135,6 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                     || ((userContact.getSubscription() == "none") && (userContact.getAsk() == "subscribe") &&
                         (contactUser.getAsk() == "subscribe")))
             {
-                qDebug() << "user contact subscription : " << userContact.getSubscription();
-                qDebug() << "user contact approved : " << userContact.getApproved();
-                qDebug() << "contact user : " << contactUser.getAsk();
-
                 // Stamp the outbound subscription
                 presence.setAttribute("from", from);
 
@@ -423,7 +418,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
 
                 if (roomTypes.contains("passwordprotectedroom"))
                 {
-                    QString password = presence.firstChildElement().elementsByTagName("password").item(0).toElement().text();
+                    QString password = presence.elementsByTagName("password").item(0).toElement().text();
                     if (password.isEmpty())
                     {
                         return Error::generateError(roomName, "presence", "auth", "not-authorized", presenceTo, presenceFrom,
@@ -514,7 +509,6 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                     // Room history fetch
                     if (!presence.lastChildElement("x").firstChildElement("history").isNull())
                     {
-                        qDebug() << "room history";
                         QDomElement historyElement = presence.lastChildElement("x").firstChildElement("history");
                         if (historyElement.attributes().count() == 1)
                         {

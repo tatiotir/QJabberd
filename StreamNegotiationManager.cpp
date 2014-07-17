@@ -18,6 +18,8 @@ void StreamNegotiationManager::resourceBind(QString streamId)
     // Delete stream negotiation data
     m_streamNegotiationVariableMap->value(streamId)->setClientFirstResponseDataMap(QMultiHash<QString, QByteArray>());
     m_streamNegotiationVariableMap->value(streamId)->setHost("");
+    m_streamNegotiationVariableMap->value(streamId)->setMechanism("");
+    m_streamNegotiationVariableMap->value(streamId)->setNonce("");
     m_streamNegotiationVariableMap->value(streamId)->setBindFeatureProceed(true);
 }
 
@@ -34,6 +36,7 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
     {
         if (!m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(document.documentElement().attribute("to")))
         {
+            qDebug() << "Client disconnected. This server does not serve " << document.documentElement().attribute("to");
             emit sigStreamNegotiationError(streamId);
             return Error::generateStreamError("host-unknown");
         }
@@ -74,15 +77,54 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
     else if (document.documentElement().tagName() == "auth")
     {
         QString mechanism = document.documentElement().attribute("mechanism", "");
-        if (mechanism.isEmpty() /*|| ((mechanism != "PLAIN") && (mechanism != "EXTERNAL")*/
-                && (mechanism != "DIGEST-MD5"))
+        if (mechanism.isEmpty() || ((mechanism != "DIGEST-MD5") && (mechanism != "PLAIN")
+                                    && (mechanism != "SCRAM-SHA-1")))
         {
+            emit sigStreamNegotiationError(streamId);
             return Error::generateFailureError("urn:ietf:params:xml:ns:xmpp-sasl", "invalid-mechanism");
         }
-        return generateFirstChallengeReply(document, streamId);
+
+        m_streamNegotiationVariableMap->value(streamId)->setMechanism(mechanism);
+        if (mechanism == "PLAIN")
+        {
+            QStringList userInfo = QString(QByteArray::fromBase64(document.documentElement().text().toUtf8()).toPercentEncoding("@")).split("%00", QString::SkipEmptyParts);
+
+            QString jid = userInfo.value(userInfo.count() - 2) + "@" + m_streamNegotiationVariableMap->value(streamId)->getHost();
+            QString password = userInfo.value(userInfo.count() - 1);
+            if (m_userManager->getPassword(jid) == password)
+            {
+                QMultiHash<QString, QByteArray> userMap;
+                userMap.insert("username", userInfo.value(userInfo.count() - 2).toUtf8());
+                m_streamNegotiationVariableMap->value(streamId)->setClientFirstResponseDataMap(userMap);
+                return generateSaslSuccessReply(streamId);
+            }
+            else
+            {
+                emit sigStreamNegotiationError(streamId);
+                return QByteArray();
+            }
+        }
+        else if (mechanism == "SCRAM-SHA-1")
+        {
+            QByteArray message = QByteArray::fromBase64(document.documentElement().text().toUtf8());
+            if ((message.at(0) != 'n') && (message.at(0) != 'y') && (message.at(0) != 'p'))
+            {
+                emit sigStreamNegotiationError(streamId);
+                return QByteArray();
+            }
+            else
+            {
+                return generateFirstChallengeReply(document, streamId);
+            }
+        }
+        else if (mechanism == "DIGEST-MD5")
+        {
+            return generateFirstChallengeReply(document, streamId);
+        }
     }
     else if (document.documentElement().tagName() == "abort")
     {
+        emit sigStreamNegotiationError(streamId);
         return Error::generateFailureError("urn:ietf:params:xml:ns:xmpp-sasl", "aborted");
     }
     else if (document.documentElement().tagName() == "response")
@@ -95,7 +137,7 @@ QByteArray StreamNegotiationManager::reply(QDomDocument document, QString stream
                     && !m_streamNegotiationVariableMap->value(streamId)->secondChallengeGenerated())
             {
                 m_streamNegotiationVariableMap->value(streamId)->setSecondChallengeGenerated(true);
-                return generateSecondChallengeReply(streamId);
+                return generateSecondChallengeReply(m_streamNegotiationVariableMap->value(streamId)->mechanism(), streamId);
             }
             else
             {
@@ -138,11 +180,15 @@ QByteArray StreamNegotiationManager::firstFeatures()
         QDomElement firstMechanism = document.createElement("mechanism");
         firstMechanism.appendChild(document.createTextNode("DIGEST-MD5"));
 
-//        QDomElement secondMechanism = document.createElement("mechanism");
-//        secondMechanism.appendChild(document.createTextNode("PLAIN"));
+        QDomElement secondMechanism = document.createElement("mechanism");
+        secondMechanism.appendChild(document.createTextNode("PLAIN"));
+
+//        QDomElement thirdMechanism = document.createElement("mechanism");
+//        thirdMechanism.appendChild(document.createTextNode("SCRAM-SHA-1"));
 
         mechanisms.appendChild(firstMechanism);
-//        mechanisms.appendChild(secondMechanism);
+        mechanisms.appendChild(secondMechanism);
+//        mechanisms.appendChild(thirdMechanism);
 
         streamFeatures.appendChild(mechanisms);
     }
@@ -188,14 +234,14 @@ QByteArray StreamNegotiationManager::secondFeatures()
     QDomElement firstMechanism = document.createElement("mechanism");
     firstMechanism.appendChild(document.createTextNode("DIGEST-MD5"));
 
-//    QDomElement secondMechanism = document.createElement("mechanism");
-//    secondMechanism.appendChild(document.createTextNode("PLAIN"));
+    QDomElement secondMechanism = document.createElement("mechanism");
+    secondMechanism.appendChild(document.createTextNode("PLAIN"));
 
 //    QDomElement thirdMechanism = document.createElement("mechanism");
-//    thirdMechanism.appendChild(document.createTextNode("EXTERNAL"));
+//    thirdMechanism.appendChild(document.createTextNode("SCRAM-SHA-1"));
 
     mechanisms.appendChild(firstMechanism);
-//    mechanisms.appendChild(secondMechanism);
+    mechanisms.appendChild(secondMechanism);
 //    mechanisms.appendChild(thirdMechanism);
 
     streamFeatures.appendChild(authElement);
@@ -281,11 +327,12 @@ QByteArray StreamNegotiationManager::generateFirstStreamReply(QDomDocument docum
     replyDocument.appendChild(replyElement);
 
     QByteArray reply = replyDocument.toByteArray().replace(QByteArray("/>"), QByteArray(">"));
-    if (!m_streamNegotiationVariableMap->value(streamId)->firstFeatureProceed())
+    if (!m_streamNegotiationVariableMap->value(streamId)->firstFeatureProceed()
+            && !m_streamNegotiationVariableMap->value(streamId)->secondFeatureProceed())
     {
         reply += firstFeatures();
     }
-    else if (!m_streamNegotiationVariableMap->value(streamId)->secondChallengeGenerated())
+    else if (!m_streamNegotiationVariableMap->value(streamId)->secondFeatureProceed())
     {
         reply += secondFeatures();
     }
@@ -340,11 +387,22 @@ QByteArray StreamNegotiationManager::generateFirstChallengeReply(QDomDocument do
     if (mechanism == "DIGEST-MD5")
     {
         firstChallenge += "realm=";
-        firstChallenge += m_streamNegotiationVariableMap->value(streamId)->getHost();
+        firstChallenge += "\"" + m_streamNegotiationVariableMap->value(streamId)->getHost() + "\"";
         firstChallenge += ",nonce=";
-        firstChallenge += Sasl::generateNonce();
-        firstChallenge += ",qop=auth";
+        firstChallenge += "\"" + Sasl::generateNonce() + "\"";
+        firstChallenge += ",qop=\"auth\"";
         firstChallenge += ",charset=utf-8,algorithm=md5-sess";
+    }
+    else if (mechanism == "SCRAM-SHA-1")
+    {
+        QString nonce = Sasl::generateNonce();
+        QString username = Sasl::decode(QByteArray::fromBase64(document.documentElement().text().toUtf8()), "SCRAM-SHA-1").value("n");
+        QString password = m_userManager->getPassword(username + "@" + m_streamNegotiationVariableMap->value(streamId)->getHost());
+        firstChallenge += "r=" + nonce + ",";
+        firstChallenge += "s=" + Sasl::generateSalt(password, 4096) + ",";
+        firstChallenge += "i=4096";
+
+        m_streamNegotiationVariableMap->value(streamId)->setNonce(nonce);
     }
 
     QDomDocument replyDocument;
@@ -359,9 +417,17 @@ QByteArray StreamNegotiationManager::generateFirstChallengeReply(QDomDocument do
 /*
  * This function generate first server challenge according to the digest mechanism for sasl authentification
  */
-QByteArray StreamNegotiationManager::generateSecondChallengeReply(QString streamId)
+QByteArray StreamNegotiationManager::generateSecondChallengeReply(QString mechanism, QString streamId)
 {
-    QByteArray secondChallenge = "rspauth=" + Sasl::generateResponseValue(m_streamNegotiationVariableMap->value(streamId)->getClientFirstResponseDataMap());
+    QByteArray secondChallenge;
+    if (mechanism == "DIGEST-MD5")
+    {
+        secondChallenge = "rspauth=" + Sasl::generateResponseValue(m_streamNegotiationVariableMap->value(streamId)->getClientFirstResponseDataMap());
+    }
+    else if (mechanism == "SCRAM-SHA-1")
+    {
+
+    }
 
     QDomDocument replyDocument;
 
@@ -376,20 +442,21 @@ QByteArray StreamNegotiationManager::generateSecondChallengeReply(QString stream
 
 bool StreamNegotiationManager::parse(QByteArray clientResponse, QString streamId)
 {
-    QMultiHash<QString, QByteArray> clientResponseDataMap;
-    QList<QByteArray> m_clientFirstResponseMapList = clientResponse.split(',');
-    foreach (QByteArray data, m_clientFirstResponseMapList)
-    {
-        QString key = QString(data.left(data.indexOf('=')));
-        QByteArray value = data.mid(data.indexOf('=') + 1).replace(QByteArray("\""), QByteArray(""));
-        clientResponseDataMap.insert(key, value);
-    }
+    QMultiHash<QString, QByteArray> clientResponseDataMap = Sasl::decode(clientResponse, m_streamNegotiationVariableMap->value(streamId)->mechanism());
 
-    if ((clientResponseDataMap.count("nonce") > 1) || (clientResponseDataMap.count("cnonce") > 1)
-            || (!clientResponseDataMap.value("authzid").isEmpty())
-            || (clientResponseDataMap.value("nonce-count") == "0000001"))
+    if (m_streamNegotiationVariableMap->value(streamId)->mechanism() == "DIGEST-MD5")
     {
-        return false;
+        if ((clientResponseDataMap.count("nonce") > 1) || (clientResponseDataMap.count("cnonce") > 1)
+                || (!clientResponseDataMap.value("authzid").isEmpty())
+                || (clientResponseDataMap.value("nonce-count") == "0000001"))
+        {
+            return false;
+        }
+    }
+    else if (m_streamNegotiationVariableMap->value(streamId)->mechanism() == "SCRAM-SHA-1")
+    {
+        if (clientResponseDataMap.value("r") != m_streamNegotiationVariableMap->value(streamId)->nonce())
+            return false;
     }
 
     QString jid = clientResponseDataMap.value("username") + "@" + m_streamNegotiationVariableMap->value(streamId)->getHost();
@@ -413,4 +480,9 @@ QString StreamNegotiationManager::getUserJid(QString streamId)
 {
     return m_streamNegotiationVariableMap->value(streamId)->getClientFirstResponseDataMap().value("username") +
             "@" + m_streamNegotiationVariableMap->value(streamId)->getHost();
+}
+
+void StreamNegotiationManager::setStreamNegotiationData(QString streamId, StreamNegotiationData *strData)
+{
+    m_streamNegotiationVariableMap->insert(streamId, strData);
 }

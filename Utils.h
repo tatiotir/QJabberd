@@ -6,6 +6,7 @@
 #include <QTime>
 #include <QSet>
 #include <QCryptographicHash>
+#include <QMessageAuthenticationCode>
 #include <QDomElement>
 #include <QDomDocument>
 #include <QDebug>
@@ -15,6 +16,8 @@ class Utils
 public:
     Utils();
 
+    static QByteArray generateHttpResponseHeader(int contentLength);
+    static QMap<QByteArray, QByteArray> parseHttpRequest(QByteArray postData);
     static QByteArray digestCalculator(QString id, QString password);
     static QString generateResource();
     static QString generateId();
@@ -37,6 +40,8 @@ public:
                                                QString roomPassword, QString reason);
     static QDomDocument generateMucNotificationMessage(QString type, QString from, QString to, QString id, QList<int> statusCode);
     static int affiliationIntValue(QString affiliation);
+    static QString hmac(QByteArray key, QByteArray baseString);
+    static QString XOR(QByteArray a, QByteArray b);
 };
 
 #endif // UTILS_H

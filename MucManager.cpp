@@ -235,6 +235,11 @@ QStringList MucManager::getRoomModeratorsJid(QString roomName)
     return m_storageManager->getStorage()->getRoomModeratorsJid(roomName);
 }
 
+bool MucManager::removeOccupantJid(QString roomName, QString jid)
+{
+    return m_storageManager->getStorage()->removeOccupantJid(roomName, jid);
+}
+
 bool MucManager::removeOccupant(QString roomName, QString mucJid)
 {
     return m_storageManager->getStorage()->removeOccupant(roomName, mucJid);

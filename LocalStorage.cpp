@@ -18,7 +18,7 @@ QString LocalStorage::getPassword(QString jid)
     if (!userFile.open(QIODevice::ReadOnly))
         return QString();
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QString password = document.object().value("password").toString();
     userFile.close();
     return password;
@@ -32,7 +32,7 @@ bool LocalStorage::changePassword(QString jid, QString newPassword)
     if (!userFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QJsonObject userObject = document.object();
 
     userObject.insert("password", newPassword);
@@ -40,7 +40,7 @@ bool LocalStorage::changePassword(QString jid, QString newPassword)
 
     // We erase the contain of the file
     userFile.resize(0);
-    bool ok = userFile.write(document.toJson());
+    bool ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -68,7 +68,7 @@ bool LocalStorage::createUser(QString jid, QString password)
     userObject.insert("password", QJsonValue(password));
     document.setObject(userObject);
 
-    bool ok = userFile.write(document.toJson());
+    bool ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -94,7 +94,7 @@ QList<Contact> LocalStorage::getContactsList(QString jid)
         if (!contactFile.open(QIODevice::ReadOnly))
             return QList<Contact>();
 
-        QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+        QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
         contactList << Contact::fromJsonObject(document.object());
         contactFile.close();
     }
@@ -114,7 +114,7 @@ bool LocalStorage::addContactToRoster(QString jid, Contact contact)
     if (!contactFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     // First contact
@@ -133,7 +133,7 @@ bool LocalStorage::addContactToRoster(QString jid, Contact contact)
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toJson());
+    bool ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -155,14 +155,14 @@ bool LocalStorage::updateGroupToContact(QString jid, QString contactJid,
     if (!contactFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contactObject.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(groups)));
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -180,7 +180,7 @@ bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
         return addContactToRoster(jid, contact);
     }
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     QString contactSubscription = contactObject.value("subscription").toString();
@@ -196,7 +196,7 @@ bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -214,7 +214,7 @@ bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
         return addContactToRoster(jid, contact);
     }
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     if ((contactObject.value("subscription").toString() != "to")
@@ -225,7 +225,7 @@ bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -240,14 +240,14 @@ bool LocalStorage::updateNameToContact(QString jid, QString contactJid,
     if (!contactFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contactObject.insert("name", QJsonValue(name));
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -261,14 +261,14 @@ bool LocalStorage::updateApprovedToContact(QString jid, QString contactJid, bool
     if (!contactFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contactObject.insert("approved", QJsonValue(approved));
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toJson());
+    quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -296,7 +296,7 @@ Contact LocalStorage::getContact(QString jid, QString contactJid)
     if (!contactFile.open(QIODevice::ReadOnly))
         return contact;
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contact.setApproved(contactObject.value("approved").toBool());
@@ -321,7 +321,7 @@ QString LocalStorage::getContactSubscription(QString jid, QString contactJid)
     if (!contactFile.open(QIODevice::ReadOnly))
         return QString();
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contactFile.close();
@@ -337,7 +337,7 @@ QSet<QString> LocalStorage::getContactGroups(QString jid, QString contactJid)
     if (!contactFile.open(QIODevice::ReadOnly))
         return QSet<QString>();
 
-    QJsonDocument document = QJsonDocument::fromJson(contactFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
     contactFile.close();
@@ -352,7 +352,7 @@ QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacy
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return QList<PrivacyListItem>();
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QJsonArray privacyList = userObject.value("privacyList").toObject().value(privacyListName).toArray();
@@ -391,7 +391,7 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QJsonArray privacyListItems;
@@ -406,7 +406,7 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -430,7 +430,7 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     if (userObject.value("default").toString() == privacyListName)
@@ -446,7 +446,7 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -459,7 +459,7 @@ bool LocalStorage::privacyListExist(QString jid, QString privacyListName)
     if (!privacyListFile.open(QIODevice::ReadOnly))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     bool listExist = userObject.value("privacyList").toObject().value(privacyListName).toArray().isEmpty();
@@ -475,7 +475,7 @@ QString LocalStorage::getDefaultPrivacyList(QString jid)
     if (!privacyListFile.open(QIODevice::ReadOnly))
         return QString();
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QString defaultList = userObject.value("default").toString();
@@ -492,7 +492,7 @@ QString LocalStorage::getActivePrivacyList(QString jid)
     if (!privacyListFile.open(QIODevice::ReadOnly))
         return QString();
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QString activeList = userObject.value("active").toString();
@@ -509,14 +509,14 @@ bool LocalStorage::setDefaultPrivacyList(QString jid, QString defaultList)
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     userObject.insert("default", defaultList);
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -529,14 +529,14 @@ bool LocalStorage::setActivePrivacyList(QString jid, QString activeList)
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     userObject.insert("active", activeList);
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toJson());
+    quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -550,7 +550,7 @@ QList<PrivacyListItem> LocalStorage::getPrivacyListItems(QString jid, QString pr
     if (!privacyListFile.open(QIODevice::ReadOnly))
         return QList<PrivacyListItem>();
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QJsonArray privacyList = userObject.value("privacyList").toObject().value(privacyListName).toArray();
@@ -576,7 +576,7 @@ QStringList LocalStorage::getPrivacyListNames(QString jid)
     if (!privacyListFile.open(QIODevice::ReadWrite))
         return QStringList();
 
-    QJsonDocument document = QJsonDocument::fromJson(privacyListFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(privacyListFile.readAll());
     QJsonObject userObject = document.object();
 
     QStringList privacyListNames = userObject.value("privacyList").toObject().toVariantMap().keys();
@@ -593,7 +593,7 @@ QString LocalStorage::getVCard(QString jid)
     if (!vCardFile.open(QIODevice::ReadOnly))
         return "";
 
-    QJsonDocument document = QJsonDocument::fromJson(vCardFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(vCardFile.readAll());
     QString vCard = document.object().value("vCard").toString();
     vCardFile.close();
 
@@ -617,7 +617,7 @@ bool LocalStorage::updateVCard(QString jid, QString vCardInfos)
     vCardObject.insert("vCard", vCardInfos);
     document.setObject(vCardObject);
 
-    quint64 ok = vCardFile.write(document.toJson());
+    quint64 ok = vCardFile.write(document.toBinaryData());
     vCardFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -636,7 +636,7 @@ QString LocalStorage::getLastLogoutTime(QString jid)
     if (!userFile.open(QIODevice::ReadWrite))
         return "";
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QString logoutTime = document.object().value("lastLogoutTime").toString();
     userFile.close();
 
@@ -651,16 +651,16 @@ bool LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
     if (!userFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QJsonObject userObject = document.object();
     userObject.insert("lastLogoutTime", lastLogoutTime);
     document.setObject(userObject);
 
-    qDebug() << "set last logout time : " << " jid = " << jid << " time = " << lastLogoutTime << " document = " <<
-                document.toJson();
+//    qDebug() << "set last logout time : " << " jid = " << jid << " time = " << lastLogoutTime << " document = " <<
+//                document.toBinaryData();
 
     userFile.resize(0);
-    quint64 ok = userFile.write(document.toJson());
+    quint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -673,7 +673,7 @@ QString LocalStorage::getLastStatus(QString jid)
     if (!userFile.open(QIODevice::ReadWrite))
         return "";
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QString lastStatus = document.object().value("lastStatus").toString();
     userFile.close();
 
@@ -688,15 +688,15 @@ bool LocalStorage::setLastStatus(QString jid, QString status)
     if (!userFile.open(QIODevice::ReadWrite))
         return false;
 
-    qDebug() << "set last status : jid = " << jid << " status = " << status;
+    //qDebug() << "set last status : jid = " << jid << " status = " << status;
 
-    QJsonDocument document = QJsonDocument::fromJson(userFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userFile.readAll());
     QJsonObject userObject = document.object();
     userObject.insert("lastStatus", status);
     document.setObject(userObject);
 
     userFile.resize(0);
-    quint64 ok = userFile.write(document.toJson());
+    quint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -717,7 +717,7 @@ bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     if (!userPrivateDataFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userPrivateDataFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userPrivateDataFile.readAll());
     QJsonObject jsonObject = document.object();
 
     QList<QString> nodeMapKeys = nodeMap.keys();
@@ -728,7 +728,7 @@ bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    quint64 ok = userPrivateDataFile.write(document.toJson());
+    quint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -749,7 +749,7 @@ bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     if (!userPrivateDataFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userPrivateDataFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userPrivateDataFile.readAll());
     QJsonObject jsonObject = document.object();
 
     QJsonArray metaContactArray;
@@ -762,7 +762,7 @@ bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    quint64 ok = userPrivateDataFile.write(document.toJson());
+    quint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -775,7 +775,7 @@ QByteArray LocalStorage::getPrivateData(QString jid, QString node)
     if (!userPrivateDataFile.open(QIODevice::ReadOnly))
         return QByteArray();
 
-    QJsonDocument document = QJsonDocument::fromJson(userPrivateDataFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userPrivateDataFile.readAll());
 
     userPrivateDataFile.close();
     return document.object().value(node).toVariant().toByteArray();
@@ -789,7 +789,7 @@ QList<MetaContact> LocalStorage::getPrivateData(QString jid)
     if (!userPrivateDataFile.open(QIODevice::ReadOnly))
         return QList<MetaContact>();
 
-    QJsonDocument document = QJsonDocument::fromJson(userPrivateDataFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userPrivateDataFile.readAll());
     QJsonArray metaContactArray = document.object().value("storage:metacontacts").toArray();
     QList<MetaContact> metaContactList;
     for (int i = 0; i < metaContactArray.count(); ++i)
@@ -817,7 +817,7 @@ bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
     QJsonObject object = document.object();
 
     QList<QString> keys = object.toVariantMap().keys();
@@ -842,23 +842,23 @@ bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
     document.setObject(object);
 
     userOfflineMessageFile.resize(0);
-    quint64 ok = userOfflineMessageFile.write(document.toJson());
+    quint64 ok = userOfflineMessageFile.write(document.toBinaryData());
     userOfflineMessageFile.close();
 
     // Build indexes
-    QJsonDocument indexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+    QJsonDocument indexDocument = QJsonDocument::fromBinaryData(userOfflineMessageFileIndex.readAll());
     QJsonObject indexObject = indexDocument.object();
 
     indexObject.insert(stamp, QJsonValue(key.toInt()));
 
-    QJsonArray fromJsonArray = indexObject.value(from).toArray();
-    fromJsonArray.append(key.toInt());
+    QJsonArray fromBinaryDataArray = indexObject.value(from).toArray();
+    fromBinaryDataArray.append(key.toInt());
 
-    indexObject.insert(from, fromJsonArray);
+    indexObject.insert(from, fromBinaryDataArray);
     indexDocument.setObject(indexObject);
 
     userOfflineMessageFileIndex.resize(0);
-    quint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toJson());
+    quint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
     return (true ? (ok >= 0 && ok1 >= 0) : false);
 }
@@ -870,7 +870,7 @@ int LocalStorage::getOfflineMessagesNumber(QString jid)
     if (!userOfflineMessageFile.open(QIODevice::ReadOnly))
         return -1;
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
     userOfflineMessageFile.close();
     return offlineMessageDocument.object().toVariantMap().values().count();
 }
@@ -888,8 +888,8 @@ QByteArray LocalStorage::getOfflineMessage(QString jid, QString stamp)
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
         return QByteArray();
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
-    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromBinaryData(userOfflineMessageFileIndex.readAll());
     QString messageNumberKey = offlineMessageFileIndexDocument.object().value(stamp).toString();
 
     QJsonObject messageObject = offlineMessageDocument.object().value(messageNumberKey).toObject();
@@ -932,8 +932,8 @@ QMultiHash<QString, QByteArray> LocalStorage::getOfflineMessageFrom(QString jid,
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
         return QMultiHash<QString, QByteArray>();
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
-    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromBinaryData(userOfflineMessageFileIndex.readAll());
     QJsonArray messageNumberKeyList = offlineMessageFileIndexDocument.object().value(from).toArray();
 
     QMultiHash<QString, QByteArray> offlineMessageList;
@@ -972,7 +972,7 @@ QMultiHash<QString, QByteArray> LocalStorage::getAllOfflineMessage(QString jid)
     if (!userOfflineMessageFile.open(QIODevice::ReadOnly))
         return QMultiHash<QString, QByteArray>();
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
     QList<QVariant> offlineMessageJsonList = offlineMessageDocument.object().toVariantMap().values();
 
     QMultiHash<QString, QByteArray> offlineMessageList;
@@ -1016,12 +1016,12 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
         return false;
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
     QJsonObject offlineMessageObject = offlineMessageDocument.object();
 
     if (key.contains("@"))
     {
-        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromBinaryData(userOfflineMessageFileIndex.readAll());
         QJsonArray messageNumberKeyList = offlineMessageFileIndexDocument.object().value(key).toArray();
         for (int i = 0; i < messageNumberKeyList.count(); ++i)
         {
@@ -1030,13 +1030,13 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
     }
     else
     {
-        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromJson(userOfflineMessageFileIndex.readAll());
+        QJsonDocument offlineMessageFileIndexDocument = QJsonDocument::fromBinaryData(userOfflineMessageFileIndex.readAll());
         offlineMessageObject.remove(offlineMessageFileIndexDocument.object().value(key).toString());
     }
 
     offlineMessageDocument.setObject(offlineMessageObject);
     userOfflineMessageFile.resize(0);
-    quint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toJson());
+    quint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
     userOfflineMessageFile.close();
     return (true ? (ok >= 0) : false);
@@ -1069,7 +1069,7 @@ QMultiHash<QString, QString> LocalStorage::getOfflineMessageHeaders(QString jid)
     if (!userOfflineMessageFile.open(QIODevice::ReadOnly))
         return QMultiHash<QString, QString>();
 
-    QJsonDocument offlineMessageDocument = QJsonDocument::fromJson(userOfflineMessageFile.readAll());
+    QJsonDocument offlineMessageDocument = QJsonDocument::fromBinaryData(userOfflineMessageFile.readAll());
     QList<QVariant> offlineMessageJsonList = offlineMessageDocument.object().toVariantMap().values();
 
     QMultiHash<QString, QString> offlineMessageHeaders;
@@ -1085,7 +1085,7 @@ QMultiHash<QString, QString> LocalStorage::getOfflineMessageHeaders(QString jid)
 bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QByteArray presence,
                                                    QString presenceType)
 {
-    qDebug() << "save offline presence subscribe";
+    //qDebug() << "save offline presence subscribe";
     QDir dir;
     dir.mkdir("offlinePresenceSubscription");
 
@@ -1111,7 +1111,7 @@ bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
     if (!userOfflinePresenceSubscriptionFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(userOfflinePresenceSubscriptionFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(userOfflinePresenceSubscriptionFile.readAll());
     QJsonObject object = document.object();
 
     QString key = from + "," + to.replace("_", "@");
@@ -1120,7 +1120,7 @@ bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
     document.setObject(object);
 
     userOfflinePresenceSubscriptionFile.resize(0);
-    quint64 ok = userOfflinePresenceSubscriptionFile.write(document.toJson());
+    quint64 ok = userOfflinePresenceSubscriptionFile.write(document.toBinaryData());
     userOfflinePresenceSubscriptionFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -1135,22 +1135,22 @@ QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
     QFile subscribeFile(filename1);
     QJsonDocument subscribeDocument;
     if (subscribeFile.open(QIODevice::ReadOnly))
-        subscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
+        subscribeDocument = QJsonDocument::fromBinaryData(subscribeFile.readAll());
 
     QFile subscribedFile(filename2);
     QJsonDocument subscribedDocument;
     if (subscribedFile.open(QIODevice::ReadOnly))
-        subscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
+        subscribedDocument = QJsonDocument::fromBinaryData(subscribeFile.readAll());
 
     QFile unsubscribeFile(filename3);
     QJsonDocument unsubscribeDocument;
     if (unsubscribeFile.open(QIODevice::ReadOnly))
-        unsubscribeDocument = QJsonDocument::fromJson(subscribeFile.readAll());
+        unsubscribeDocument = QJsonDocument::fromBinaryData(subscribeFile.readAll());
 
     QFile unsubscribedFile(filename4);
     QJsonDocument unsubscribedDocument;
     if (unsubscribedFile.open(QIODevice::ReadOnly))
-        unsubscribedDocument = QJsonDocument::fromJson(subscribeFile.readAll());
+        unsubscribedDocument = QJsonDocument::fromBinaryData(subscribeFile.readAll());
 
     QList<QVariant> subscriptionList;
     subscriptionList << subscribeDocument.object().toVariantMap().values()
@@ -1178,7 +1178,7 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     if (!subscribeFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(subscribeFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(subscribeFile.readAll());
     QJsonObject object = document.object();
 
     QString key = from + "," + to.replace("_", "@");
@@ -1187,7 +1187,7 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     document.setObject(object);
 
     subscribeFile.resize(0);
-    quint64 ok = subscribeFile.write(document.toJson());
+    quint64 ok = subscribeFile.write(document.toBinaryData());
     subscribeFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -1200,7 +1200,7 @@ QList<QString> LocalStorage::getUserBlockList(QString jid)
     if (!blocklistFile.open(QIODevice::ReadOnly))
         return QList<QString>();
 
-    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(blocklistFile.readAll());
     QJsonArray array = document.object().value("blocklist").toArray();
     QList<QString> blocklist;
 
@@ -1230,7 +1230,7 @@ bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
     if (!blocklistFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(blocklistFile.readAll());
     QJsonObject object = document.object();
 
     QJsonArray blocklistArray = object.value("blocklist").toArray();
@@ -1244,7 +1244,7 @@ bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
     document.setObject(object);
 
     blocklistFile.resize(0);
-    quint64 ok = blocklistFile.write(document.toJson());
+    quint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -1257,7 +1257,7 @@ bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
     if (!blocklistFile.open(QIODevice::ReadWrite))
         return false;
 
-    QJsonDocument document = QJsonDocument::fromJson(blocklistFile.readAll());
+    QJsonDocument document = QJsonDocument::fromBinaryData(blocklistFile.readAll());
     QJsonObject object = document.object();
 
     QStringList blocklist = object.value("blocklist").toVariant().toStringList();
@@ -1271,7 +1271,7 @@ bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
     document.setObject(object);
 
     blocklistFile.resize(0);
-    quint64 ok = blocklistFile.write(document.toJson());
+    quint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
     return (true ? (ok >= 0) : false);
 }
@@ -1329,7 +1329,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomObject.insert("roomConfig", QJsonObject::fromVariantMap(initialConfiguration));
 //    document.setObject(roomObject);
 
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -1345,7 +1345,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //        QFile roomFile(roomService + "/" + roomFilename);
 //        roomFile.open(QIODevice::ReadOnly);
 
-//        QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//        QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 
 //        if (document.object().value("roomConfig").toObject().value("muc#roomconfig_publicroom").toVariant().toBool())
 //        {
@@ -1376,7 +1376,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QList<QString>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QStringList occupantMucJid;
@@ -1402,13 +1402,13 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QList<Occupant>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QList<Occupant> occupantsList;
 //    for (int i = 0; i < occupantArray.count(); ++i)
 //    {
-//        occupantsList << Occupant::fromJsonObject(occupantArray[i].toObject());
+//        occupantsList << Occupant::fromBinaryDataObject(occupantArray[i].toObject());
 //    }
 //    roomFile.close();
 //    return occupantsList;
@@ -1423,7 +1423,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QList<Occupant>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QList<Occupant> occupantsList;
@@ -1431,7 +1431,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    {
 //        if (Utils::getBareJid(occupantArray[i].toObject().value("jid").toString()) == bareJid)
 //        {
-//            occupantsList << Occupant::fromJsonObject(occupantArray[i].toObject());
+//            occupantsList << Occupant::fromBinaryDataObject(occupantArray[i].toObject());
 //        }
 //    }
 //    roomFile.close();
@@ -1447,7 +1447,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantMucJid;
@@ -1472,7 +1472,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantJid;
@@ -1497,7 +1497,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantRole;
@@ -1522,7 +1522,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantRole;
@@ -1547,7 +1547,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantAffiliation;
@@ -1572,7 +1572,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QString occupantAffiliation;
@@ -1597,7 +1597,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return Occupant();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    Occupant occupant;
@@ -1605,7 +1605,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    {
 //        if (occupantArray[i].toObject().value("jid").toString() == jid)
 //        {
-//            occupant = Occupant::fromJsonObject(occupantArray[i].toObject());
+//            occupant = Occupant::fromBinaryDataObject(occupantArray[i].toObject());
 //            break;
 //        }
 //    }
@@ -1625,17 +1625,17 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject roomObject = document.object();
 
 //    QJsonArray occupantsArray = roomObject.value("occupants").toArray();
-//    occupantsArray.append(occupant.toJsonObject());
+//    occupantsArray.append(occupant.toBinaryDataObject());
 
 //    roomObject.insert("occupants", occupantsArray);
 //    document.setObject(roomObject);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -1649,7 +1649,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QStringList();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QStringList roomType = document.object().value("roomTypes").toVariant().toStringList();
 //    roomFile.close();
 //    return roomType;
@@ -1664,7 +1664,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QString naturalRoomName = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomName").toString();
 //    roomFile.close();
 //    return naturalRoomName;
@@ -1679,7 +1679,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool registered = document.object().value("memberList").toVariant().toStringList().contains(jid);
 //    roomFile.close();
 //    return registered;
@@ -1694,7 +1694,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QStringList();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QStringList registerdMemberMist = document.object().value("memberList").toVariant().toStringList();
 //    roomFile.close();
 //    return registerdMemberMist;
@@ -1709,7 +1709,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool banned = document.object().value("bannedList").toVariant().toStringList().contains(jid);
 //    roomFile.close();
 //    return banned;
@@ -1724,7 +1724,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    bool occuped = false;
@@ -1749,7 +1749,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    int maxUsersConfig = document.object().value("roomConfig").toObject().value("muc#roomconfig_maxusers").toString().toInt();
 //    int numberOccupants = document.object().value("occupants").toArray().count();
 
@@ -1766,7 +1766,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool locked = document.object().value("locked").toBool();
 //    roomFile.close();
 //    return locked;
@@ -1781,7 +1781,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool passwordprotected = document.object().value("roomConfig").toObject().value("muc#roomconfig_passwordprotectedroom").toVariant().toBool();
 //    roomFile.close();
 //    return passwordprotected;
@@ -1796,7 +1796,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QString password = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomsecret").toString();
 //    roomFile.close();
 //    return password;
@@ -1811,7 +1811,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool canbroadcast = document.object().value("roomConfig").toObject()
 //            .value("muc#roomconfig_presencebroadcast").toVariant().toStringList().contains(occupantRole);
 //    roomFile.close();
@@ -1832,7 +1832,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 ////    if (!historyFile.open(QIODevice::ReadOnly))
 ////        return false;
 
-////    QJsonDocument document = QJsonDocument::fromJson(historyFile.readAll());
+////    QJsonDocument document = QJsonDocument::fromBinaryData(historyFile.readAll());
 
 ////    QByteArray data;
 ////    QList<QVariant> historyList = document.object().toVariantMap().values();
@@ -1852,7 +1852,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyFile.open(QIODevice::ReadOnly))
 //        return QList<QDomDocument>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(historyFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(historyFile.readAll());
 
 //    QList<QVariant> historyList = document.object().toVariantMap().values();
 
@@ -1881,8 +1881,8 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyIndexFile.open(QIODevice::ReadOnly))
 //        return QList<QDomDocument>();
 
-//    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
-//    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+//    QJsonDocument historyDocument = QJsonDocument::fromBinaryData(historyFile.readAll());
+//    QJsonDocument historyIndexDocument = QJsonDocument::fromBinaryData(historyIndexFile.readAll());
 
 //    QDateTime leftDateTime = QDateTime::currentDateTimeUtc().addSecs(seconds);
 //    QDateTime rightDateTime = QDateTime::currentDateTimeUtc();
@@ -1920,8 +1920,8 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyIndexFile.open(QIODevice::ReadOnly))
 //        return QList<QDomDocument>();
 
-//    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
-//    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+//    QJsonDocument historyDocument = QJsonDocument::fromBinaryData(historyFile.readAll());
+//    QJsonDocument historyIndexDocument = QJsonDocument::fromBinaryData(historyIndexFile.readAll());
 
 //    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
 
@@ -1958,8 +1958,8 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyIndexFile.open(QIODevice::ReadOnly))
 //        return QList<QDomDocument>();
 
-//    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
-//    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+//    QJsonDocument historyDocument = QJsonDocument::fromBinaryData(historyFile.readAll());
+//    QJsonDocument historyIndexDocument = QJsonDocument::fromBinaryData(historyIndexFile.readAll());
 
 //    QList<QString> indexKeys = historyIndexDocument.object().toVariantMap().keys();
 
@@ -2001,8 +2001,8 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 ////    if (!historyIndexFile.open(QIODevice::ReadOnly))
 ////        return QList<QDomDocument>();
 
-////    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
-////    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+////    QJsonDocument historyDocument = QJsonDocument::fromBinaryData(historyFile.readAll());
+////    QJsonDocument historyIndexDocument = QJsonDocument::fromBinaryData(historyIndexFile.readAll());
 
 ////    QDateTime leftDateTime = QDateTime::currentDateTimeUtc().addSecs(seconds);
 ////    QDateTime rightDateTime = QDateTime::currentDateTimeUtc();
@@ -2039,7 +2039,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QString subject = document.object().value("roomSubject").toString();
 //    roomFile.close();
 //    return subject;
@@ -2062,7 +2062,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 
 //    QJsonArray occupantArray = object.value("occupants").toArray();
@@ -2084,7 +2084,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    return (true ? (ok >= 0) : false);
 //}
 
@@ -2097,7 +2097,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 
 //    QJsonArray occupantArray = object.value("occupants").toArray();
@@ -2119,7 +2119,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    return (true ? (ok >= 0) : false);
 //}
 
@@ -2134,7 +2134,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 
 //    QStringList memberList = object.value("memberList").toVariant().toStringList();
@@ -2144,7 +2144,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    return (true ? (ok >= 0) : false);
 //}
 
@@ -2157,14 +2157,14 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    object.insert("locked", false);
 
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    return (true ? (ok >= 0) : false);
 //}
 
@@ -2177,7 +2177,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    object.insert("roomConfig", QJsonObject::fromVariantMap(dataFormValue));
 
@@ -2201,7 +2201,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    return (true ? (ok >= 0) : false);
 //}
 
@@ -2214,7 +2214,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QList<QString>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QStringList ownersList = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomowners").toVariant().toStringList();
 //    roomFile.close();
 //    return ownersList;
@@ -2229,7 +2229,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QMap<QString, QVariant>();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QMap<QString, QVariant> roomConfig = document.object().value("roomConfig").toVariant().toMap();
 //    roomFile.close();
 //    return roomConfig;
@@ -2252,7 +2252,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QStringList();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    QStringList moderatorList;
@@ -2265,6 +2265,38 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    return moderatorList;
 //}
 
+//bool LocalStorage::removeOccupantJid(QString roomName, QString jid)
+//{
+//    QString roomService = Utils::getHost(roomName);
+//    QString filename = roomService + "/" + roomName.replace("@", "_") + ".qjr";
+//    QFile roomFile(filename);
+
+//    if (!roomFile.open(QIODevice::ReadWrite))
+//        return false;
+
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
+//    QJsonObject object = document.object();
+
+//    QJsonArray occupantArray = object.value("occupants").toArray();
+//    QList<int> index;
+//    for (int i = 0; i < occupantArray.count(); ++i)
+//    {
+//        if (occupantArray[i].toObject().value("jid").toString() == jid)
+//            index << i;
+//    }
+
+//    for (int i = 0; i < index.count(); ++i)
+//        occupantArray.removeAt(index[i]);
+
+//    object.insert("occupants", occupantArray);
+//    document.setObject(object);
+
+//    roomFile.resize(0);
+//    quint64 ok = roomFile.write(document.toBinaryData());
+//    roomFile.close();
+//    return (true ? (ok >= 0) : false);
+//}
+
 //bool LocalStorage::removeOccupant(QString roomName, QString mucJid)
 //{
 //    QString roomService = Utils::getHost(roomName);
@@ -2274,7 +2306,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    QJsonArray occupantArray = object.value("occupants").toArray();
 //    for (int i = 0; i < occupantArray.count(); ++i)
@@ -2290,7 +2322,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2304,7 +2336,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 
 //    QJsonArray occupantArray = object.value("occupants").toArray();
@@ -2322,7 +2354,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2336,13 +2368,13 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    object.insert("roomSubject", subject);
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2356,7 +2388,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool canChangeRoomSubject = document.object().value("roomConfig").toObject().value("muc#roomconfig_changesubject").toVariant().toBool();
 //    roomFile.close();
 //    return canChangeRoomSubject;
@@ -2371,7 +2403,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QStringList();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QStringList adminList = document.object().value("roomConfig").toObject().value("muc#roomconfig_roomadmins").toVariant().toStringList();
 //    roomFile.close();
 //    return adminList;
@@ -2387,7 +2419,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 
 //    QJsonArray occupantArray = object.value("occupants").toArray();
@@ -2487,7 +2519,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2501,7 +2533,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    bool isPersistent = document.object().value("roomConfig").toObject().value("muc#roomconfig_persistentroom").toVariant().toBool();
 //    roomFile.close();
 //    return isPersistent;
@@ -2516,7 +2548,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    QJsonArray occupantArray = object.value("occupants").toArray();
 
@@ -2536,7 +2568,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2550,7 +2582,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    QJsonArray occupantArray = object.value("occupants").toArray();
 
@@ -2570,7 +2602,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toJson());
+//    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (true ? (ok >= 0) : false);
 //}
@@ -2584,7 +2616,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    QJsonArray occupantArray = object.value("occupants").toArray();
 
@@ -2610,7 +2642,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QString();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonObject object = document.object();
 //    QJsonArray occupantArray = object.value("occupants").toArray();
 
@@ -2636,7 +2668,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return Occupant();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QJsonArray occupantArray = document.object().value("occupants").toArray();
 
 //    Occupant occupant;
@@ -2644,7 +2676,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    {
 //        if (occupantArray[i].toObject().value("mucJid").toString() == mucJid)
 //        {
-//            occupant = Occupant::fromJsonObject(occupantArray[i].toObject());
+//            occupant = Occupant::fromBinaryDataObject(occupantArray[i].toObject());
 //            break;
 //        }
 //    }
@@ -2665,7 +2697,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument historyDocument = QJsonDocument::fromJson(historyFile.readAll());
+//    QJsonDocument historyDocument = QJsonDocument::fromBinaryData(historyFile.readAll());
 //    QJsonObject object = historyDocument.object();
 
 //    QList<QString> keys = object.toVariantMap().keys();
@@ -2675,7 +2707,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    historyDocument.setObject(object);
 
 //    historyFile.resize(0);
-//    bool ok = historyFile.write(historyDocument.toJson());
+//    bool ok = historyFile.write(historyDocument.toBinaryData());
 //    historyFile.close();
 
 //    // Build index
@@ -2683,14 +2715,14 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!historyIndexFile.open(QIODevice::ReadWrite))
 //        return false;
 
-//    QJsonDocument historyIndexDocument = QJsonDocument::fromJson(historyIndexFile.readAll());
+//    QJsonDocument historyIndexDocument = QJsonDocument::fromBinaryData(historyIndexFile.readAll());
 //    QJsonObject indexObject = historyIndexDocument.object();
 
 //    indexObject.insert(stamp, key);
 //    historyIndexDocument.setObject(indexObject);
 
 //    historyIndexFile.resize(0);
-//    bool ok1 = historyIndexFile.write(historyIndexDocument.toJson());
+//    bool ok1 = historyIndexFile.write(historyIndexDocument.toBinaryData());
 //    historyIndexFile.close();
 
 //    return (ok && ok1);
@@ -2705,7 +2737,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return 0;
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    roomFile.close();
 
 
@@ -2721,7 +2753,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    if (!roomFile.open(QIODevice::ReadOnly))
 //        return QStringList();
 
-//    QJsonDocument document = QJsonDocument::fromJson(roomFile.readAll());
+//    QJsonDocument document = QJsonDocument::fromBinaryData(roomFile.readAll());
 //    QStringList bannedList = document.object().value("bannedList").toVariant().toStringList();
 //    roomFile.close();
 

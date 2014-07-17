@@ -202,11 +202,11 @@ void ConnectionManager::startManage()
 {
     if (listen(QHostAddress::Any, m_port))
     {
-        qDebug() << "The server listen on port : " << m_port;
+        qDebug() << "QJabberd listen on port : " << m_port;
     }
     else
     {
-        qDebug() << "The server can not start on port : " << m_port;
+        qDebug() << "QJabberd can not start on port : " << m_port;
     }
 }
 
@@ -226,7 +226,7 @@ void ConnectionManager::stopManage()
  */
 void ConnectionManager::incomingConnection(qintptr socketDescriptor)
 {
-    qDebug() << "New client connected on server";
+    //qDebug() << "New client connected on server";
 
     // We create new socket connection but we don't start tls v1 encryption at this time.
     Connection *connection = new Connection(this);
@@ -280,4 +280,58 @@ void ConnectionManager::deconnection()
 int ConnectionManager::getPort()
 {
     return m_port;
+}
+
+void ConnectionManager::boshSessionInitiation(QString sid, QString host)
+{
+    StreamNegotiationData *strData = new StreamNegotiationData();
+    strData->setHost(host);
+    m_streamNegotiationManager->setStreamNegotiationData(sid, strData);
+
+    QDomDocument document;
+    document.setContent(m_streamNegotiationManager->secondFeatures());
+    emit sigConnectionManagerBoshSessionInitiationReply(sid, document);
+}
+
+void ConnectionManager::boshSessionRequest(QString sid, QString fullJid, QString host,
+                                           QList<QDomDocument> requests)
+{
+    QList<QDomDocument> listResponse;
+    foreach (QDomDocument document, requests)
+    {
+        //qDebug() << "Connection manager request from Bosh Server : " << document.toString();
+        if (document.documentElement().tagName() == "iq")
+        {
+            QByteArray answer = m_iqManager->parseIQ(document, fullJid, host, sid);
+
+            QDomDocument replyDocument;
+            replyDocument.setContent(answer);
+            listResponse << replyDocument;
+        }
+        else if (document.documentElement().tagName() == "presence")
+        {
+            QByteArray answer = m_presenceManager->parsePresence(document, fullJid);
+
+            QDomDocument replyDocument;
+            replyDocument.setContent(answer);
+            listResponse << replyDocument;
+        }
+        else if (document.documentElement().tagName() == "message")
+        {
+            QByteArray answer = m_messageManager->parseMessage(document, fullJid);
+
+            QDomDocument replyDocument;
+            replyDocument.setContent(answer);
+            listResponse << replyDocument;
+        }
+        else
+        {
+            QByteArray answer = m_streamNegotiationManager->reply(document, sid);
+
+            QDomDocument replyDocument;
+            replyDocument.setContent(answer);
+            listResponse << replyDocument;
+        }
+    }
+    emit sigConnectionManagerBoshRequestReply(sid, listResponse);
 }
