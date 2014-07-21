@@ -9,7 +9,6 @@ class RosterManager
 {
 public:
     RosterManager(StorageManager *storageManager = 0);
-    void setStorageType(QString type);
 
     QList<Contact> getContactsList(QString jid);
     QSet<QString> getContactGroups(QString jid, QString contactJid);

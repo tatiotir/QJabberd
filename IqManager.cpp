@@ -15,15 +15,16 @@
  * \param streamNegotiationManager
  * \param oobDataManager
  */
-IqManager::IqManager(QJsonObject *serverConfiguration,
+IqManager::IqManager(QObject *parent, QJsonObject *serverConfiguration,
                      UserManager *userManager,
                      PrivacyListManager *privacyListManager, RosterManager *rosterManager,
                      VCardManager *vcardManager, LastActivityManager *lastActivityManager,
                      EntityTimeManager *entityTimeManager, PrivateStorageManager *privateStorageManager,
                      ServiceDiscoveryManager *serviceDiscoveryManager,
                      OfflineMessageManager *offlineMessageManager,
-                     StreamNegotiationManager *streamNegotiationManager, BlockingCommandManager *blockingCmdManager,
-                     MucManager *mucManager, ByteStreamsManager *byteStreamManager)
+                     StreamNegotiationManager *streamNegotiationManager,
+                     BlockingCommandManager *blockingCmdManager,
+                     MucManager *mucManager, ByteStreamsManager *byteStreamManager) : QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;
@@ -201,6 +202,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
             if ((xmlns == "jabber:iq:roster") && m_serverConfiguration->value("modules").toObject().value("roster").toBool())
             {
+                qDebug() << "Roster add : " << document.toByteArray();
                 // We check if there are errors.
                 QDomNodeList groupNodes = firstChild.firstChild().toElement().elementsByTagName("group");
                 for (int i = 0; i < groupNodes.count(); ++i)

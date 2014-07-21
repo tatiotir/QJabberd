@@ -10,7 +10,7 @@ class LastActivityManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit LastActivityManager(UserManager *userManager = 0, RosterManager *rosterManager = 0,
+    explicit LastActivityManager(QObject *parent = 0, UserManager *userManager = 0, RosterManager *rosterManager = 0,
                                  StorageManager *storageManager = 0);
     QByteArray lastActivityReply(QDomDocument document, QString iqFrom);
     QByteArray lastActivityQueryResult(QString from, QString to, QString id, int seconds, QString lastStatus);

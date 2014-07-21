@@ -11,7 +11,6 @@ class UserManager
 public:
     UserManager(StorageManager *storageManager = 0);
 
-    void setStorageType(QString type);
     StorageManager *getStorageManager();
     QByteArray authenticate(QString id, QString username, QString password, QString resource, QString digest, QString host);
     QString getPassword(QString jid);

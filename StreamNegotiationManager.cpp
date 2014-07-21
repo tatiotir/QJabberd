@@ -6,7 +6,8 @@
 
 #include "StreamNegotiationManager.h"
 
-StreamNegotiationManager::StreamNegotiationManager(QJsonObject *serverConfiguration, UserManager *userManager)
+StreamNegotiationManager::StreamNegotiationManager(QObject *parent, QJsonObject *serverConfiguration,
+                                                   UserManager *userManager) : QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;

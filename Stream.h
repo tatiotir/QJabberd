@@ -1,7 +1,6 @@
 #ifndef SESSION_H
 #define SESSION_H
 
-#include <QThread>
 #include <QtXml/QtXml>
 #include <QDebug>
 #include <QtNetwork/QtNetwork>
@@ -10,16 +9,18 @@
 #include "PresenceManager.h"
 #include "Connection.h"
 
-class Stream : public QThread
+class Stream : public QObject
 {
     Q_OBJECT
 public:
-    explicit Stream(QObject *parent = 0, QString streamId = QString(),
+    explicit Stream(QString streamId = QString(),
                     Connection *connection = 0,
                     IqManager *iqManager = 0, PresenceManager *presenceManager = 0,
                     MessageManager *messageManager = 0,
                     RosterManager *rosterManager = 0, StreamNegotiationManager *streamNegotiationManager = 0,
                     BlockingCommandManager *blockingCmdManager = 0);
+
+    ~Stream();
 
 private slots:
     void dataReceived();
@@ -35,6 +36,7 @@ public slots:
     Connection* getConnection();
 
 signals:
+    void sigCloseStream(QString fullJid);
     void sigOfflineUser(QString jid);
     void sigBindFeatureNegotiated(QString fullJid, Stream *stream);
     void sigPresenceBroadCast(QString jid, QDomDocument document);

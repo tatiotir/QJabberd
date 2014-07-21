@@ -1,6 +1,6 @@
 #include "PrivateStorageManager.h"
 
-PrivateStorageManager::PrivateStorageManager(StorageManager *storageManager)
+PrivateStorageManager::PrivateStorageManager(QObject *parent, StorageManager *storageManager) : QObject(parent)
 {
     m_storageManager = storageManager;
 }

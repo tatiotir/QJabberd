@@ -14,7 +14,7 @@ class ByteStreamsManager : public QObject
 {
     Q_OBJECT
 public:
-    ByteStreamsManager(QJsonObject *serverConfiguration = 0);
+    ByteStreamsManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0);
 
     QByteArray byteStreamManagerReply(QDomDocument document, QString iqFrom);
     QByteArray byteStreamManagerResult(QString from, QString to, QString id, QJsonObject proxyObject);

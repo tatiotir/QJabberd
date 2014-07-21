@@ -15,7 +15,8 @@ class StreamNegotiationManager : public QObject
 {
     Q_OBJECT
 public:
-    StreamNegotiationManager(QJsonObject *serverConfiguration = 0, UserManager *userManager = 0);
+    StreamNegotiationManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0,
+                             UserManager *userManager = 0);
 
 public slots:
     QByteArray reply(QDomDocument document, QString streamId);

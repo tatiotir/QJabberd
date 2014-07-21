@@ -3,7 +3,6 @@ QT       -= gui
 
 TARGET = QJabberd
 CONFIG   += console
-CONFIG   -= app_bundle
 
 TEMPLATE = app
 
@@ -50,7 +49,8 @@ SOURCES += \
     DataFormField.cpp \
     BoshManager.cpp \
     BoshSession.cpp \
-    BoshSessionManager.cpp
+    BoshSessionManager.cpp \
+    PubsubManager.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -94,4 +94,5 @@ HEADERS += \
     DataFormField.h \
     BoshManager.h \
     BoshSession.h \
-    BoshSessionManager.h
+    BoshSessionManager.h \
+    PubsubManager.h

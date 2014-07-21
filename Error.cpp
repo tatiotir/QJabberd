@@ -53,6 +53,48 @@ QByteArray Error::generateError(QString by, QString stanzaType, QString errorTyp
     return document.toByteArray();
 }
 
+QByteArray Error::generateError(QString by, QString stanzaType, QString errorType, QString errorCause,
+                                QString specificErrorCause, QString specificErrorXmlns, QString feature,
+                                QString from, QString to, QString id)
+{
+    QDomDocument document;
+    QDomElement element = document.createElement(stanzaType);
+
+    if (!from.isEmpty())
+    {
+        element.setAttribute("from", from);
+    }
+    if (!to.isEmpty())
+    {
+        element.setAttribute("to", to);
+    }
+
+    element.setAttribute("type", "error");
+    element.setAttribute("id", id);
+
+    QDomElement errorElement = document.createElement("error");
+    errorElement.setAttribute("type", errorType);
+
+    if (!by.isEmpty())
+        errorElement.setAttribute("by", by);
+
+    QDomElement errorCauseElement = document.createElement(errorCause);
+    errorCauseElement.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas");
+
+    QDomElement specificErrorCauseElement = document.createElement(specificErrorCause);
+    specificErrorCauseElement.setAttribute("xmlns", specificErrorXmlns);
+
+    if (!feature.isEmpty())
+        specificErrorCauseElement.setAttribute("feature", feature);
+
+    errorElement.appendChild(errorCauseElement);
+    errorElement.appendChild(specificErrorCauseElement);
+    element.appendChild(errorElement);
+    document.appendChild(element);
+
+    return document.toByteArray();
+}
+
 /*!
  * \brief The Error::generateSmError method generate the stream management error
  * \param childName

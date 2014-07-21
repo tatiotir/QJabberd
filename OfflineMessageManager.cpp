@@ -1,6 +1,6 @@
 #include "OfflineMessageManager.h"
 
-OfflineMessageManager::OfflineMessageManager(StorageManager *storageManager)
+OfflineMessageManager::OfflineMessageManager(QObject *parent, StorageManager *storageManager) : QObject(parent)
 {
     m_storageManager = storageManager;
 }
@@ -113,6 +113,7 @@ QByteArray OfflineMessageManager::offlineMessageManagerReply(QDomDocument docume
             }
         }
     }
+    return QByteArray();
 }
 
 /*!

@@ -26,7 +26,7 @@ class IqManager : public QObject
 {
     Q_OBJECT
 public:
-    IqManager(QJsonObject *serverConfiguration = 0,
+    IqManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0,
               UserManager *userManager = 0,
               PrivacyListManager *privacyListManager = 0,
               RosterManager *rosterManager = 0, VCardManager *vcardManager = 0,

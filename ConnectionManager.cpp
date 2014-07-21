@@ -7,7 +7,8 @@
  * \param port
  * \param serverConfigMap
  */
-ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *serverConfiguration) : QTcpServer(parent), m_port(port)
+ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *serverConfiguration) :
+    QTcpServer(parent), m_port(port)
 {
     // Create network proxy
     createNetworkProxy(serverConfiguration);
@@ -17,30 +18,30 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
                                           serverConfiguration->value(serverConfiguration->value("storageType").toString()).toObject());
     m_userManager = new UserManager(m_storageManager);
     m_mucManager = new MucManager(m_storageManager);
-    m_bytestreamsManager = new ByteStreamsManager(serverConfiguration);
-    m_offlineMessageManager = new OfflineMessageManager(m_storageManager);
-    m_streamNegotiationManager = new StreamNegotiationManager(serverConfiguration, m_userManager);
+    m_bytestreamsManager = new ByteStreamsManager(this, serverConfiguration);
+    m_offlineMessageManager = new OfflineMessageManager(this, m_storageManager);
+    m_streamNegotiationManager = new StreamNegotiationManager(this, serverConfiguration, m_userManager);
     m_rosterManager = new RosterManager(m_storageManager);
-    m_blockingCmdManager = new BlockingCommandManager(m_storageManager, m_rosterManager);
-    m_vCardManager = new VCardManager(m_storageManager);
-    m_privateStorageManager = new PrivateStorageManager(m_storageManager);
-    m_entityTimeManager = new EntityTimeManager();
-    m_serviceDiscoveryManager = new ServiceDiscoveryManager(serverConfiguration, m_userManager, m_mucManager);
-    m_privacyListManager = new PrivacyListManager(m_storageManager, m_rosterManager);
-    m_lastActivityManager= new LastActivityManager(m_userManager, m_rosterManager, m_storageManager);
-    m_iqManager = new IqManager(serverConfiguration, m_userManager, m_privacyListManager, m_rosterManager,
+    m_blockingCmdManager = new BlockingCommandManager(this, m_storageManager, m_rosterManager);
+    m_vCardManager = new VCardManager(this, m_storageManager);
+    m_privateStorageManager = new PrivateStorageManager(this, m_storageManager);
+    m_entityTimeManager = new EntityTimeManager(this);
+    m_serviceDiscoveryManager = new ServiceDiscoveryManager(this, serverConfiguration, m_userManager, m_mucManager);
+    m_privacyListManager = new PrivacyListManager(this, m_storageManager, m_rosterManager);
+    m_lastActivityManager= new LastActivityManager(this, m_userManager, m_rosterManager, m_storageManager);
+    m_iqManager = new IqManager(this, serverConfiguration, m_userManager, m_privacyListManager, m_rosterManager,
                                 m_vCardManager, m_lastActivityManager, m_entityTimeManager,
                                 m_privateStorageManager, m_serviceDiscoveryManager, m_offlineMessageManager,
                                 m_streamNegotiationManager, m_blockingCmdManager, m_mucManager,
                                 m_bytestreamsManager);
-    m_messageManager = new MessageManager(serverConfiguration, m_userManager, m_privacyListManager, m_mucManager,
+    m_messageManager = new MessageManager(this, serverConfiguration, m_userManager, m_privacyListManager, m_mucManager,
                                           m_blockingCmdManager);
-    m_presenceManager = new PresenceManager( m_userManager, m_rosterManager, m_lastActivityManager,
+    m_presenceManager = new PresenceManager(this, m_userManager, m_rosterManager, m_lastActivityManager,
                                             m_privacyListManager, m_mucManager, m_blockingCmdManager);
 
     m_streamManager = new StreamManager(this, m_storageManager, m_userManager, m_rosterManager,
                                         m_lastActivityManager);
-    m_streamManager->start();
+    //m_streamManager->start();
 
     // Connect SessionManager to the signal newConnection(Connection *)
     connect(this, SIGNAL(sigNewConnection(Connection*,IqManager*,PresenceManager*,MessageManager*,

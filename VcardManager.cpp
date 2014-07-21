@@ -1,6 +1,6 @@
 #include "VcardManager.h"
 
-VCardManager::VCardManager(StorageManager *storageManager)
+VCardManager::VCardManager(QObject *parent, StorageManager *storageManager) : QObject(parent)
 {
     m_storageManager = storageManager;
 }
@@ -61,6 +61,7 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
             return generateIQResult(from, id);
         }
     }
+    return QByteArray();
 }
 
 QByteArray VCardManager::generateVCardResult(QString from, QString to, QString id, QString vCard)

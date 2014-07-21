@@ -10,7 +10,7 @@ class OfflineMessageManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit OfflineMessageManager(StorageManager *storageManager = 0);
+    explicit OfflineMessageManager(QObject *parent = 0, StorageManager *storageManager = 0);
 
     QByteArray offlineMessageManagerReply(QDomDocument document, QString iqFrom);
     QByteArray offlineMessageManagerResult(QString to, QString id, QByteArray messageList);

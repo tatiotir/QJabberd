@@ -1,7 +1,8 @@
 #include "ServiceDiscoveryManager.h"
 
-ServiceDiscoveryManager::ServiceDiscoveryManager(QJsonObject *serverConfiguration,
-                                                 UserManager *userManager, MucManager *mucManager)
+ServiceDiscoveryManager::ServiceDiscoveryManager(QObject *parent, QJsonObject *serverConfiguration,
+                                                 UserManager *userManager, MucManager *mucManager) :
+    QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;
@@ -32,7 +33,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerReply(QDomDocument do
         }
         else
         {
-            return serviceDiscoveryManagerItemsQueryResult(from, to, id, document);
+            return serviceDiscoveryManagerItemsQueryResult(from, to, id);
         }
     }
     else if (xmlns == "http://jabber.org/protocol/disco#info")
@@ -86,7 +87,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
 
         QDomElement identity2 = document.createElement("identity");
         identity2.setAttribute("category", "pubsub");
-        identity2.setAttribute("type", "pep");
+        identity2.setAttribute("type", "service");
         identity2.setAttribute("name", "QJabberd");
 
         query.appendChild(identity1);
@@ -240,6 +241,18 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             query.appendChild(feature17);
         }
 
+        if (m_serverConfiguration->value("modules").toObject().value("pubsub").toBool())
+        {
+            QDomElement feature18 = document.createElement("feature");
+            feature18.setAttribute("var", "http://jabber.org/protocol/pubsub");
+
+            query.appendChild(feature18);
+        }
+
+        QDomElement feature19 = document.createElement("feature");
+        feature19.setAttribute("var", "http://jabber.org/protocol/pubsub¢#last-published");
+        query.appendChild(feature19);
+
         iq.appendChild(query);
         document.appendChild(iq);
 
@@ -250,7 +263,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
     // Entity Queries Chat Service for MUC Support via Disco
     else
     {
-        QJsonObject chatServiceObject = chatServiceExist(to);
+        QJsonObject chatServiceObject = serviceExist(to);
         if (!chatServiceObject.isEmpty())
         {
             QDomDocument document;
@@ -415,8 +428,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
     return QByteArray();
 }
 
-QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
-                                                                            QDomDocument document)
+QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id)
 {
     if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(to))
     {
@@ -447,73 +459,84 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
-    else if (!chatServiceExist(to).isEmpty())
+    else
     {
-        QDomDocument document;
-        QDomElement iq = document.createElement("iq");
-        iq.setAttribute("from", to);
-        iq.setAttribute("to", from);
-        iq.setAttribute("id", id);
-        iq.setAttribute("type", "result");
-
-        QDomElement query = document.createElement("query");
-        query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
-
-        QMultiHash<QString, QString> roomList = m_mucManager->getChatRoomNameList(to);
-        foreach (QString key, roomList.keys())
+        QJsonObject serviceObject = serviceExist(to);
+        if (!serviceObject.isEmpty())
         {
-            QDomElement item = document.createElement("item");
-            item.setAttribute("jid", key);
-            item.setAttribute("name", roomList.value(key));
-            query.appendChild(item);
-        }
-
-        iq.appendChild(query);
-        document.appendChild(iq);
-
-        // TODO : Result set management in the iq result.
-
-        // Request Acknowledgment of receipt
-        sigSendReceiptRequest(from, document.toByteArray());
-        return document.toByteArray();
-    }
-    // Entity Queries for Items Associated with a Specific Chat Room
-    else if (m_mucManager->chatRoomExist(to))
-    {
-        QDomDocument document;
-
-        QDomElement iq = document.createElement("iq");
-        iq.setAttribute("from", to);
-        iq.setAttribute("to", from);
-        iq.setAttribute("id", id);
-        iq.setAttribute("type", "result");
-
-        QDomElement query = document.createElement("query");
-        query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
-
-//        if (!m_mucManager->isPrivateOccupantsList(to))
-//        {
-            QList<QString> occupantsMucJid = m_mucManager->getOccupantsMucJid(to);
-            foreach (QString MucJid, occupantsMucJid)
+            if (serviceObject.value("category").toString() == "conference")
             {
-                QDomElement mucItem = document.createElement("item");
-                mucItem.setAttribute("jid", MucJid);
-                query.appendChild(mucItem);
-            }
-//        }
-        iq.appendChild(query);
-        document.appendChild(iq);
+                QDomDocument document;
+                QDomElement iq = document.createElement("iq");
+                iq.setAttribute("from", to);
+                iq.setAttribute("to", from);
+                iq.setAttribute("id", id);
+                iq.setAttribute("type", "result");
 
-        // Request Acknowledgment of receipt
-        sigSendReceiptRequest(from, document.toByteArray());
-        return document.toByteArray();
-    }
-    else if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(Utils::getHost(to)))
-    {
-        if (!to.contains("/"))
+                QDomElement query = document.createElement("query");
+                query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
+
+                QMultiHash<QString, QString> roomList = m_mucManager->getChatRoomNameList(to);
+                foreach (QString key, roomList.keys())
+                {
+                    QDomElement item = document.createElement("item");
+                    item.setAttribute("jid", key);
+                    item.setAttribute("name", roomList.value(key));
+                    query.appendChild(item);
+                }
+
+                iq.appendChild(query);
+                document.appendChild(iq);
+
+                // TODO : Result set management in the iq result.
+
+                // Request Acknowledgment of receipt
+                sigSendReceiptRequest(from, document.toByteArray());
+                return document.toByteArray();
+            }
+            else if (serviceObject.value("category").toString() == "pubsub")
+            {
+
+            }
+        }
+        // Entity Queries for Items Associated with a Specific Chat Room
+        else if (m_mucManager->chatRoomExist(to))
         {
-            emit sigAccountAvailableResourceQuery(from, to, id);
-            return QByteArray();
+            QDomDocument document;
+
+            QDomElement iq = document.createElement("iq");
+            iq.setAttribute("from", to);
+            iq.setAttribute("to", from);
+            iq.setAttribute("id", id);
+            iq.setAttribute("type", "result");
+
+            QDomElement query = document.createElement("query");
+            query.setAttribute("xmlns", "http://jabber.org/protocol/disco#items");
+
+    //        if (!m_mucManager->isPrivateOccupantsList(to))
+    //        {
+                QList<QString> occupantsMucJid = m_mucManager->getOccupantsMucJid(to);
+                foreach (QString MucJid, occupantsMucJid)
+                {
+                    QDomElement mucItem = document.createElement("item");
+                    mucItem.setAttribute("jid", MucJid);
+                    query.appendChild(mucItem);
+                }
+    //        }
+            iq.appendChild(query);
+            document.appendChild(iq);
+
+            // Request Acknowledgment of receipt
+            sigSendReceiptRequest(from, document.toByteArray());
+            return document.toByteArray();
+        }
+        else if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(Utils::getHost(to)))
+        {
+            if (!to.contains("/"))
+            {
+                emit sigAccountAvailableResourceQuery(from, to, id);
+                return QByteArray();
+            }
         }
     }
     return QByteArray();
@@ -637,7 +660,7 @@ QMultiHash<QString, QString> ServiceDiscoveryManager::getOfflineMessageHeaders(Q
     return m_userManager->getStorageManager()->getStorage()->getOfflineMessageHeaders(jid);
 }
 
-QJsonObject ServiceDiscoveryManager::chatServiceExist(QString serviceJid)
+QJsonObject ServiceDiscoveryManager::serviceExist(QString serviceJid)
 {
     foreach (QString host, m_serverConfiguration->value("services").toVariant().toMap().keys())
     {

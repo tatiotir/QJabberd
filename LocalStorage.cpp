@@ -42,7 +42,7 @@ bool LocalStorage::changePassword(QString jid, QString newPassword)
     userFile.resize(0);
     bool ok = userFile.write(document.toBinaryData());
     userFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::createUser(QString jid, QString password)
@@ -70,7 +70,7 @@ bool LocalStorage::createUser(QString jid, QString password)
 
     bool ok = userFile.write(document.toBinaryData());
     userFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::deleteUser(QString jid)
@@ -135,7 +135,7 @@ bool LocalStorage::addContactToRoster(QString jid, Contact contact)
     contactFile.resize(0);
     bool ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::deleteContactToRoster(QString jid, QString contactJid)
@@ -164,7 +164,7 @@ bool LocalStorage::updateGroupToContact(QString jid, QString contactJid,
     contactFile.resize(0);
     quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok = -1) : true);
 }
 
 bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
@@ -198,7 +198,7 @@ bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
     contactFile.resize(0);
     quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
@@ -227,7 +227,7 @@ bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
     contactFile.resize(0);
     quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::updateNameToContact(QString jid, QString contactJid,
@@ -249,7 +249,7 @@ bool LocalStorage::updateNameToContact(QString jid, QString contactJid,
     contactFile.resize(0);
     quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::updateApprovedToContact(QString jid, QString contactJid, bool approved)
@@ -270,7 +270,7 @@ bool LocalStorage::updateApprovedToContact(QString jid, QString contactJid, bool
     contactFile.resize(0);
     quint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::userExists(QString jid)
@@ -408,7 +408,7 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     privacyListFile.resize(0);
     quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
@@ -448,7 +448,7 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
     privacyListFile.resize(0);
     quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::privacyListExist(QString jid, QString privacyListName)
@@ -518,7 +518,7 @@ bool LocalStorage::setDefaultPrivacyList(QString jid, QString defaultList)
     privacyListFile.resize(0);
     quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::setActivePrivacyList(QString jid, QString activeList)
@@ -538,7 +538,7 @@ bool LocalStorage::setActivePrivacyList(QString jid, QString activeList)
     privacyListFile.resize(0);
     quint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QList<PrivacyListItem> LocalStorage::getPrivacyListItems(QString jid, QString privacyListName,
@@ -619,7 +619,7 @@ bool LocalStorage::updateVCard(QString jid, QString vCardInfos)
 
     quint64 ok = vCardFile.write(document.toBinaryData());
     vCardFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::vCardExist(QString jid)
@@ -662,7 +662,7 @@ bool LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
     userFile.resize(0);
     quint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QString LocalStorage::getLastStatus(QString jid)
@@ -698,7 +698,7 @@ bool LocalStorage::setLastStatus(QString jid, QString status)
     userFile.resize(0);
     quint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> nodeMap)
@@ -730,7 +730,7 @@ bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     userPrivateDataFile.resize(0);
     quint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactList)
@@ -764,7 +764,7 @@ bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     userPrivateDataFile.resize(0);
     quint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QByteArray LocalStorage::getPrivateData(QString jid, QString node)
@@ -860,7 +860,7 @@ bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
     userOfflineMessageFileIndex.resize(0);
     quint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
-    return (true ? (ok >= 0 && ok1 >= 0) : false);
+    return (false ? (ok == -1 && ok1 == -1) : true);
 }
 
 int LocalStorage::getOfflineMessagesNumber(QString jid)
@@ -1039,7 +1039,7 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
     quint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
     userOfflineMessageFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::deleteAllOfflineMessage(QString jid)
@@ -1122,7 +1122,7 @@ bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
     userOfflinePresenceSubscriptionFile.resize(0);
     quint64 ok = userOfflinePresenceSubscriptionFile.write(document.toBinaryData());
     userOfflinePresenceSubscriptionFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QList<QVariant> LocalStorage::getOfflinePresenceSubscription(QString jid)
@@ -1189,7 +1189,7 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     subscribeFile.resize(0);
     quint64 ok = subscribeFile.write(document.toBinaryData());
     subscribeFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QList<QString> LocalStorage::getUserBlockList(QString jid)
@@ -1246,7 +1246,7 @@ bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
     blocklistFile.resize(0);
     quint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
@@ -1273,7 +1273,7 @@ bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
     blocklistFile.resize(0);
     quint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::emptyUserBlockList(QString jid)
@@ -1331,7 +1331,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //QMultiHash<QString, QString> LocalStorage::getChatRoomNameList(QString roomService)
@@ -1637,7 +1637,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //QStringList LocalStorage::getRoomTypes(QString roomName)
@@ -2085,7 +2085,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::changeRole(QString roomName, QString mucJid, QString newRole)
@@ -2120,7 +2120,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::registerUser(QString roomName, Occupant occupant)
@@ -2145,7 +2145,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::unlockRoom(QString roomName)
@@ -2165,7 +2165,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
@@ -2202,7 +2202,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //QStringList LocalStorage::getRoomOwnersList(QString roomName)
@@ -2294,7 +2294,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::removeOccupant(QString roomName, QString mucJid)
@@ -2324,7 +2324,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::removeOccupants(QString roomName, QString bareJid)
@@ -2356,7 +2356,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::changeRoomSubject(QString roomName, QString subject)
@@ -2376,7 +2376,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::canChangeRoomSubject(QString roomName)
@@ -2521,7 +2521,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::isPersistentRoom(QString roomName)
@@ -2570,7 +2570,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //bool LocalStorage::changeOccupantShow(QString roomName, QString mucJid, QString show)
@@ -2604,7 +2604,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomFile.resize(0);
 //    quint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
-//    return (true ? (ok >= 0) : false);
+//    return (false ? (ok == -1) : true);
 //}
 
 //QString LocalStorage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)

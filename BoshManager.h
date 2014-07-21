@@ -7,7 +7,7 @@ class BoshManager : public QObject
 {
     Q_OBJECT
 public:
-    BoshManager(int boshPort = 5280, int xmppServerPort = 5222);
+    BoshManager(QObject *parent = 0, int boshPort = 5280, int xmppServerPort = 5222);
 
     void start();
     void stop();

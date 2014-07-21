@@ -14,7 +14,7 @@ class PresenceManager : public QObject
 {
     Q_OBJECT
 public:
-    PresenceManager(UserManager *usermanager = 0, RosterManager *rosterManager = 0,
+    PresenceManager(QObject *parent = 0, UserManager *usermanager = 0, RosterManager *rosterManager = 0,
                     LastActivityManager *lastActivityManager = 0, PrivacyListManager *privateListManager = 0,
                     MucManager *mucManager = 0, BlockingCommandManager *blockingCmdManager = 0);
 

@@ -33,27 +33,27 @@ Storage* StorageManager::getStorage()
     return m_storage;
 }
 
-QString StorageManager::getStorageType()
-{
+//QString StorageManager::getStorageType()
+//{
 
-}
+//}
 
-void StorageManager::setStorageType(QString type)
-{
-    if (type == "Local")
-    {
+//void StorageManager::setStorageType(QString type)
+//{
+//    if (type == "Local")
+//    {
 
-    }
-    else if (type == "MySql")
-    {
-        // We authenticate user using mysql
-    }
-    else if (type == "PgSql")
-    {
-        // We authenticate user using postgresql
-    }
-    else if (type == "MongoDB")
-    {
-        // We authenticate user using no sql mongodb database
-    }
-}
+//    }
+//    else if (type == "MySql")
+//    {
+//        // We authenticate user using mysql
+//    }
+//    else if (type == "PgSql")
+//    {
+//        // We authenticate user using postgresql
+//    }
+//    else if (type == "MongoDB")
+//    {
+//        // We authenticate user using no sql mongodb database
+//    }
+//}

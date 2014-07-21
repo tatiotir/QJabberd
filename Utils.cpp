@@ -906,6 +906,8 @@ int Utils::affiliationIntValue(QString affiliation)
         return 3;
     if (affiliation == "owner")
         return 4;
+
+    return -1;
 }
 
 QDomDocument Utils::generateMucInvitationMessage(QString from, QString to, QString id, QString inviterJid,
@@ -928,6 +930,13 @@ QDomDocument Utils::generateMucInvitationMessage(QString from, QString to, QStri
         QDomElement passwordElement = document.createElement("password");
         passwordElement.appendChild(document.createTextNode(roomPassword));
         xElement.appendChild(passwordElement);
+    }
+
+    if (!reason.isEmpty())
+    {
+        QDomElement reasonElement = document.createElement("reason");
+        reasonElement.appendChild(document.createTextNode(reason));
+        inviteElement.appendChild(reasonElement);
     }
 
     xElement.appendChild(inviteElement);

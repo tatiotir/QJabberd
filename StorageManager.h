@@ -13,8 +13,8 @@ class StorageManager
 public:
     StorageManager(QString storageType, QJsonObject databaseSettings);
 
-    QString getStorageType();
-    void setStorageType(QString type);
+//    QString getStorageType();
+//    void setStorageType(QString type);
     Storage* getStorage();
 
 private:

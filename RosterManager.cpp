@@ -68,12 +68,3 @@ QSet<QString> RosterManager::getContactGroups(QString jid, QString contactJid)
 {
     return m_storageManager->getStorage()->getContactGroups(jid, contactJid);
 }
-
-/*
- * Change the storageManager storage type
- */
-
-void RosterManager::setStorageType(QString type)
-{
-    m_storageManager->setStorageType(type);
-}

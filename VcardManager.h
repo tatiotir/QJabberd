@@ -9,7 +9,7 @@ class VCardManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit VCardManager(StorageManager *storageManager = 0);
+    explicit VCardManager(QObject *parent = 0, StorageManager *storageManager = 0);
 
     QByteArray vCardManagerReply(QDomDocument document, QString iqFrom);
     QByteArray generateVCardResult(QString from, QString to, QString id, QString vCard);

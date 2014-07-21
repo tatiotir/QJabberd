@@ -1,8 +1,8 @@
 #include "BoshManager.h"
 
-BoshManager::BoshManager(int boshPort, int xmppServerPort)
+BoshManager::BoshManager(QObject *parent, int boshPort, int xmppServerPort) : QObject(parent)
 {
-    m_boshSessionManager = new BoshSessionManager(boshPort, xmppServerPort);
+    m_boshSessionManager = new BoshSessionManager(this, boshPort, xmppServerPort);
 
     connect(m_boshSessionManager, SIGNAL(sigBoshSessionInitiation(QString,QString)), this,
             SIGNAL(sigBoshSessionInitiation(QString,QString)));

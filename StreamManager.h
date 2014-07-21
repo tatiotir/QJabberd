@@ -4,7 +4,7 @@
 #include "Stream.h"
 #include "User.h"
 
-class StreamManager : public QThread
+class StreamManager : public QObject
 {
     Q_OBJECT
 public:
@@ -30,6 +30,7 @@ public slots:
     void sendReceiptRequest(QString to, QByteArray data);
     void slotSendReceiptRequest(QString to, QByteArray data);
     void saveStream(QString fullJid, Stream *stream);
+    void closeStream(QString fullJid);
     void streamHost(QString streamId, QString host);
     void rosterPush(QString to, QDomDocument document);
     void presenceBroadCast(QString to, QDomDocument document);

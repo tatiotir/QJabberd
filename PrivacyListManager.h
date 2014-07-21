@@ -10,7 +10,8 @@ class PrivacyListManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit PrivacyListManager(StorageManager *storageManager = 0, RosterManager *rosterManager = 0);
+    explicit PrivacyListManager(QObject *parent = 0, StorageManager *storageManager = 0,
+                                RosterManager *rosterManager = 0);
 
 signals:
     void sigSetDefaultListName(QString jid, QString to, QString defaultListName, QString id);

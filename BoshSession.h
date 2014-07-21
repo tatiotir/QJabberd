@@ -6,13 +6,12 @@
 #include <QDomDocument>
 #include <QJsonObject>
 #include <QTimer>
-#include <QThread>
 #include <QHostInfo>
 #include <QQueue>
 #include "Utils.h"
 #include "Connection.h"
 
-class BoshSession : public QThread
+class BoshSession : public QObject
 {
     Q_OBJECT
 public:
@@ -27,6 +26,8 @@ public:
                 QString from = QString(),
                 int hold = -1, int rid = -1, QString host = QString(), QString route = QString(),
                 int wait = -1, int ack = -1,  QString xmlLang = QString(), QString sid = QString());
+
+    ~BoshSession();
 
     QString content() const;
     void setContent(const QString &content);
@@ -73,9 +74,6 @@ public:
     Connection *boshSecondConnection() const;
     void setBoshSecondConnection(Connection *boshSecondConnection);
 
-    int activeConnection() const;
-    void setActiveConnection(int activeConnection);
-
 signals:
     void sigCloseBoshSession(QString sid);
 
@@ -84,8 +82,7 @@ public slots:
     void boshSessionRequestReply();
     void boshSessionInitiationReply(QDomDocument document);
     void boshSessionRestartReply(QDomDocument document);
-    void sessionRequest(QDomDocument request);
-    void sendRequest();
+    void sessionRequest(QDomDocument request, Connection *connection);
     void sendKeepAlive();
     void requestReply(QByteArray reply);
     void emptyRequestReply(QByteArray reply);
@@ -93,8 +90,7 @@ public slots:
     void xmppServerDataReceived();
     void close();
 
-protected:
-    void run();
+    void deleteBoshSession();
 
 private:
     Connection *m_boshFirstConnection;
@@ -112,11 +108,9 @@ private:
     QString m_sid;
     QString m_fullJid;
     QTimer *m_keepAliveTimer;
-    QTimer *m_emptyRequestTimer;
     QByteArray m_xmlPaquet;
     bool m_saslNegotiated;
     int m_nbRequest;
-    int m_activeConnection;
     QList<QByteArray> m_xmppServerResponseList;
     QQueue<QDomDocument> m_xmppServerRequestQueue;
 };

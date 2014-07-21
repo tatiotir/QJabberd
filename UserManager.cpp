@@ -37,15 +37,6 @@ bool UserManager::deleteUser(QString jid)
     return m_storageManager->getStorage()->deleteUser(jid);
 }
 
-/*
- * Change the storageManager storage type
- */
-
-void UserManager::setStorageType(QString type)
-{
-    m_storageManager->setStorageType(type);
-}
-
 bool UserManager::userExists(QString jid)
 {
     return m_storageManager->getStorage()->userExists(jid);

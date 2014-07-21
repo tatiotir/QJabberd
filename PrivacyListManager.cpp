@@ -1,6 +1,8 @@
 #include "PrivacyListManager.h"
 
-PrivacyListManager::PrivacyListManager(StorageManager *storageManager, RosterManager *rosterManager)
+PrivacyListManager::PrivacyListManager(QObject *parent, StorageManager *storageManager,
+                                       RosterManager *rosterManager) :
+    QObject(parent)
 {
     m_storageManager =  storageManager;
     m_rosterMananager = rosterManager;

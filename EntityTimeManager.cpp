@@ -1,6 +1,6 @@
 #include "EntityTimeManager.h"
 
-EntityTimeManager::EntityTimeManager()
+EntityTimeManager::EntityTimeManager(QObject *parent) : QObject(parent)
 {
 
 }

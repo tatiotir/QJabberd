@@ -15,7 +15,7 @@ Server::Server()
     }
 
     m_conManager = new ConnectionManager(this, 5222, m_configuration);
-    m_boshManager = new BoshManager(5280, 5222);
+    m_boshManager = new BoshManager(this, 5280, 5222);
 
 //    connect(m_boshManager, SIGNAL(sigBoshSessionInitiation(QString,QString)), m_conManager,
 //            SLOT(boshSessionInitiation(QString,QString)));

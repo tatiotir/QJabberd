@@ -150,7 +150,7 @@ QDomDocument DataFormManager::getRoomConfigForm(QString type, QString from, QStr
     QDomDocument document;
 
     QDomElement iqNode = document.createElement("iq");
-    iqNode.setAttribute("type", "result");
+    iqNode.setAttribute("type", type);
     iqNode.setAttribute("from", from);
     iqNode.setAttribute("to", to);
     iqNode.setAttribute("id", id);

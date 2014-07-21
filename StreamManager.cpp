@@ -1,8 +1,8 @@
 #include "StreamManager.h"
 
-StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, UserManager *userManager, RosterManager *rosterManager,
-                             LastActivityManager *lastActivityManager) :
-    QThread(parent)
+StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, UserManager *userManager,
+                             RosterManager *rosterManager, LastActivityManager *lastActivityManager) :
+    QObject(parent)
 {
     m_userMap = new QMultiHash<QString, User* >();
     m_notNegotiatedStream = new QMultiHash<QString, Stream* >();
@@ -20,13 +20,14 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
                                   BlockingCommandManager *blockingCmdManager)
 {
     QString streamId = Utils::generateId();
-    Stream *stream = new Stream(this, streamId, connection, iqManager, presenceManager, messageManager,
+    Stream *stream = new Stream(streamId, connection, iqManager, presenceManager, messageManager,
                                 rosterManager, streamNegotiationManager, blockingCmdManager);
 
     m_notNegotiatedStream->insert(streamId, stream);
 
-    connect(stream, SIGNAL(sigBindFeatureNegotiated(QString,Stream*)), this,
-            SLOT(saveStream(QString,Stream*)));
+    connect(stream, SIGNAL(sigCloseStream(QString)), this, SLOT(closeStream(QString)));
+
+    connect(stream, SIGNAL(sigBindFeatureNegotiated(QString,Stream*)), this, SLOT(saveStream(QString,Stream*)));
 
     connect(stream, SIGNAL(sigOfflineUser(QString)), this, SLOT(offlineUser(QString)));
 
@@ -40,6 +41,7 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
             SLOT(enableStreamManagement(QString,QString)));
 
     connect(stream, SIGNAL(sigInboundStanzaReceived(QString)), this, SLOT(inboundStanzaReceived(QString)));
+
     connect(stream, SIGNAL(sigQueryInboundStanzaReceived(QString)), this,
             SLOT(queryInboundStanzaReceived(QString)));
 
@@ -49,7 +51,12 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
     connect(stream, SIGNAL(sigResumeStream(Connection*,QString,int)), this,
             SLOT(resumeStream(Connection*,QString,int)));
 
-    stream->start();
+    //stream->start();
+}
+
+void StreamManager::closeStream(QString fullJid)
+{
+    m_userMap->remove(fullJid);
 }
 
 void StreamManager::requestRedirection(QString to, QDomDocument document)
@@ -293,7 +300,6 @@ void StreamManager::offlineUser(QString fullJid)
 
     m_lastActivityManager->setLastStatus(Utils::getBareJid(fullJid),
                                  document.documentElement().elementsByTagName("status").item(0).toElement().text());
-    m_userMap->remove(fullJid);
 }
 
 void StreamManager::saveStream(QString fullJid, Stream *stream)
@@ -1202,10 +1208,4 @@ void StreamManager::resumeStream(Connection *connection, QString prevId, int h)
         // resend unhandle stanza
         // Create the user class with all its previous stream information.
     }
-}
-
-void StreamManager::run()
-{
-    // Entering in event loop
-    exec();
 }

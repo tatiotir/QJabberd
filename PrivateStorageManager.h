@@ -12,7 +12,7 @@ class PrivateStorageManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit PrivateStorageManager(StorageManager *storageManager = 0);
+    explicit PrivateStorageManager(QObject *parent = 0, StorageManager *storageManager = 0);
 
     QByteArray privateStorageManagerReply(QDomDocument document, QString from);
     QByteArray privateStorageManagerResult(QByteArray data, QString id);

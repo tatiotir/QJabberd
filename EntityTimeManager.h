@@ -10,7 +10,7 @@ class EntityTimeManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit EntityTimeManager();
+    explicit EntityTimeManager(QObject *parent = 0);
 
     QByteArray entityTimeManagerReply(QDomDocument document, QString iqFrom);
     QByteArray entityTimeMananerResult(QString from, QString to, QString id, QString tzo, QString utc);

@@ -7,9 +7,10 @@
  * \param lastActivityManager
  * \param privateListManager
  */
-PresenceManager::PresenceManager(UserManager *usermanager, RosterManager *rosterManager,
+PresenceManager::PresenceManager(QObject *parent, UserManager *usermanager, RosterManager *rosterManager,
                                  LastActivityManager *lastActivityManager,
-                                 PrivacyListManager *privateListManager, MucManager *mucManager, BlockingCommandManager *blockingCmdManager)
+                                 PrivacyListManager *privateListManager, MucManager *mucManager,
+                                 BlockingCommandManager *blockingCmdManager) : QObject(parent)
 {
     m_userManager = usermanager;
     m_rosterManager = rosterManager;
@@ -482,7 +483,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                         {
                             QString jid = "";
                             if ((roomTypes.contains("nonanonymous")) ||
-                                    (roomTypes.contains("semianonymous")) && (role == "moderator"))
+                                    ((roomTypes.contains("semianonymous")) && (role == "moderator")))
                                 jid = from;
                             emit sigMucPresenceBroadCast(occupant.jid(), Utils::generatePresence("", presenceTo, occupant.jid(),
                                                                                       Utils::generateId(),

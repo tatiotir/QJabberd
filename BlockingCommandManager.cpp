@@ -1,6 +1,7 @@
 #include "BlockingCommandManager.h"
 
-BlockingCommandManager::BlockingCommandManager(StorageManager *storageManager, RosterManager *rosterManager)
+BlockingCommandManager::BlockingCommandManager(QObject *parent, StorageManager *storageManager,
+                                               RosterManager *rosterManager) : QObject(parent)
 {
     m_storageManager = storageManager;
     m_rosterManager = rosterManager;
@@ -84,6 +85,7 @@ QByteArray BlockingCommandManager::blockingCommandManagerReply(QDomDocument docu
             }
         }
     }
+    return QByteArray();
 }
 
 QByteArray BlockingCommandManager::generateIQResult(QString to, QString id)

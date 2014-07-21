@@ -15,7 +15,7 @@ class ServiceDiscoveryManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit ServiceDiscoveryManager(QJsonObject *serverConfiguration = 0,
+    explicit ServiceDiscoveryManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0,
                                      UserManager *userManager = 0, MucManager *mucManager = 0);
 
     QByteArray serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom);
@@ -31,12 +31,11 @@ public slots:
 private:
     QByteArray serviceDiscoveryManagerInfoQueryResult(QString from, QString to, QString id,
                                                       QDomDocument document);
-    QByteArray serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id,
-                                                       QDomDocument document);
+    QByteArray serviceDiscoveryManagerItemsQueryResult(QString from, QString to, QString id);
     QByteArray serviceDiscoveryManagerInfoQueryResult(QString iqFrom, QString node, QDomDocument document);
     QByteArray serviceDiscoveryManagerItemsQueryResult(QString node, QString iqFrom, QDomDocument document);
     int getOfflineMessagesNumber(QString jid);
-    QJsonObject chatServiceExist(QString serviceJid);
+    QJsonObject serviceExist(QString serviceJid);
     QMultiHash<QString, QString> getOfflineMessageHeaders(QString jid);
 
     UserManager *m_userManager;

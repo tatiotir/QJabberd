@@ -8,11 +8,10 @@
 
 #include "Stream.h"
 
-Stream::Stream(QObject *parent, QString streamId, Connection *connection,
+Stream::Stream(QString streamId, Connection *connection,
                IqManager *iqManager, PresenceManager *presenceManager,
                MessageManager *messageManager, RosterManager *rosterManager,
-               StreamNegotiationManager *streamNegotiationManager, BlockingCommandManager *blockingCmdManager) :
-    QThread(parent)
+               StreamNegotiationManager *streamNegotiationManager, BlockingCommandManager *blockingCmdManager)
 {
     m_streamId = streamId;
     m_connection = connection;
@@ -36,10 +35,9 @@ Stream::Stream(QObject *parent, QString streamId, Connection *connection,
 //    m_connection = new Connection(0);
 //}
 
-void Stream::run()
+Stream::~Stream()
 {
-    // Entering in event loop
-    exec();
+    delete m_connection;
 }
 
 void Stream::closeStream()
@@ -52,12 +50,7 @@ void Stream::closeStream()
     streamReply(QByteArray("</stream:stream>"));
 
     qDebug() << "Info : Client " << Utils::getBareJid(m_fullJid) << " disconnected.";
-    m_connection->disconnectFromHost();
-    m_connection->deleteLater();
-
-    // Close the thread
-    terminate();
-    deleteLater();
+    emit sigCloseStream(m_fullJid);
 }
 
 void Stream::streamEncrypted()

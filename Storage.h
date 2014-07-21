@@ -145,6 +145,19 @@ public:
     bool saveMucMessage(QString roomName, QByteArray message, QString stamp);
     int getRoomMaxhistoryFetch(QString roomName);
     QStringList getBannedList(QString roomName);
+
+    // Pubsub interface
+    bool subscribeToNode(QString node, QString jid);
+    QString nodeAccessModel(QString node);
+    QString nodeOwner(QString node);
+    QStringList authorizedRosterGroups(QString node);
+    QStringList nodeWhiteList(QString node);
+    QStringList nodeCustomerDatabase(QString node);
+    QString nodeUserSubscription(QString node, QString jid);
+    QString nodeUserAffiliation(QString node, QString jid);
+    bool allowSubscription(QString node);
+    bool nodeExist(QString node);
+    bool configurationRequired(QString node);
 };
 
 #endif // STORAGE_H

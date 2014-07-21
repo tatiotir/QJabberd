@@ -6,8 +6,8 @@
  * \param rosterManager
  * \param storageManager
  */
-LastActivityManager::LastActivityManager(UserManager *userManager, RosterManager *rosterManager,
-                                         StorageManager *storageManager)
+LastActivityManager::LastActivityManager(QObject *parent, UserManager *userManager, RosterManager *rosterManager,
+                                         StorageManager *storageManager) : QObject(parent)
 {
     m_userManager = userManager;
     m_rosterManager = rosterManager;

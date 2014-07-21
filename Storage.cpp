@@ -25,7 +25,7 @@ bool Storage::saveStreamData(QString smId, QByteArray data)
     userStreamDataFile.resize(0);
     bool ok = userStreamDataFile.write(document.toBinaryData());
     userStreamDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::saveStreamPresencePriority(QString smId, int presencePriority)
@@ -45,7 +45,7 @@ bool Storage::saveStreamPresencePriority(QString smId, int presencePriority)
     userStreamDataFile.resize(0);
     bool ok = userStreamDataFile.write(document.toBinaryData());
     userStreamDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::saveStreamPresenceStanza(QString smId, QByteArray presenceData)
@@ -65,7 +65,7 @@ bool Storage::saveStreamPresenceStanza(QString smId, QByteArray presenceData)
     userStreamDataFile.resize(0);
     bool ok = userStreamDataFile.write(document.toBinaryData());
     userStreamDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::deleteStreamData(QString smId, int h)
@@ -88,7 +88,7 @@ bool Storage::deleteStreamData(QString smId, int h)
     userStreamDataFile.resize(0);
     bool ok = userStreamDataFile.write(document.toBinaryData());
     userStreamDataFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QList<QByteArray> Storage::getClientUnhandleStanza(QString smId)
@@ -157,7 +157,7 @@ bool Storage::createRoom(QString roomName, QString ownerJid)
 
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QMultiHash<QString, QString> Storage::getChatRoomNameList(QString roomService)
@@ -466,7 +466,7 @@ bool Storage::addUserToRoom(QString roomName, Occupant occupant)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QStringList Storage::getRoomTypes(QString roomName)
@@ -914,7 +914,7 @@ bool Storage::changeRoomNickname(QString roomName, QString jid, QString nickname
 
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::changeRole(QString roomName, QString mucJid, QString newRole)
@@ -949,7 +949,7 @@ bool Storage::changeRole(QString roomName, QString mucJid, QString newRole)
 
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::registerUser(QString roomName, Occupant occupant)
@@ -974,7 +974,7 @@ bool Storage::registerUser(QString roomName, Occupant occupant)
 
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::unlockRoom(QString roomName)
@@ -994,7 +994,7 @@ bool Storage::unlockRoom(QString roomName)
 
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFormValue)
@@ -1031,7 +1031,7 @@ bool Storage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFor
 
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QStringList Storage::getRoomOwnersList(QString roomName)
@@ -1123,7 +1123,7 @@ bool Storage::removeOccupantJid(QString roomName, QString jid)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::removeOccupant(QString roomName, QString mucJid)
@@ -1153,7 +1153,7 @@ bool Storage::removeOccupant(QString roomName, QString mucJid)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::removeOccupants(QString roomName, QString bareJid)
@@ -1185,7 +1185,7 @@ bool Storage::removeOccupants(QString roomName, QString bareJid)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::changeRoomSubject(QString roomName, QString subject)
@@ -1205,7 +1205,7 @@ bool Storage::changeRoomSubject(QString roomName, QString subject)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::canChangeRoomSubject(QString roomName)
@@ -1350,7 +1350,7 @@ bool Storage::changeAffiliation(QString roomName, QString jid, QString newAffili
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::isPersistentRoom(QString roomName)
@@ -1399,7 +1399,7 @@ bool Storage::changeOccupantStatus(QString roomName, QString mucJid, QString sta
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 bool Storage::changeOccupantShow(QString roomName, QString mucJid, QString show)
@@ -1433,7 +1433,7 @@ bool Storage::changeOccupantShow(QString roomName, QString mucJid, QString show)
     roomFile.resize(0);
     quint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
-    return (true ? (ok >= 0) : false);
+    return (false ? (ok == -1) : true);
 }
 
 QString Storage::getOccupantStatusFromMucJid(QString roomName, QString mucJid)
@@ -1587,4 +1587,59 @@ QStringList Storage::getBannedList(QString roomName)
     roomFile.close();
 
     return bannedList;
+}
+
+bool Storage::subscribeToNode(QString node, QString jid)
+{
+    return true;
+}
+
+QString Storage::nodeAccessModel(QString node)
+{
+    return QString();
+}
+
+QString Storage::nodeOwner(QString node)
+{
+    return QString();
+}
+
+QStringList Storage::authorizedRosterGroups(QString node)
+{
+    return QStringList();
+}
+
+QStringList Storage::nodeWhiteList(QString node)
+{
+    return QStringList();
+}
+
+QStringList Storage::nodeCustomerDatabase(QString node)
+{
+    return QStringList();
+}
+
+QString Storage::nodeUserSubscription(QString node, QString jid)
+{
+    return QString();
+}
+
+QString Storage::nodeUserAffiliation(QString node, QString jid)
+{
+    return QString();
+}
+
+bool Storage::allowSubscription(QString node)
+{
+    return true;
+}
+
+bool Storage::nodeExist(QString node)
+{
+    return true;
+}
+
+bool Storage::configurationRequired(QString node)
+{
+    return true;
 }

@@ -5,8 +5,9 @@
  * \param userManager
  * \param privacyListManager
  */
-MessageManager::MessageManager(QJsonObject *serverConfiguration, UserManager *userManager, PrivacyListManager *privacyListManager,
-                               MucManager *mucManager, BlockingCommandManager *blockingCmdManager)
+MessageManager::MessageManager(QObject *parent, QJsonObject *serverConfiguration, UserManager *userManager, PrivacyListManager *privacyListManager,
+                               MucManager *mucManager, BlockingCommandManager *blockingCmdManager) :
+    QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;

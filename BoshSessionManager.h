@@ -10,7 +10,7 @@ class BoshSessionManager : public QTcpServer
 {
     Q_OBJECT
 public:
-    BoshSessionManager(int boshPort, int xmppServerPort);
+    BoshSessionManager(QObject *parent = 0, int boshPort = 5280, int xmppServerPort = 5222);
 
 protected:
     void incomingConnection(qintptr socketDescriptor);
@@ -30,7 +30,6 @@ private:
     int m_boshPort;
     int m_xmppServerPort;
     QMap<QString, BoshSession* > *m_sessionMap;
-
 };
 
 #endif // BOSHSESSIONMANAGER_H

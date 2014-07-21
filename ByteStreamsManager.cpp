@@ -1,6 +1,6 @@
 #include "ByteStreamsManager.h"
 
-ByteStreamsManager::ByteStreamsManager(QJsonObject *serverConfiguration)
+ByteStreamsManager::ByteStreamsManager(QObject *parent, QJsonObject *serverConfiguration) : QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
 }
