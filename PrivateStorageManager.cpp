@@ -23,14 +23,14 @@ QByteArray PrivateStorageManager::privateStorageManagerReply(QDomDocument docume
         {
             QByteArray dataResult = privateStorageManagerResult(getPrivateData(Utils::getBareJid(from)), id);
             // Request Acknowledgment of receipt
-            sigSendReceiptRequest(from, dataResult);
+            // sigSendReceiptRequest(from, dataResult);
             return dataResult;
         }
         else
         {
             QByteArray dataResult = privateStorageManagerResult(getPrivateData(Utils::getBareJid(from), node), id);;
             // Request Acknowledgment of receipt
-            sigSendReceiptRequest(from, dataResult);
+            // sigSendReceiptRequest(from, dataResult);
             return dataResult;
         }
     }
@@ -83,7 +83,7 @@ QByteArray PrivateStorageManager::privateStorageManagerReply(QDomDocument docume
         document.appendChild(iq);
 
         // Request Acknowledgment of receipt
-        sigSendReceiptRequest(from, document.toByteArray());
+        // sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
     return QByteArray();

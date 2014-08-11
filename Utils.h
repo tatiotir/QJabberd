@@ -42,6 +42,7 @@ public:
     static int affiliationIntValue(QString affiliation);
     static QString hmac(QByteArray key, QByteArray baseString);
     static QString XOR(QByteArray a, QByteArray b);
+    static QByteArray generateIQResult(QString from, QString to, QString id);
 };
 
 #endif // UTILS_H

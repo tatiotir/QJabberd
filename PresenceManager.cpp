@@ -249,7 +249,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
         else if (!defaultListName.isEmpty())
         {
             privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "deny");
-            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
+            privacyListAllowItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
         }
 
         QString priority = presence.elementsByTagName("priority").item(0).toElement().text();
@@ -304,7 +304,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
         else if (!defaultListName.isEmpty())
         {
             privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "deny");
-            privacyListDenyItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
+            privacyListAllowItems = m_privacyListManager->getPrivacyListItems(from, defaultListName, "presence-out", "allow");
         }
 
         emit sigCurrentPresence(presenceFrom, document.toByteArray());

@@ -106,7 +106,7 @@ QByteArray LastActivityManager::lastActivityQueryResult(QString from, QString to
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(from, document.toByteArray());
+    // sigSendReceiptRequest(from, document.toByteArray());
     return document.toByteArray();
 }
 

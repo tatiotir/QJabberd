@@ -30,6 +30,9 @@ signals:
     void sigApplicationRequest(QString to, QDomDocument document);
 
 private:
+    QDomDocument generatePubsubSubscriptionApprovalNotification(QString from, QString to, QString id, QString node,
+                                                              QString jid, QString subscription);
+
     UserManager *m_userManager;
     MucManager *m_mucManager;
     PrivacyListManager *m_privacyListManager;

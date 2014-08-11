@@ -58,7 +58,7 @@ bool MySqlStorage::changePassword(QString jid, QString newPassword)
 bool MySqlStorage::createUser(QString jid, QString password)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO user(jid, password) VALUES(:jid, :password)");
+    query.prepare("INSERT INTO users(jid, password) VALUES(:jid, :password)");
     query.bindValue(":jid", jid);
     query.bindValue(":password", password);
     return query.exec();
@@ -279,6 +279,22 @@ QSet<QString> MySqlStorage::getContactGroups(QString jid, QString contactJid)
     if (query.first())
         return QJsonDocument::fromJson(query.value(0).toByteArray()).object().value("groups").toVariant().toStringList().toSet();
     return QSet<QString>();
+}
+
+QSet<QString> MySqlStorage::getGroups(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT groups FROM contact WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QSet<QString> groups;
+    while (query.next())
+    {
+        foreach (QString group, QJsonDocument::fromJson(query.value(0).toByteArray()).object().value("groups").toVariant().toStringList().toSet())
+            groups << group;
+    }
+    return groups;
 }
 
 QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacyListName)

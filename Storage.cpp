@@ -155,7 +155,7 @@ bool Storage::createRoom(QString roomName, QString ownerJid)
     roomObject.insert("roomConfig", QJsonObject::fromVariantMap(initialConfiguration));
     document.setObject(roomObject);
 
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -464,7 +464,7 @@ bool Storage::addUserToRoom(QString roomName, Occupant occupant)
     document.setObject(roomObject);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -913,7 +913,7 @@ bool Storage::changeRoomNickname(QString roomName, QString jid, QString nickname
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     return (false ? (ok == -1) : true);
 }
 
@@ -948,7 +948,7 @@ bool Storage::changeRole(QString roomName, QString mucJid, QString newRole)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     return (false ? (ok == -1) : true);
 }
 
@@ -973,7 +973,7 @@ bool Storage::registerUser(QString roomName, Occupant occupant)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     return (false ? (ok == -1) : true);
 }
 
@@ -993,7 +993,7 @@ bool Storage::unlockRoom(QString roomName)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     return (false ? (ok == -1) : true);
 }
 
@@ -1030,7 +1030,7 @@ bool Storage::submitConfigForm(QString roomName, QMap<QString, QVariant> dataFor
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     return (false ? (ok == -1) : true);
 }
 
@@ -1121,7 +1121,7 @@ bool Storage::removeOccupantJid(QString roomName, QString jid)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1151,7 +1151,7 @@ bool Storage::removeOccupant(QString roomName, QString mucJid)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1183,7 +1183,7 @@ bool Storage::removeOccupants(QString roomName, QString bareJid)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1203,7 +1203,7 @@ bool Storage::changeRoomSubject(QString roomName, QString subject)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1348,7 +1348,7 @@ bool Storage::changeAffiliation(QString roomName, QString jid, QString newAffili
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1397,7 +1397,7 @@ bool Storage::changeOccupantStatus(QString roomName, QString mucJid, QString sta
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1431,7 +1431,7 @@ bool Storage::changeOccupantShow(QString roomName, QString mucJid, QString show)
     document.setObject(object);
 
     roomFile.resize(0);
-    quint64 ok = roomFile.write(document.toBinaryData());
+    qint64 ok = roomFile.write(document.toBinaryData());
     roomFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1589,57 +1589,462 @@ QStringList Storage::getBannedList(QString roomName)
     return bannedList;
 }
 
-bool Storage::subscribeToNode(QString node, QString jid)
+bool Storage::subscribeToNode(QString pubsubService, QString node, NodeSubscriber subscriber)
 {
-    return true;
+    QDir dir(pubsubService + "/" + node + "/");
+    dir.mkdir("subscribers");
+
+    QString filename = pubsubService + "/" + node + "/subscribers/" + subscriber.jid().replace("@", "_") + ".qjs";
+    QFile subscriberFile(filename);
+
+    if (!subscriberFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document;
+    document.setObject(subscriber.toJsonObject());
+
+    qint64 ok = subscriberFile.write(document.toJson());
+    subscriberFile.close();
+    return (false ? (ok == -1) : true);
 }
 
-QString Storage::nodeAccessModel(QString node)
+bool Storage::unsubscribeToNode(QString pubsubService, QString node, QString jid)
 {
-    return QString();
+    QString filename = pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs";
+    return QFile::remove(filename);
 }
 
-QString Storage::nodeOwner(QString node)
+QString Storage::nodeAccessModel(QString pubsubService, QString node)
 {
-    return QString();
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QString accessModel = document.object().value("nodeConfig").toObject().value("pubsub#access_model").toString();
+
+    nodeFile.close();
+    return accessModel;
 }
 
-QStringList Storage::authorizedRosterGroups(QString node)
+QString Storage::nodeOwner(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QString nodeOwner = document.object().value("owner").toString();
+
+    nodeFile.close();
+    return nodeOwner;
+}
+
+QStringList Storage::authorizedRosterGroups(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QStringList rosterGroups = document.object().value("authorizedRosterGroups").toVariant().toStringList();
+
+    nodeFile.close();
+    return rosterGroups;
+}
+
+QStringList Storage::nodeWhiteList(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return QStringList();
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QStringList whiteList = document.object().value("whiteList").toVariant().toStringList();
+
+    nodeFile.close();
+    return whiteList;
+}
+
+QStringList Storage::nodeCustomerDatabase(QString pubsubService, QString node)
 {
     return QStringList();
 }
 
-QStringList Storage::nodeWhiteList(QString node)
+QString Storage::nodeUserSubscription(QString pubsubService, QString node, QString jid)
 {
-    return QStringList();
+    QString filename = pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs";
+    QFile subscriberFile(filename);
+
+    if (!subscriberFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+    QString subscription = document.object().value("subscription").toString();
+
+    subscriberFile.close();
+    return subscription;
 }
 
-QStringList Storage::nodeCustomerDatabase(QString node)
+QString Storage::nodeUserAffiliation(QString pubsubService, QString node, QString jid)
 {
-    return QStringList();
+    QString filename = pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs";
+    QFile subscriberFile(filename);
+
+    if (!subscriberFile.open(QIODevice::ReadOnly))
+        return QString();
+
+    QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+    QString affiliation = document.object().value("affiliation").toString();
+
+    subscriberFile.close();
+    return affiliation;
 }
 
-QString Storage::nodeUserSubscription(QString node, QString jid)
-{
-    return QString();
-}
-
-QString Storage::nodeUserAffiliation(QString node, QString jid)
-{
-    return QString();
-}
-
-bool Storage::allowSubscription(QString node)
+bool Storage::allowSubscription(QString pubsubService, QString node)
 {
     return true;
 }
 
-bool Storage::nodeExist(QString node)
+bool Storage::nodeExist(QString pubsubService, QString node)
 {
-    return true;
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    return QFile::exists(filename);
 }
 
-bool Storage::configurationRequired(QString node)
+bool Storage::configurationRequired(QString pubsubService, QString node)
 {
-    return true;
+    return false;
+}
+
+PubsubItem Storage::nodeLastPublishedItem(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node + "/items/");
+    QStringList dirEntryList = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot, QDir::Time);
+
+    if (dirEntryList.isEmpty())
+        return PubsubItem();
+
+    QString lastNodeItemFilename = dirEntryList.last();
+
+    QFile lastNodeItemFile(lastNodeItemFilename);
+    if (!lastNodeItemFile.open(QIODevice::ReadOnly))
+        return PubsubItem();
+
+    QJsonDocument document = QJsonDocument::fromJson(lastNodeItemFile.readAll());
+    PubsubItem item = PubsubItem::fromJsonObject(document.object());
+
+    lastNodeItemFile.close();
+    return item;
+}
+
+bool Storage::hasSubscription(QString pubsubService, QString node, QString jid)
+{
+    QString filename = pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs";
+    QFile subscriberFile(filename);
+
+    if (!subscriberFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+    QString subscription = document.object().value("subscription").toString();
+
+    subscriberFile.close();
+    if ((subscription == "subscribed") || (subscription == "unconfigured"))
+        return true;
+
+    return false;
+}
+
+QMultiMap<QString, QVariant> Storage::nodeSubscriptionOptionForm(QString pubsubService, QString node, QString jid)
+{
+    QString filename = pubsubService + "/" + node + "/subscriptionOption/" + jid.replace("@", "_") + ".qjo";
+    QFile optionFile(filename);
+
+    if (!optionFile.open(QIODevice::ReadOnly))
+        return QMultiMap<QString, QVariant>();
+
+    QJsonDocument document = QJsonDocument::fromJson(optionFile.readAll());
+    QMultiMap<QString, QVariant> dataFormValue = document.toVariant().toMap();
+
+    optionFile.close();
+    return dataFormValue;
+}
+
+bool Storage::processSubscriptionOptionForm(QString pubsubService, QString node, QString jid,
+                                            QMultiMap<QString, QVariant> dataFormValues)
+{
+    QString filename = pubsubService + "/" + node + "/subscriptionOption/" + jid.replace("@", "_") + ".qjo";
+    QFile optionFile(filename);
+
+    if (!optionFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(optionFile.readAll());
+    document.setObject(QJsonObject::fromVariantMap(dataFormValues));
+
+    qint64 ok = optionFile.write(document.toJson());
+    optionFile.close();
+    return (false ? (ok == -1) : true);
+}
+
+QList<PubsubItem> Storage::getNodeItems(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node + "/items/");
+    QStringList nodeItemsFilesnames = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+
+    QList<PubsubItem> items;
+    for (int i = 0; i < nodeItemsFilesnames.count(); ++i)
+    {
+        QFile itemFile(pubsubService + "/" + node + "/items/" + nodeItemsFilesnames.value(i));
+        QJsonDocument document = QJsonDocument::fromJson(itemFile.readAll());
+        items << PubsubItem::fromJsonObject(document.object());
+
+        itemFile.close();
+    }
+    return items;
+}
+
+QList<PubsubItem> Storage::getNodeItems(QString pubsubService, QString node, int max_items)
+{
+    QDir dir(pubsubService + "/" + node + "/items/");
+    QStringList nodeItemsFilesnames = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot, QDir::Time);
+
+    QList<PubsubItem> items;
+    for (int i = 0; i < max_items; ++i)
+    {
+        QFile itemFile(pubsubService + "/" + node + "/items/" + nodeItemsFilesnames.value(i));
+        QJsonDocument document = QJsonDocument::fromJson(itemFile.readAll());
+        items << PubsubItem::fromJsonObject(document.object());
+
+        itemFile.close();
+    }
+    return items;
+}
+
+PubsubItem Storage::getNodeItem(QString pubsubService, QString node, QString itemId)
+{
+    QString filename = pubsubService + "/" + node + "/items" + "/" + itemId + ".qji";
+    QFile itemFile(filename);
+
+    if (!itemFile.open(QIODevice::ReadOnly))
+        return PubsubItem();
+
+    QJsonDocument document = QJsonDocument::fromJson(itemFile.readAll());
+    PubsubItem item = PubsubItem::fromJsonObject(document.object());
+
+    itemFile.close();
+    return item;
+}
+
+bool Storage::publishItem(QString pubsubService, QString node, PubsubItem item)
+{
+    QDir dir(pubsubService + "/" + node + "/");
+    dir.mkdir("items");
+
+    QString filename = pubsubService + "/" + node + "/items/" + item.id() + ".qji";
+    QFile itemFile(filename);
+
+    if (!itemFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document;
+    document.setObject(item.toJsonObject());
+
+    qint64 ok = itemFile.write(document.toJson());
+    itemFile.close();
+    return (false ? (ok == -1) : true);
+}
+
+bool Storage::notificationWithPayload(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    bool notifyPayload = document.object().value("nodeConfig").toObject().value("pubsub#deliver_payloads").toBool();
+
+    nodeFile.close();
+    return notifyPayload;
+}
+
+QStringList Storage::getSubscriberList(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node + "/subscribers/");
+    QStringList subscribersFilesnames = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+
+    QStringList subscriberList;
+    foreach (QString  subscriberFilename, subscribersFilesnames)
+    {
+        QFile subscriberFile(pubsubService + "/" + node + "/subscribers/" + subscriberFilename);
+        QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+        QString subscription = document.object().value("subscription").toString();
+
+        if ((subscription == "subscribed") || (subscription == "unconfigured"))
+            subscriberList << document.object().value("jid").toString();
+
+        subscriberFile.close();
+    }
+    return subscriberList;
+}
+
+bool Storage::deleteItemToNode(QString pubsubService, QString node, QString itemId)
+{
+    QString filename = pubsubService + "/" + node + "/items/" + itemId + ".qji";
+    return QFile::remove(filename);
+}
+
+bool Storage::createNode(QString pubsubService, QString node, QString owner,
+                         QMultiMap<QString, QVariant> dataFormValue)
+{
+    QDir dir;
+    dir.mkdir(pubsubService);
+
+    dir.setPath(pubsubService);
+    dir.mkdir(node);
+
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document;
+    QJsonObject nodeObject;
+
+    nodeObject.insert("nodeName", node);
+
+    QMap<QString, QVariant> initialConfiguration;
+
+    if (!dataFormValue.isEmpty())
+    {
+        initialConfiguration = dataFormValue;
+    }
+    else
+    {
+        initialConfiguration.insert("pubsub#title", node);
+        initialConfiguration.insert("pubsub#deliver_notifications", "1");
+        initialConfiguration.insert("pubsub#deliver_payloads", "1");
+        initialConfiguration.insert("pubsub#persist_items", "1");
+        initialConfiguration.insert("pubsub#max_items", 10);
+        initialConfiguration.insert("pubsub#item_expire", 604800);
+        initialConfiguration.insert("pubsub#access_model", "open");
+        initialConfiguration.insert("pubsub#roster_groups_allowed", QVariant(QList<QString>()));
+        initialConfiguration.insert("pubsub#publish_model", "publishers");
+        initialConfiguration.insert("pubsub#purge_offline", 0);
+        initialConfiguration.insert("pubsub#send_last_published_item", "never");
+        initialConfiguration.insert("pubsub#presence_based_delivery", "false");
+        initialConfiguration.insert("pubsub#notification_type", "headline");
+        initialConfiguration.insert("pubsub#notify_config", "0");
+        initialConfiguration.insert("pubsub#notify_delete", "0");
+        initialConfiguration.insert("pubsub#notify_retract", "0");
+        initialConfiguration.insert("pubsub#notify_sub", "0");
+        initialConfiguration.insert("pubsub#node_type", "leaf");
+        initialConfiguration.insert("pubsub#max_payload_size", 1028);
+        initialConfiguration.insert("pubsub#type", "");
+    }
+
+    nodeObject.insert("nodeConfig", QJsonObject::fromVariantMap(initialConfiguration));
+    nodeObject.insert("owner", owner);
+    document.setObject(nodeObject);
+
+    qint64 ok = nodeFile.write(document.toJson());
+    nodeFile.close();
+    return (false ? (ok == -1) : true);
+}
+
+QMultiMap<QString, QVariant> Storage::getNodeConfiguration(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return QMultiMap<QString, QVariant>();
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QMultiMap<QString, QVariant> nodeConfig = document.object().value("nodeConfig").toVariant().toMap();
+    nodeFile.close();
+    return nodeConfig;
+}
+
+bool Storage::processNodeConfigurationForm(QString pubsubService, QString node, QMultiMap<QString, QVariant> dataFormValues)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::WriteOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    QJsonObject nodeObject = document.object();
+
+    nodeObject.insert("nodeConfig", QJsonObject::fromVariantMap(dataFormValues));
+    document.setObject(nodeObject);
+
+    nodeFile.resize(0);
+    qint64 ok = nodeFile.write(document.toJson());
+    nodeFile.close();
+    return (false ? (ok == -1) : true);
+}
+
+bool Storage::deleteNode(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node);
+    return dir.removeRecursively();
+}
+
+bool Storage::purgeNodeItems(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node + "/items/");
+    QStringList nodeItemsFilesnames = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot, QDir::Time);
+    nodeItemsFilesnames.removeLast();
+
+    bool ok = true;
+    foreach (QString nodeItemFilename, nodeItemsFilesnames)
+    {
+        if (!QFile::remove(pubsubService + "/" + node + "/items/" + nodeItemFilename))
+            ok = false;
+    }
+    return ok;
+}
+
+bool Storage::notifyWhenItemRemove(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    bool notify = document.object().value("nodeConfig").toObject().value("pubsub#notify_retract").toBool();
+
+    nodeFile.close();
+    return notify;
+}
+
+bool Storage::nodePersistItems(QString pubsubService, QString node)
+{
+    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    QFile nodeFile(filename);
+
+    if (!nodeFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
+    bool persistItem = document.object().value("nodeConfig").toObject().value("pubsub#persist_items").toBool();
+
+    nodeFile.close();
+    return persistItem;
 }

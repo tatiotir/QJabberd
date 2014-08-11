@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/bd">
+        <file alias="base_de_donnee">qjabberd.sql</file>
+    </qresource>
+</RCC>

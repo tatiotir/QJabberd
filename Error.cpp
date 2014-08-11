@@ -31,7 +31,7 @@ QByteArray Error::generateError(QString by, QString stanzaType, QString errorTyp
     }
     if (!request.isNull())
     {
-        element.appendChild(request);
+        element.appendChild(document.importNode(request, true));
     }
 
     element.setAttribute("type", "error");

@@ -241,23 +241,26 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             query.appendChild(feature17);
         }
 
-        if (m_serverConfiguration->value("modules").toObject().value("pubsub").toBool())
-        {
-            QDomElement feature18 = document.createElement("feature");
-            feature18.setAttribute("var", "http://jabber.org/protocol/pubsub");
+//        if (m_serverConfiguration->value("modules").toObject().value("pubsub").toBool())
+//        {
+//            QDomElement feature18 = document.createElement("feature");
+//            feature18.setAttribute("var", "http://jabber.org/protocol/pubsub");
+//            query.appendChild(feature18);
 
-            query.appendChild(feature18);
-        }
+//            QDomElement feature19 = document.createElement("feature");
+//            feature19.setAttribute("var", "http://jabber.org/protocol/pubsub#last-published");
+//            query.appendChild(feature19);
 
-        QDomElement feature19 = document.createElement("feature");
-        feature19.setAttribute("var", "http://jabber.org/protocol/pubsub¢#last-published");
-        query.appendChild(feature19);
+//            QDomElement feature20 = document.createElement("feature");
+//            feature20.setAttribute("var", "http://jabber.org/protocol/pubsub#subscription-options");
+//            query.appendChild(feature20);
+//        }
 
         iq.appendChild(query);
         document.appendChild(iq);
 
         // Request Acknowledgment of receipt
-        sigSendReceiptRequest(from, document.toByteArray());
+        // sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
     // Entity Queries Chat Service for MUC Support via Disco
@@ -384,7 +387,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
             document.appendChild(iq);
 
             // Request Acknowledgment of receipt
-            sigSendReceiptRequest(from, document.toByteArray());
+            // sigSendReceiptRequest(from, document.toByteArray());
             return document.toByteArray();
         }
         // disco#info to an account of virtual host entity
@@ -412,7 +415,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerInfoQueryResult(QStri
                 document.appendChild(iq);
 
                 // Request Acknowledgment of receipt
-                sigSendReceiptRequest(from, document.toByteArray());
+                // sigSendReceiptRequest(from, document.toByteArray());
                 return document.toByteArray();
             }
             else
@@ -456,7 +459,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
         document.appendChild(iq);
 
         // Request Acknowledgment of receipt
-        sigSendReceiptRequest(from, document.toByteArray());
+        // sigSendReceiptRequest(from, document.toByteArray());
         return document.toByteArray();
     }
     else
@@ -491,13 +494,13 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
                 // TODO : Result set management in the iq result.
 
                 // Request Acknowledgment of receipt
-                sigSendReceiptRequest(from, document.toByteArray());
+                // sigSendReceiptRequest(from, document.toByteArray());
                 return document.toByteArray();
             }
-            else if (serviceObject.value("category").toString() == "pubsub")
-            {
+//            else if (serviceObject.value("category").toString() == "pubsub")
+//            {
 
-            }
+//            }
         }
         // Entity Queries for Items Associated with a Specific Chat Room
         else if (m_mucManager->chatRoomExist(to))
@@ -527,7 +530,7 @@ QByteArray ServiceDiscoveryManager::serviceDiscoveryManagerItemsQueryResult(QStr
             document.appendChild(iq);
 
             // Request Acknowledgment of receipt
-            sigSendReceiptRequest(from, document.toByteArray());
+            // sigSendReceiptRequest(from, document.toByteArray());
             return document.toByteArray();
         }
         else if (m_serverConfiguration->value("virtualHost").toVariant().toStringList().contains(Utils::getHost(to)))

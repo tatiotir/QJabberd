@@ -304,9 +304,17 @@ void StreamManager::offlineUser(QString fullJid)
 
 void StreamManager::saveStream(QString fullJid, Stream *stream)
 {
+    if (m_userMap->value(fullJid) == NULL)
+    {
+        qDebug() << "Info : New Client connected." << " Authenticated as " << Utils::getBareJid(fullJid) << endl;
+        sendOfflineMessage(fullJid);
+    }
+    else
+    {
+        qDebug() << "Info : Session resume : " << Utils::getBareJid(fullJid);
+    }
     m_userMap->insert(fullJid, new User(stream, "", 0, 0, QByteArray()));
     sendUndeliveredPresence(fullJid);
-    sendOfflineMessage(fullJid);
 }
 
 void StreamManager::sendOfflineMessage(QString to)
@@ -898,10 +906,7 @@ void StreamManager::presenceProbeReply(QString to, QString from,
 
 void StreamManager::presenceProbeToContact(QString to, QString from, bool directedPresenceProbe)
 {
-    if (m_userMap->value(from, new User())->getCurrentPresence().isEmpty())
-    {
-        presenceProbeReply(Utils::getBareJid(from), to, directedPresenceProbe);
-    }
+    presenceProbeReply(Utils::getBareJid(from), to, directedPresenceProbe);
 }
 
 void StreamManager::directedPresence(QString from, QString to, QByteArray data)

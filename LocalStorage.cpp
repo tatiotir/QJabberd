@@ -40,7 +40,7 @@ bool LocalStorage::changePassword(QString jid, QString newPassword)
 
     // We erase the contain of the file
     userFile.resize(0);
-    bool ok = userFile.write(document.toBinaryData());
+    qint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -68,7 +68,7 @@ bool LocalStorage::createUser(QString jid, QString password)
     userObject.insert("password", QJsonValue(password));
     document.setObject(userObject);
 
-    bool ok = userFile.write(document.toBinaryData());
+    qint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -133,7 +133,7 @@ bool LocalStorage::addContactToRoster(QString jid, Contact contact)
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    bool ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -162,9 +162,9 @@ bool LocalStorage::updateGroupToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
-    return (false ? (ok = -1) : true);
+    return (false ? (ok == -1) : true);
 }
 
 bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
@@ -196,7 +196,7 @@ bool LocalStorage::updateSubscriptionToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -225,7 +225,7 @@ bool LocalStorage::updateAskAttributeToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -247,7 +247,7 @@ bool LocalStorage::updateNameToContact(QString jid, QString contactJid,
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -268,7 +268,7 @@ bool LocalStorage::updateApprovedToContact(QString jid, QString contactJid, bool
     document.setObject(contactObject);
 
     contactFile.resize(0);
-    quint64 ok = contactFile.write(document.toBinaryData());
+    qint64 ok = contactFile.write(document.toBinaryData());
     contactFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -344,6 +344,30 @@ QSet<QString> LocalStorage::getContactGroups(QString jid, QString contactJid)
     return contactObject.value("groups").toVariant().toStringList().toSet();
 }
 
+QSet<QString> LocalStorage::getGroups(QString jid)
+{
+
+    QString contactDirPath = "roster/" + jid.replace("@", "_") + "/";
+    QDir contactDir(contactDirPath);
+
+    QSet<QString> groups;
+    QStringList contactFileList = contactDir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+    for (int i = 0, c = contactFileList.count(); i < c; ++i)
+    {
+        QString filename = contactDir.path() + "/" + contactFileList.value(i);
+        QFile contactFile(filename);
+
+        if (!contactFile.open(QIODevice::ReadOnly))
+            return QSet<QString>();
+
+        QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
+        foreach (QString group, document.object().value("groups").toVariant().toStringList().toSet())
+            groups << group;
+
+        contactFile.close();
+    }
+}
+
 QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacyListName)
 {
     QString filename = "privacyList/" + jid.replace("@", "_") + ".qjp";
@@ -406,7 +430,7 @@ bool LocalStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toBinaryData());
+    qint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -446,7 +470,7 @@ bool LocalStorage::deletePrivacyList(QString jid, QString privacyListName)
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toBinaryData());
+    qint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -516,7 +540,7 @@ bool LocalStorage::setDefaultPrivacyList(QString jid, QString defaultList)
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toBinaryData());
+    qint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -536,7 +560,7 @@ bool LocalStorage::setActivePrivacyList(QString jid, QString activeList)
     document.setObject(userObject);
 
     privacyListFile.resize(0);
-    quint64 ok = privacyListFile.write(document.toBinaryData());
+    qint64 ok = privacyListFile.write(document.toBinaryData());
     privacyListFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -617,7 +641,7 @@ bool LocalStorage::updateVCard(QString jid, QString vCardInfos)
     vCardObject.insert("vCard", vCardInfos);
     document.setObject(vCardObject);
 
-    quint64 ok = vCardFile.write(document.toBinaryData());
+    qint64 ok = vCardFile.write(document.toBinaryData());
     vCardFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -660,7 +684,7 @@ bool LocalStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 //                document.toBinaryData();
 
     userFile.resize(0);
-    quint64 ok = userFile.write(document.toBinaryData());
+    qint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -696,7 +720,7 @@ bool LocalStorage::setLastStatus(QString jid, QString status)
     document.setObject(userObject);
 
     userFile.resize(0);
-    quint64 ok = userFile.write(document.toBinaryData());
+    qint64 ok = userFile.write(document.toBinaryData());
     userFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -728,7 +752,7 @@ bool LocalStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    quint64 ok = userPrivateDataFile.write(document.toBinaryData());
+    qint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -762,7 +786,7 @@ bool LocalStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     document.setObject(jsonObject);
 
     userPrivateDataFile.resize(0);
-    quint64 ok = userPrivateDataFile.write(document.toBinaryData());
+    qint64 ok = userPrivateDataFile.write(document.toBinaryData());
     userPrivateDataFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -842,7 +866,7 @@ bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
     document.setObject(object);
 
     userOfflineMessageFile.resize(0);
-    quint64 ok = userOfflineMessageFile.write(document.toBinaryData());
+    qint64 ok = userOfflineMessageFile.write(document.toBinaryData());
     userOfflineMessageFile.close();
 
     // Build indexes
@@ -858,7 +882,7 @@ bool LocalStorage::saveOfflineMessage(QString from, QString to, QString type,
     indexDocument.setObject(indexObject);
 
     userOfflineMessageFileIndex.resize(0);
-    quint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toBinaryData());
+    qint64 ok1 = userOfflineMessageFileIndex.write(indexDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
     return (false ? (ok == -1 && ok1 == -1) : true);
 }
@@ -1036,7 +1060,7 @@ bool LocalStorage::deleteOfflineMessage(QString jid, QString key)
 
     offlineMessageDocument.setObject(offlineMessageObject);
     userOfflineMessageFile.resize(0);
-    quint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toBinaryData());
+    qint64 ok = userOfflineMessageFile.write(offlineMessageDocument.toBinaryData());
     userOfflineMessageFileIndex.close();
     userOfflineMessageFile.close();
     return (false ? (ok == -1) : true);
@@ -1055,8 +1079,8 @@ bool LocalStorage::deleteAllOfflineMessage(QString jid)
     if (!userOfflineMessageFileIndex.open(QIODevice::ReadOnly))
         return false;
 
-    bool ok = userOfflineMessageFile.resize(0);
-    bool ok1 = userOfflineMessageFileIndex.resize(0);
+    qint64 ok = userOfflineMessageFile.resize(0);
+    qint64 ok1 = userOfflineMessageFileIndex.resize(0);
     userOfflineMessageFile.close();
     userOfflineMessageFileIndex.close();
     return (ok && ok1);
@@ -1120,7 +1144,7 @@ bool LocalStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
     document.setObject(object);
 
     userOfflinePresenceSubscriptionFile.resize(0);
-    quint64 ok = userOfflinePresenceSubscriptionFile.write(document.toBinaryData());
+    qint64 ok = userOfflinePresenceSubscriptionFile.write(document.toBinaryData());
     userOfflinePresenceSubscriptionFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1187,7 +1211,7 @@ bool LocalStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
     document.setObject(object);
 
     subscribeFile.resize(0);
-    quint64 ok = subscribeFile.write(document.toBinaryData());
+    qint64 ok = subscribeFile.write(document.toBinaryData());
     subscribeFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1244,7 +1268,7 @@ bool LocalStorage::addUserBlockListItems(QString jid, QList<QString> items)
     document.setObject(object);
 
     blocklistFile.resize(0);
-    quint64 ok = blocklistFile.write(document.toBinaryData());
+    qint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1271,7 +1295,7 @@ bool LocalStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
     document.setObject(object);
 
     blocklistFile.resize(0);
-    quint64 ok = blocklistFile.write(document.toBinaryData());
+    qint64 ok = blocklistFile.write(document.toBinaryData());
     blocklistFile.close();
     return (false ? (ok == -1) : true);
 }
@@ -1329,7 +1353,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    roomObject.insert("roomConfig", QJsonObject::fromVariantMap(initialConfiguration));
 //    document.setObject(roomObject);
 
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -1635,7 +1659,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(roomObject);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2084,7 +2108,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    return (false ? (ok == -1) : true);
 //}
 
@@ -2119,7 +2143,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    return (false ? (ok == -1) : true);
 //}
 
@@ -2144,7 +2168,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    return (false ? (ok == -1) : true);
 //}
 
@@ -2164,7 +2188,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    return (false ? (ok == -1) : true);
 //}
 
@@ -2201,7 +2225,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    return (false ? (ok == -1) : true);
 //}
 
@@ -2292,7 +2316,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2322,7 +2346,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2354,7 +2378,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2374,7 +2398,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2519,7 +2543,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2568,7 +2592,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2602,7 +2626,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    document.setObject(object);
 
 //    roomFile.resize(0);
-//    quint64 ok = roomFile.write(document.toBinaryData());
+//    qint64 ok = roomFile.write(document.toBinaryData());
 //    roomFile.close();
 //    return (false ? (ok == -1) : true);
 //}
@@ -2707,7 +2731,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    historyDocument.setObject(object);
 
 //    historyFile.resize(0);
-//    bool ok = historyFile.write(historyDocument.toBinaryData());
+//    qint64 ok = historyFile.write(historyDocument.toBinaryData());
 //    historyFile.close();
 
 //    // Build index
@@ -2722,7 +2746,7 @@ bool LocalStorage::emptyUserBlockList(QString jid)
 //    historyIndexDocument.setObject(indexObject);
 
 //    historyIndexFile.resize(0);
-//    bool ok1 = historyIndexFile.write(historyIndexDocument.toBinaryData());
+//    qint64 ok1 = historyIndexFile.write(historyIndexDocument.toBinaryData());
 //    historyIndexFile.close();
 
 //    return (ok && ok1);

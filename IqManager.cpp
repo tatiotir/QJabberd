@@ -24,7 +24,8 @@ IqManager::IqManager(QObject *parent, QJsonObject *serverConfiguration,
                      OfflineMessageManager *offlineMessageManager,
                      StreamNegotiationManager *streamNegotiationManager,
                      BlockingCommandManager *blockingCmdManager,
-                     MucManager *mucManager, ByteStreamsManager *byteStreamManager) : QObject(parent)
+                     MucManager *mucManager, ByteStreamsManager *byteStreamManager, PubsubManager *pubsubManager) :
+    QObject(parent)
 {
     m_serverConfiguration = serverConfiguration;
     m_userManager = userManager;
@@ -40,6 +41,7 @@ IqManager::IqManager(QObject *parent, QJsonObject *serverConfiguration,
     m_blockingCmdManager = blockingCmdManager;
     m_mucManager = mucManager;
     m_byteStreamManager = byteStreamManager;
+    m_pubsubManager = pubsubManager;
 }
 
 /*!
@@ -202,7 +204,6 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
             if ((xmlns == "jabber:iq:roster") && m_serverConfiguration->value("modules").toObject().value("roster").toBool())
             {
-                qDebug() << "Roster add : " << document.toByteArray();
                 // We check if there are errors.
                 QDomNodeList groupNodes = firstChild.firstChild().toElement().elementsByTagName("group");
                 for (int i = 0; i < groupNodes.count(); ++i)
@@ -289,7 +290,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                                                                    "", "", ""));
 
                         }
-                        return generateIQResult("", iqFrom, id);
+                        return Utils::generateIQResult("", iqFrom, id);
                     }
                 }
                 else
@@ -317,7 +318,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                                                          userContact.getApproved(),
                                                                          userContact.getGroups()));
 
-                            return generateIQResult("", iqFrom, id);
+                            return Utils::generateIQResult("", iqFrom, id);
                         }
                         else
                         {
@@ -357,7 +358,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                                                                 "participant", iqFrom, "", QList<int>(), "", ""));
 
                         }
-                        return generateIQResult(iqTo, iqFrom, id);
+                        return Utils::generateIQResult(iqTo, iqFrom, id);
                     }
                     return QByteArray();
                 }
@@ -392,7 +393,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
 
                         if (m_userManager->changePassword(jid, password))
                         {
-                            return generateIQResult("", "", id);
+                            return Utils::generateIQResult("", "", id);
                         }
                         else
                         {
@@ -411,7 +412,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
 
                 if (m_userManager->deleteUser(Utils::getBareJid(iqFrom)))
                 {
-                    return generateIQResult("", iqFrom, id);
+                    return Utils::generateIQResult("", iqFrom, id);
                 }
                 else
                 {
@@ -459,7 +460,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                             emit sigMucPresenceBroadCast(occupant.jid(), presenceDocument);
                         }
                     }
-                    return generateIQResult(iqTo, iqFrom, id);
+                    return Utils::generateIQResult(iqTo, iqFrom, id);
                 }
 
                 QDomElement xElement = firstChild.firstChildElement();
@@ -495,7 +496,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                             emit sigGroupchatMessage(occupant.jid(), Utils::generateMucNotificationMessage("groupchat", iqTo, occupant.jid(),
                                                                                                            Utils::generateId(), QList<int>()));
                         }
-                        return generateIQResult(iqTo, iqFrom, id);
+                        return Utils::generateIQResult(iqTo, iqFrom, id);
                     }
                 }
             }
@@ -579,7 +580,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                             emit sigMucPresenceBroadCast(occupant.jid(), document);
                         }
 
-                        return generateIQResult(iqTo, iqFrom, id);
+                        return Utils::generateIQResult(iqTo, iqFrom, id);
                     }
                     else if (!affiliation.isEmpty())
                     {
@@ -781,7 +782,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                                 }
                             }
                         }
-                        return generateIQResult(iqTo, iqFrom, id);
+                        return Utils::generateIQResult(iqTo, iqFrom, id);
                     }
                 }
             }
@@ -839,6 +840,15 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
         }
         else if (firstChildTagName == "feature")
+        {
+            emit sigApplicationRequest(iqTo, document);
+            return QByteArray();
+        }
+//        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
+//        {
+//            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
+//        }
+        else if (firstChildTagName == "jingle")
         {
             emit sigApplicationRequest(iqTo, document);
             return QByteArray();
@@ -1053,6 +1063,10 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
             return QByteArray();
         }
+//        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
+//        {
+//            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
+//        }
         else
         {
             return Error::generateError("", "iq", "cancel", "service-unavailable",
@@ -1122,7 +1136,7 @@ QByteArray IqManager::registerUserReply(QString username, QString password, QStr
     {
         if (m_userManager->createUser(jid, password))
         {
-            return generateIQResult("", "", id);
+            return Utils::generateIQResult("", "", id);
         }
         else
         {
@@ -1237,7 +1251,7 @@ QByteArray IqManager::generateRosterGetResultReply(QString to, QString id,
         document.appendChild(iq);
 
         // Request Acknowledgment of receipt
-        sigSendReceiptRequest(to, document.toByteArray());
+        // sigSendReceiptRequest(to, document.toByteArray());
         return document.toByteArray();
     }
 }
@@ -1262,34 +1276,34 @@ QByteArray IqManager::generateIqSessionReply(QString id, QString from)
 }
 
 /*!
- * \brief The IqManager::generateIQResult method generate an iq result as result from an iq request
+ * \brief The IqManager::Utils::generateIQResult method generate an iq result as result from an iq request
  * \param to
  * \param id
  * \return QByteArray
  */
-QByteArray IqManager::generateIQResult(QString from, QString to, QString id)
-{
-    QDomDocument document;
-    QDomElement iq = document.createElement("iq");
+//QByteArray IqManager::Utils::generateIQResult(QString from, QString to, QString id)
+//{
+//    QDomDocument document;
+//    QDomElement iq = document.createElement("iq");
 
-    if (!from.isEmpty())
-    {
-        iq.setAttribute("from", from);
-    }
+//    if (!from.isEmpty())
+//    {
+//        iq.setAttribute("from", from);
+//    }
 
-    if (!to.isEmpty())
-    {
-        iq.setAttribute("to", to);
-    }
-    iq.setAttribute("id", id);
-    iq.setAttribute("type", "result");
+//    if (!to.isEmpty())
+//    {
+//        iq.setAttribute("to", to);
+//    }
+//    iq.setAttribute("id", id);
+//    iq.setAttribute("type", "result");
 
-    document.appendChild(iq);
+//    document.appendChild(iq);
 
-    // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
-    return document.toByteArray();
-}
+//    // Request Acknowledgment of receipt
+//    // sigSendReceiptequest(to, document.toByteArray());
+//    return document.toByteArray();
+//}
 
 /*!
  * \brief The IqManager::generateRegistrationFieldsReply method generate the registration fields to an user for account registration
@@ -1368,6 +1382,6 @@ QByteArray IqManager::generatePongReply(QString from, QString to, QString id)
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 }

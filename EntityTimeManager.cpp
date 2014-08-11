@@ -68,7 +68,7 @@ QByteArray EntityTimeManager::entityTimeMananerResult(QString from, QString to, 
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 
 }

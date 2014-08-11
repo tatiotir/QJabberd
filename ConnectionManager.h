@@ -55,6 +55,7 @@ private:
     BlockingCommandManager *m_blockingCmdManager;
     MucManager *m_mucManager;
     ByteStreamsManager *m_bytestreamsManager;
+    PubsubManager *m_pubsubManager;
 };
 
 #endif // CONNECTIONMANAGER_H

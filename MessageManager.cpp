@@ -304,7 +304,45 @@ QByteArray MessageManager::parseMessage(QDomDocument document, QString messageFr
                     }
                 }
             }
+            else if (dataFormValue.value("FORM_TYPE") == "http://jabber.org/protocol/pubsub#subscribe_authorization")
+            {
+                QString node = dataFormValue.value("pubsub#node").toString();
+                QString jid = dataFormValue.value("pubsub#subscriber_jid").toString();
+                if (dataFormValue.value("pubsub#allow").toBool())
+                {
+                    emit sigApplicationRequest(jid, generatePubsubSubscriptionApprovalNotification(to, jid, Utils::generateId(), node, jid, "subscribed"));
+                }
+                else
+                {
+                    emit sigApplicationRequest(jid, generatePubsubSubscriptionApprovalNotification(to, jid, Utils::generateId(), node, jid, "none"));
+                }
+            }
         }
     }
     return QByteArray();
+}
+
+QDomDocument MessageManager::generatePubsubSubscriptionApprovalNotification(QString from, QString to, QString id,
+                                                                          QString node, QString jid,
+                                                                            QString subscription)
+{
+    QDomDocument document;
+    QDomElement messageElement = document.createElement("message");
+    messageElement.setAttribute("from", from);
+    messageElement.setAttribute("to", to);
+    messageElement.setAttribute("id", id);
+
+    QDomElement eventElement = document.createElement("event");
+    eventElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#event");
+
+    QDomElement subscriptionElement = document.createElement("subscription");
+    subscriptionElement.setAttribute("node", node);
+    subscriptionElement.setAttribute("jid", jid);
+    subscriptionElement.setAttribute("subscription", subscription);
+
+    eventElement.appendChild(subscriptionElement);
+    messageElement.appendChild(eventElement);
+    document.appendChild(messageElement);
+
+    return document;
 }

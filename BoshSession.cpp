@@ -81,9 +81,6 @@ void BoshSession::setFullJid(const QString &fullJid)
 void BoshSession::xmppServerDataReceived()
 {
     m_xmlPaquet.append(m_xmppServerConnection->readAll());
-
-    //qDebug() << "XMPP Server Reply : " << m_xmlPaquet;
-
     if (m_xmlPaquet == "</stream:stream>")
     {
         close();
@@ -147,8 +144,11 @@ void BoshSession::xmppServerDataReceived()
 
 void BoshSession::requestReply(QByteArray reply)
 {
-    m_boshFirstConnection->write(reply);
-    m_boshFirstConnection->flush();
+    if (m_boshFirstConnection->isOpen() && (m_boshFirstConnection->openMode() != QIODevice::NotOpen))
+    {
+        m_boshFirstConnection->write(reply);
+        m_boshFirstConnection->flush();
+    }
 
     // After wait second we send keep alive HTTP POST
     m_keepAliveTimer->start();
@@ -156,8 +156,17 @@ void BoshSession::requestReply(QByteArray reply)
 
 void BoshSession::emptyRequestReply(QByteArray reply)
 {
-    m_boshSecondConnection->write(reply);
-    m_boshSecondConnection->flush();
+    if (m_boshSecondConnection->isOpen() && (m_boshSecondConnection->openMode() != QIODevice::NotOpen))
+    {
+        m_boshSecondConnection->write(reply);
+        m_boshSecondConnection->flush();
+    }
+    else
+    {
+        m_boshFirstConnection->write(reply);
+        m_boshFirstConnection->flush();
+    }
+
 }
 
 Connection *BoshSession::xmppServerConnection() const

@@ -68,3 +68,8 @@ QSet<QString> RosterManager::getContactGroups(QString jid, QString contactJid)
 {
     return m_storageManager->getStorage()->getContactGroups(jid, contactJid);
 }
+
+QSet<QString> RosterManager::getGroups(QString jid)
+{
+    return m_storageManager->getStorage()->getGroups(jid);
+}

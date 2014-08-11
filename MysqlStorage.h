@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
+#include <QProcess>
 
 class MySqlStorage : public Storage
 {
@@ -21,6 +22,7 @@ public:
     bool deleteUser(QString jid);
     QList<Contact> getContactsList(QString jid);
     QSet<QString> getContactGroups(QString jid, QString contactJid);
+    QSet<QString> getGroups(QString jid);
     Contact getContact(QString jid, QString contactJid);
     QString getContactSubscription(QString jid, QString contactJid);
     bool addContactToRoster(QString jid, Contact contact);

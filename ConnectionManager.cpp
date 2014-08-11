@@ -29,11 +29,12 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
     m_serviceDiscoveryManager = new ServiceDiscoveryManager(this, serverConfiguration, m_userManager, m_mucManager);
     m_privacyListManager = new PrivacyListManager(this, m_storageManager, m_rosterManager);
     m_lastActivityManager= new LastActivityManager(this, m_userManager, m_rosterManager, m_storageManager);
+    m_pubsubManager = new PubsubManager(m_rosterManager, m_storageManager);
     m_iqManager = new IqManager(this, serverConfiguration, m_userManager, m_privacyListManager, m_rosterManager,
                                 m_vCardManager, m_lastActivityManager, m_entityTimeManager,
                                 m_privateStorageManager, m_serviceDiscoveryManager, m_offlineMessageManager,
                                 m_streamNegotiationManager, m_blockingCmdManager, m_mucManager,
-                                m_bytestreamsManager);
+                                m_bytestreamsManager, m_pubsubManager);
     m_messageManager = new MessageManager(this, serverConfiguration, m_userManager, m_privacyListManager, m_mucManager,
                                           m_blockingCmdManager);
     m_presenceManager = new PresenceManager(this, m_userManager, m_rosterManager, m_lastActivityManager,

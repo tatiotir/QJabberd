@@ -282,6 +282,22 @@ QSet<QString> PgSqlStorage::getContactGroups(QString jid, QString contactJid)
     return QSet<QString>();
 }
 
+QSet<QString> PgSqlStorage::getGroups(QString jid)
+{
+    QSqlQuery query;
+    query.prepare("SELECT groups FROM contact WHERE user_id = :user_id");
+    query.bindValue(":user_id", getUserId(jid));
+    query.exec();
+
+    QSet<QString> groups;
+    while (query.next())
+    {
+        foreach (QString group, QJsonDocument::fromJson(query.value(0).toByteArray()).object().value("groups").toVariant().toStringList().toSet())
+            groups << group;
+    }
+    return groups;
+}
+
 QList<PrivacyListItem> PgSqlStorage::getPrivacyList(QString jid, QString privacyListName)
 {
     QSqlQuery query;

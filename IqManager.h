@@ -21,6 +21,7 @@
 #include "BlockingCommandManager.h"
 #include "MucManager.h"
 #include "ByteStreamsManager.h"
+#include "PubsubManager.h"
 
 class IqManager : public QObject
 {
@@ -36,7 +37,7 @@ public:
               OfflineMessageManager *offlineMessageManager = 0,
               StreamNegotiationManager *streamNegotiationManager = 0,
               BlockingCommandManager *blockingCmdManager = 0, MucManager *mucManager = 0,
-              ByteStreamsManager *byteStreamManager = 0);
+              ByteStreamsManager *byteStreamManager = 0, PubsubManager *pubsubManager = 0);
 
 public slots:
     QByteArray parseIQ(QDomDocument document, QString from, QString host, QString streamId);
@@ -61,7 +62,7 @@ private:
                                            QString affiliation);
     QByteArray generateRoomRoleList(QString from, QString to, QString id, QList<QString> list,
                                            QString role);
-    QByteArray generateIQResult(QString from, QString to, QString id);
+    //QByteArray generateIQResult(QString from, QString to, QString id);
     QByteArray generateRosterGetResultReply(QString to, QString id, QList<Contact> rosterList);
     QByteArray generateIqSessionReply(QString id, QString from);
     QByteArray generateRegistrationFieldsReply(QString id);
@@ -86,6 +87,7 @@ private:
     MucManager *m_mucManager;
     BlockingCommandManager *m_blockingCmdManager;
     ByteStreamsManager *m_byteStreamManager;
+    PubsubManager *m_pubsubManager;
     QJsonObject *m_serverConfiguration;
 
 };

@@ -982,3 +982,24 @@ QString Utils::XOR(QByteArray a, QByteArray b)
     }
     return xo;
 }
+
+QByteArray Utils::generateIQResult(QString from, QString to, QString id)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    if (!from.isEmpty())
+    {
+        iq.setAttribute("from", from);
+    }
+
+    if (!to.isEmpty())
+    {
+        iq.setAttribute("to", to);
+    }
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    document.appendChild(iq);
+    return document.toByteArray();
+}

@@ -38,7 +38,6 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
                 return Error::generateError("", "iq", "cancel", "item-not-found", from, "", id, iq.firstChildElement());
             }
         }
-
     }
     else if (iq.attribute("type") == "set")
     {
@@ -48,9 +47,6 @@ QByteArray VCardManager::vCardManagerReply(QDomDocument document, QString iqFrom
         }
         else
         {
-//            iqXML.remove(iqXML.indexOf("</iq>"), 5);
-//            int len = iqXML.indexOf(">") + 1;
-//            iqXML.remove(0, len);
             QString vCardInfos;
             QTextStream stream(&vCardInfos);
             QDomNode vCardNode = document.documentElement().firstChildElement();
@@ -83,7 +79,7 @@ QByteArray VCardManager::generateVCardResult(QString from, QString to, QString i
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 }
 
@@ -99,7 +95,7 @@ QByteArray VCardManager::generateIQResult(QString to, QString id)
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 }
 

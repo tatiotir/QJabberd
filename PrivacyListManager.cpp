@@ -141,7 +141,7 @@ QByteArray PrivacyListManager::generatePrivacyListResult(QString to, QString id,
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 }
 
@@ -187,7 +187,7 @@ QByteArray PrivacyListManager::privacyListNames(QString from, QString to, QStrin
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document.toByteArray();
 }
 
@@ -199,7 +199,7 @@ QByteArray PrivacyListManager::generateIQResult(QString to, QString id)
     if (!to.isEmpty())
     {
         // Request Acknowledgment of receipt
-        sigSendReceiptRequest(to, document.toByteArray());
+        // sigSendReceiptRequest(to, document.toByteArray());
         iq.setAttribute("to", to);
     }
     iq.setAttribute("id", id);
@@ -230,7 +230,7 @@ QDomDocument PrivacyListManager::generatePrivacyPush(QString to, QString privacy
     document.appendChild(iq);
 
     // Request Acknowledgment of receipt
-    sigSendReceiptRequest(to, document.toByteArray());
+    // sigSendReceiptRequest(to, document.toByteArray());
     return document;
 }
 

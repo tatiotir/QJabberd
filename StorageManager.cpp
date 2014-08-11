@@ -1,4 +1,4 @@
-    #include "StorageManager.h"
+#include "StorageManager.h"
 
 StorageManager::StorageManager(QString storageType, QJsonObject databaseSettings)
 {

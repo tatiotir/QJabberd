@@ -36,7 +36,10 @@ QMap<QString, QVariant> DataFormManager::parseDataForm(QDomElement xElement)
     {
         QString var = fieldNodeList.item(i).toElement().attribute("var");
         if ((var == "muc#roomconfig_getmemberlist") || (var == "muc#roomconfig_roomadmins") ||
-                (var == "muc#roomconfig_roomowners") || (var == "muc#roomconfig_presencebroadcast"))
+                (var == "muc#roomconfig_roomowners") || (var == "muc#roomconfig_presencebroadcast") ||
+                (var == "pubsub#children_association_whitelist") || (var == "pubsub#children") ||
+                (var == "pubsub#collection") || (var == "pubsub#contact") ||
+                (var == "pubsub#roster_groups_allowed"))
         {
 
             QDomNodeList valueNodeList = fieldNodeList.item(i).toElement().elementsByTagName("value");
@@ -139,6 +142,131 @@ QDomDocument DataFormManager::getPasswordChangeForm(QString from, QString to, QS
     query.appendChild(xElement);
     iqNode.appendChild(query);
     iqNode.appendChild(errorNode);
+    document.appendChild(iqNode);
+
+    return document;
+}
+
+QDomDocument DataFormManager::getNodeSubscriptionOptionForm(QString type, QString from, QString to, QString id, QString node,
+                                                            QString jid, QMap<QString, QVariant> dataFormValue)
+{
+    QDomDocument document;
+
+    QDomElement iqNode = document.createElement("iq");
+    iqNode.setAttribute("type", type);
+    iqNode.setAttribute("from", from);
+    iqNode.setAttribute("to", to);
+    iqNode.setAttribute("id", id);
+
+    QDomElement pubsubElement = document.createElement("pubsub");
+    pubsubElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub");
+
+    QDomElement optionElement = document.createElement("option");
+    optionElement.setAttribute("node", node);
+    optionElement.setAttribute("jid", jid);
+
+    // Generate data form
+    QString formType = "form";
+    QString formTitle = "Subscription configuration for " + node + " Node";
+    QString formInstruction = "Use this form to configure your subscription to the node.";
+
+    QList<DataFormField> formFields;
+    formFields << DataFormField("FORM_TYPE", "hidden", "",
+                                QVariant("http://jabber.org/protocol/pubsub#subscribe_options"),
+                                QList<QPair<QString, QString> >(), false)
+                  << DataFormField("pubsub#deliver", "boolean", "Enable delivery?", dataFormValue.value("pubsub#deliver"),
+                                   QList<QPair<QString, QString> >(), false)
+                     << DataFormField("pubsub#digest", "boolean", "Receive digest notifications (approx. one per day)?",
+                                      dataFormValue.value("pubsub#digest"), QList<QPair<QString, QString> >(), false)
+                        << DataFormField("pubsub#digest_frequency", "text-single", "The minimum number of milliseconds between sending any two notification digests",
+                                         dataFormValue.value("pubsub#digest_frequency"), QList<QPair<QString, QString> >(), false)
+                            << DataFormField("pubsub#include_body", "boolean", "Receive message body in addition to payload?",
+                                         dataFormValue.value("pubsub#include_body"), QList<QPair<QString, QString> >(), false)
+                                << DataFormField("pubsub#expire", "text-single", "The DateTime at which a leased subscription will end or has ended",
+                                                 dataFormValue.value("pubsub#expire"), QList<QPair<QString, QString> >(), false)
+                                   << DataFormField("pubsub#show-values", "list-multi", "The presence states for which an entity wants to receive notifications",
+                                                    dataFormValue.value("pubsub#show-values"), QList<QPair<QString, QString> >() << qMakePair(QString("XMPP Show Value of Away"), QString("away")) <<
+                                                    qMakePair(QString("XMPP Show Value of Chat"), QString("chat")) << qMakePair(QString("XMPP Show Value of DND (Do Not Disturb)"), QString("dnd")) <<
+                                                    qMakePair(QString("Mere Availability in XMPP (No Show Value)"), QString("online")) << qMakePair(QString("XMPP Show Value of XA (Extended Away)"), QString("xa")), false)
+                                        << DataFormField("pubsub#subscription_type", "list-single", "", dataFormValue.value("pubsub#subscription_type"), QList<QPair<QString, QString> >() << qMakePair(QString("Receive notification of new items only"), QString("items")) <<
+                                                       qMakePair(QString("Receive notification of new nodes only"), QString("nodes")), false)
+                                            << DataFormField("pubsub#subscription_depth", "list-single", "", dataFormValue.value("pubsub#subscription_depth"), QList<QPair<QString, QString> >() << qMakePair(QString("Receive notification from direct child nodes only"), QString("1")) <<
+                                                             qMakePair(QString("Receive notification from all descendent nodes"), QString("all")), false);
+
+    QDomElement xElement = generateDataForm(formType, formTitle, formInstruction, formFields);
+
+    pubsubElement.appendChild(optionElement);
+    optionElement.appendChild(xElement);
+    iqNode.appendChild(pubsubElement);
+    document.appendChild(iqNode);
+
+    return document;
+}
+
+QDomDocument DataFormManager::getNodeConfigurationForm(QString type, QString from, QString to, QString id,
+                                                       QString node, QMap<QString, QVariant> dataFormValue,
+                                                       QSet<QString> userRosterGroups)
+{
+    QDomDocument document;
+
+    QDomElement iqNode = document.createElement("iq");
+    iqNode.setAttribute("type", type);
+    iqNode.setAttribute("from", from);
+    iqNode.setAttribute("to", to);
+    iqNode.setAttribute("id", id);
+
+    QDomElement pubsubElement = document.createElement("pubsub");
+    pubsubElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#owner");
+
+    QDomElement configureElement = document.createElement("option");
+    configureElement.setAttribute("node", node);
+
+    QString formType = "form";
+    QString formTitle = "Configuration for " + node + " Node";
+    QString formInstruction = "Use this form to configure the node.";
+
+    QList<DataFormField> formFields;
+    formFields << DataFormField("FORM_TYPE", "hidden", "",
+                                QVariant("http://jabber.org/protocol/pubsub#node_config"),
+                                QList<QPair<QString, QString> >(), false)
+                  << DataFormField("pubsub#title", "text-single", "A friendly name for the node", dataFormValue.value("pubsub#title"), QList<QPair<QString, QString> >(), false)
+                     << DataFormField("pubsub#deliver_notifications", "boolean", "Whether to deliver event notifications", dataFormValue.value("pubsub#deliver_notifications"), QList<QPair<QString, QString> >(), false)
+                        << DataFormField("pubsub#deliver_payloads", "boolean", "Whether to deliver payloads with event notifications", dataFormValue.value("pubsub#deliver_payloads"), QList<QPair<QString, QString> >(), false)
+                           << DataFormField("pubsub#notify_config", "boolean", "Notify subscribers when the node configuration changes", dataFormValue.value("pubsub#notify_config"), QList<QPair<QString, QString> >(), false)
+                              << DataFormField("pubsub#notify_delete", "boolean", "Notify subscribers when the node is deleted", dataFormValue.value("pubsub#notify_delete"), QList<QPair<QString, QString> >(), false)
+                                 << DataFormField("pubsub#notify_retract", "boolean", "Notify subscribers when items are removed from the node", dataFormValue.value("pubsub#notify_retract"), QList<QPair<QString, QString> >(), false)
+                                    << DataFormField("pubsub#notify_sub", "boolean", "Notify owners about new subscribers and unsubscribes", dataFormValue.value("pubsub#notify_sub"), QList<QPair<QString, QString> >(), false)
+                                       << DataFormField("pubsub#persist_items", "boolean", "Persist items to storage", dataFormValue.value("pubsub#persist_items"), QList<QPair<QString, QString> >(), false)
+                                          << DataFormField("pubsub#max_items", "text-single", "Max number of items to persist", dataFormValue.value("pubsub#max_items"), QList<QPair<QString, QString> >(), false)
+                                             << DataFormField("pubsub#item_expire", "text-single", "Time after which to automatically purge items", dataFormValue.value("pubsub#item_expire"), QList<QPair<QString, QString> >(), false)
+                                                << DataFormField("pubsub#subscribe", "boolean", "Whether to allow subscriptions", dataFormValue.value("pubsub#subscribe"), QList<QPair<QString, QString> >(), false)
+                                                    << DataFormField("pubsub#access_model", "list-single", "Specify the subscriber model", dataFormValue.value("pubsub#access_model"), QList<QPair<QString, QString> >() << qMakePair(QString("Subscription requests must be approved and only subscribers may retrieve items"), QString("authorize")) <<
+                                                        qMakePair(QString("Anyone may subscribe and retrieve items"), QString("open")) << qMakePair(QString("Anyone with a presence subscription of both or from may subscribe and retrieve items"), QString("presence")) <<
+                                                        qMakePair(QString("Anyone in the specified roster group(s) may subscribe and retrieve items"), QString("roster")) << qMakePair(QString("Only those on a whitelist may subscribe and retrieve items"), QString("whitelist")), false);
+
+    QList<QPair<QString, QString> > options;
+    foreach (QString group, userRosterGroups)
+    {
+        options << qMakePair(QString(""), group);
+    }
+
+    formFields << DataFormField("pubsub#roster_groups_allowed", "list-multi", "Roster groups allowed to subscribe", dataFormValue.value("pubsub#roster_groups_allowed"), options, false)
+                  << DataFormField("pubsub#publish_model", "list-single", "Specify the publisher model", dataFormValue.value("pubsub#publish_model"), QList<QPair<QString, QString> >() << qMakePair(QString(""), QString("publishers"))
+                                   << qMakePair(QString(""), QString("subscribers")) << qMakePair(QString(""), QString("open")) << qMakePair(QString(""), QString("publishers")), false)
+                     << DataFormField("pubsub#purge_offline", "boolean", "Purge all items when the relevant publisher goes offline?", dataFormValue.value("pubsub#purge_offline"), QList<QPair<QString, QString> >(), false)
+                        << DataFormField("pubsub#max_payload_size", "text-single", "Max Payload size in bytes", dataFormValue.value("pubsub#max_payload_size"), QList<QPair<QString, QString> >(), false)
+                           << DataFormField("pubsub#send_last_published_item", "list-single", "When to send the last published item", dataFormValue.value("pubsub#send_last_published_item"), QList<QPair<QString, QString> >() << qMakePair(QString("Never"), QString("never"))
+                                            << qMakePair(QString("When a new subscription is processed"), QString("on_sub")) << qMakePair(QString("When a new subscription is processed and whenever a subscriber comes online"), QString("on_sub_and_presence")), false)
+                              << DataFormField("pubsub#presence_based_delivery", "boolean", "Deliver event notifications only to available users", dataFormValue.value("pubsub#presence_based_delivery"), QList<QPair<QString, QString> >(), false)
+                                 << DataFormField("pubsub#notification_type", "list-single", "Specify the delivery style for event notifications", dataFormValue.value("pubsub#notification_type"), QList<QPair<QString, QString> >() << qMakePair(QString(""), QString("normal"))
+                                                  << qMakePair(QString(""), QString("headline")), false)
+                                    << DataFormField("pubsub#type", "text-single", "Specify the type of payload data to be provided at this node", dataFormValue.value("pubsub#type"), QList<QPair<QString, QString> >(), false);
+
+    QDomElement xElement = generateDataForm(formType, formTitle, formInstruction, formFields);
+
+    pubsubElement.appendChild(configureElement);
+    configureElement.appendChild(xElement);
+    iqNode.appendChild(pubsubElement);
     document.appendChild(iqNode);
 
     return document;
@@ -280,7 +408,6 @@ QDomDocument DataFormManager::getRoomVoiceRequestForm(QString from, QString to, 
     QDomDocument document;
 
     QDomElement messageNode = document.createElement("message");
-    messageNode.setAttribute("type", "result");
     messageNode.setAttribute("from", from);
     messageNode.setAttribute("to", to);
     messageNode.setAttribute("id", id);
@@ -301,6 +428,39 @@ QDomDocument DataFormManager::getRoomVoiceRequestForm(QString from, QString to, 
                << DataFormField("muc#roomnick", "text-single", "Room nickname", QVariant(roomnick),
                                 QList<QPair<QString, QString> >(), false)
                << DataFormField("muc#request_allow", "boolean", "Grant voice to this person", QVariant(false),
+                                QList<QPair<QString, QString> >(), false);
+
+    QDomElement xElement = generateDataForm(formType, formTitle, formInstruction, formFields);
+
+    messageNode.appendChild(xElement);
+    document.appendChild(messageNode);
+
+    return document;
+}
+
+QDomDocument DataFormManager::getNodeSubscriptionApprovalForm(QString from, QString to, QString id, QString node, QString subscriberJid)
+{
+    QDomDocument document;
+
+    QDomElement messageNode = document.createElement("message");
+    messageNode.setAttribute("from", from);
+    messageNode.setAttribute("to", to);
+    messageNode.setAttribute("id", id);
+
+    // Generate data form
+    QString formType = "form";
+    QString formTitle = "PubSub subscriber request";
+    QString formInstruction = "To approve this entity&apos;s subscription request, click the OK button. To deny the request, click the cancel button.";
+
+    QList<DataFormField> formFields;
+    formFields << DataFormField("FORM_TYPE", "hidden", "",
+                                QVariant("http://jabber.org/protocol/pubsub#subscribe_authorization"),
+                                QList<QPair<QString, QString> >(), false)
+               << DataFormField("pubsub#node", "text-single", "Node ID", QVariant(node),
+                                QList<QPair<QString, QString> >(), false)
+               << DataFormField("pusub#subscriber_jid", "jid-single", "Subscriber Address", QVariant(subscriberJid),
+                                QList<QPair<QString, QString> >(), false)
+               << DataFormField("pubsub#allow", "boolean", "Allow this JID to subscribe to this pubsub node?", QVariant(false),
                                 QList<QPair<QString, QString> >(), false);
 
     QDomElement xElement = generateDataForm(formType, formTitle, formInstruction, formFields);
