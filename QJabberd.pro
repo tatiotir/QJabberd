@@ -33,7 +33,6 @@ SOURCES += \
     User.cpp \
     OfflineMessageManager.cpp \
     StreamNegotiationData.cpp \
-    MysqlStorage.cpp \
     InbandByteStreamsManager.cpp \
     OobDataManager.cpp \
     PgSqlStorage.cpp \
@@ -49,7 +48,8 @@ SOURCES += \
     PubsubManager.cpp \
     PubsubItem.cpp \
     NodeSubscriber.cpp \
-    InterestedPep.cpp
+    InterestedPep.cpp \
+    MySqlStorage.cpp
 
 HEADERS += \
     EntityTimeManager.h \

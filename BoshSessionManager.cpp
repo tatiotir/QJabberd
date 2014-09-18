@@ -41,6 +41,10 @@ void BoshSessionManager::dataReceived()
                                                    bodyElement.attribute("xml:lang"),
                                                    Utils::generateId());
 
+            // Enable cross domain for this Bosh session
+            if (m_crossDomainBosh)
+                session->setCrossDomainBosh(true);
+
             session->setBoshFirstConnection(boshConnection);
 
             connect(session, SIGNAL(sigCloseBoshSession(QString)), this, SLOT(closeBoshSession(QString)));
@@ -54,26 +58,8 @@ void BoshSessionManager::dataReceived()
             QDomDocument document;
             if (document.setContent(requestValues.value("body")))
             {
-                QString sid = document.firstChildElement().attribute("sid");/*
-                if ((m_sessionMap->value(sid)->activeConnection() == -1) ||
-                        (m_sessionMap->value(sid)->activeConnection() == 2))
-                {
-                    m_sessionMap->value(sid)->setActiveConnection(1);
-                    m_sessionMap->value(sid)->setBoshFirstConnection(boshConnection);
-                }
-                else
-                {
-                    m_sessionMap->value(sid)->setActiveConnection(2);
-                    m_sessionMap->value(sid)->setBoshSecondConnection(boshConnection);
-                }*/
-
-                /*if (document.documentElement().attribute("xmpp:restart") == "true")
-                {
-                    // Restart Stream on the XMPP Server
-                    m_sessionMap->value(sid)->initXmppServerStream();
-                    m_sessionMap->value(sid)->setRid(m_sessionMap->value(sid)->rid() + 1);
-                }
-                else */if (document.documentElement().attribute("type") == "terminate")
+                QString sid = document.firstChildElement().attribute("sid");
+                if (document.documentElement().attribute("type") == "terminate")
                 {
                     m_sessionMap->value(sid)->close();
                 }
@@ -93,7 +79,7 @@ void BoshSessionManager::dataReceived()
             QDomDocument document;
             document.appendChild(document.createElement("crossDomain"));
 
-            boshConnection->write(Utils::generateHttpResponseHeader(document.toByteArray(-1).count()) + document.toByteArray(-1));
+            boshConnection->write(Utils::generateHttpResponseHeader(document.toByteArray(-1).count(), true) + document.toByteArray(-1));
             boshConnection->flush();
         }
         else

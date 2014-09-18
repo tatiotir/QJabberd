@@ -5,7 +5,7 @@ Storage::Storage()
 
 }
 
-bool Storage::saveStreamData(QString smId, QByteArray data)
+bool  Storage::saveStreamData(QString smId, QByteArray data)
 {
     QString filename = "temp/" + smId + ".qjt";
     QFile userStreamDataFile(filename);
