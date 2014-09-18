@@ -366,6 +366,7 @@ QSet<QString> LocalStorage::getGroups(QString jid)
 
         contactFile.close();
     }
+    return groups;
 }
 
 QList<PrivacyListItem> LocalStorage::getPrivacyList(QString jid, QString privacyListName)

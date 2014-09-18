@@ -150,6 +150,7 @@ public:
     QStringList getBannedList(QString roomName);
 
     // Pubsub interface
+    QStringList pubsubNodeList(QString pubsubService);
     bool subscribeToNode(QString pubsubService, QString node, NodeSubscriber subscriber);
     bool unsubscribeToNode(QString pubsubService, QString node, QString jid);
     QString nodeAccessModel(QString pubsubService, QString node);
@@ -180,6 +181,10 @@ public:
     bool purgeNodeItems(QString pubsubService, QString node);
     bool notifyWhenItemRemove(QString pubsubService, QString node);
     bool nodePersistItems(QString pubsubService, QString node);
+    QList<NodeSubscriber> nodeSubscriptionList(QString pubsubService, QString node);
+    QList<NodeSubscriber> nodeAffiliationList(QString pubsubService, QString node);
+    bool changeAffiliation(QString pubsubService, QString node, QString jid, QString affiliation);
+    bool changeSubscription(QString pubsubService, QString node, QString jid, QString subscription);
 };
 
 #endif // STORAGE_H

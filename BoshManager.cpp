@@ -1,6 +1,6 @@
 #include "BoshManager.h"
 
-BoshManager::BoshManager(QObject *parent, int boshPort, int xmppServerPort) : QObject(parent)
+BoshManager::BoshManager(QObject *parent, int boshPort, int xmppServerPort, bool crossDomainBosh) : QObject(parent)
 {
     m_boshSessionManager = new BoshSessionManager(this, boshPort, xmppServerPort);
 

@@ -29,16 +29,16 @@ Stream::Stream(QString streamId, Connection *connection,
     //connect(m_connection, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(sslError(QList<QSslError>)));
     //connect(m_connection, SIGNAL(disconnected()), this, SLOT(closeStream()));
 
-    m_pingTimer = new QTimer();
-    m_pingTimer->setInterval(20000);
-    connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(sendPing()));
+//    m_pingTimer = new QTimer();
+//    m_pingTimer->setInterval(20000);
+//    connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(sendPing()));
 
-    m_pongTimer = new QTimer();
-    m_pongTimer->setInterval(20000);
-    connect(m_pongTimer, SIGNAL(timeout()), this, SLOT(pingError()));
+//    m_pongTimer = new QTimer();
+//    m_pongTimer->setInterval(20000);
+//    connect(m_pongTimer, SIGNAL(timeout()), this, SLOT(pingError()));
 
-    m_pingId = 0;
-    m_supportPing = true;
+//    m_pingId = 0;
+//    m_supportPing = true;
 }
 
 //Stream::Stream()
@@ -51,50 +51,50 @@ Stream::~Stream()
     delete m_connection;
 }
 
-void Stream::sendWhiteSpace()
-{
-    QByteArray space;
-    for (int i = 0; i < m_pingId; ++i)
-        space += ' ';
-    qint64 ok = streamReply(space);
-    if (ok == -1)
-        closeStream();
-}
+//void Stream::sendWhiteSpace()
+//{
+//    QByteArray space;
+//    for (int i = 0; i < m_pingId; ++i)
+//        space += ' ';
+//    qint64 ok = streamReply(space);
+//    if (ok == -1)
+//        closeStream();
+//}
 
-void Stream::pingError()
-{
-    ++m_pingErrorCount;
-    // ten attempt
-    if (m_pingErrorCount == 10)
-    {
-        closeStream();
-    }
-    else
-    {
-        sendPing();
-    }
-}
+//void Stream::pingError()
+//{
+//    ++m_pingErrorCount;
+//    // ten attempt
+//    if (m_pingErrorCount == 10)
+//    {
+//        closeStream();
+//    }
+//    else
+//    {
+//        sendPing();
+//    }
+//}
 
-void Stream::sendPing()
-{
-    ++m_pingId;
-    QDomDocument document;
-    QDomElement iqElement = document.createElement("iq");
-    iqElement.setAttribute("from", m_host);
-    iqElement.setAttribute("to", m_fullJid);
-    iqElement.setAttribute("type", "get");
-    iqElement.setAttribute("id", "QJabberd" + QString::number(m_pingId));
+//void Stream::sendPing()
+//{
+//    ++m_pingId;
+//    QDomDocument document;
+//    QDomElement iqElement = document.createElement("iq");
+//    iqElement.setAttribute("from", m_host);
+//    iqElement.setAttribute("to", m_fullJid);
+//    iqElement.setAttribute("type", "get");
+//    iqElement.setAttribute("id", "QJabberd" + QString::number(m_pingId));
 
-    QDomElement pingElement = document.createElement("ping");
-    pingElement.setAttribute("xmlns", "urn:xmpp:ping");
+//    QDomElement pingElement = document.createElement("ping");
+//    pingElement.setAttribute("xmlns", "urn:xmpp:ping");
 
-    iqElement.appendChild(pingElement);
-    document.appendChild(iqElement);
+//    iqElement.appendChild(pingElement);
+//    document.appendChild(iqElement);
 
-    streamReply(document.toByteArray());
+//    streamReply(document.toByteArray());
 
-    m_pongTimer->start();
-}
+//    m_pongTimer->start();
+//}
 
 void Stream::closeStream()
 {
@@ -230,32 +230,32 @@ void Stream::requestTreatment(QDomDocument document)
 
         //qDebug() << "Client : " << document.toByteArray();
         // emit sigInboundStanzaReceived(m_fullJid);
-        QString pingId = "QJabberd" + QString::number(m_pingId);
-        if (document.documentElement().attribute("id") == pingId)
-        {
-            if (document.documentElement().attribute("type") == "result")
-            {
-                m_pingErrorCount = 0;
-                m_pongTimer->stop();
-            }
-            else if (document.documentElement().attribute("type") == "error")
-            {
-                m_pingTimer->stop();
-                m_pongTimer->stop();
-                m_supportPing = false;
-                m_pingId = 0;
+//        QString pingId = "QJabberd" + QString::number(m_pingId);
+//        if (document.documentElement().attribute("id") == pingId)
+//        {
+//            if (document.documentElement().attribute("type") == "result")
+//            {
+//                m_pingErrorCount = 0;
+//                m_pongTimer->stop();
+//            }
+//            else if (document.documentElement().attribute("type") == "error")
+//            {
+//                m_pingTimer->stop();
+//                m_pongTimer->stop();
+//                m_supportPing = false;
+//                m_pingId = 0;
 
-                m_pingTimer->disconnect();
-                connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(sendWhiteSpace()));
-            }
-        }
-        else
-        {
+//                m_pingTimer->disconnect();
+//                connect(m_pingTimer, SIGNAL(timeout()), this, SLOT(sendWhiteSpace()));
+//            }
+//        }
+//        else
+//        {
             QByteArray answer = m_iqManager->parseIQ(document, m_fullJid, m_host, m_streamId);
 
             // We send iq reply
             streamReply(answer);
-        }
+//        }
         // ++m_inboundStanzaCount;
     }
     else if (document.documentElement().tagName() == "presence")
@@ -298,11 +298,11 @@ void Stream::requestTreatment(QDomDocument document)
     }
 
     // Restart the ping timer
-    if (!m_fullJid.isEmpty() && m_supportPing)
-    {
-        m_pingTimer->start();
-        m_pongTimer->stop();
-    }
+//    if (!m_fullJid.isEmpty() && m_supportPing)
+//    {
+//        m_pingTimer->start();
+//        m_pongTimer->stop();
+//    }
 }
 
 /*

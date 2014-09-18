@@ -6,7 +6,7 @@ Utils::Utils()
 
 QMap<QByteArray, QByteArray> Utils::parseHttpRequest(QByteArray postData)
 {
-    //qDebug() << "Post Data : " << postData;
+    qDebug() << "POST Request : " << postData;
     QList<QByteArray> lines = postData.split('\n');
 
     QMap<QByteArray, QByteArray> values;
@@ -20,12 +20,19 @@ QMap<QByteArray, QByteArray> Utils::parseHttpRequest(QByteArray postData)
     return values;
 }
 
-QByteArray Utils::generateHttpResponseHeader(int contentLength)
+QByteArray Utils::generateHttpResponseHeader(int contentLength, bool crossDomainBosh)
 {
     QByteArray header = "HTTP/1.1 200 OK\r\n";
+    if (crossDomainBosh != 0)
+    {
+        header += "Access-Control-Allow-Origin: *\r\n";
+        header += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+        header += "Access-Control-Allow-Headers: Content-Type\r\n";
+        header += "Access-Control-Max-Age: 86400\r\n";
+    }
     header += "Content-Type: text/xml; charset=utf-8\r\n";
-    header += "Content-Length: ";
-    header += QByteArray::number(contentLength) + "\r\n\r\n";
+    if (contentLength != 0)
+        header += "Content-Length: " + QByteArray::number(contentLength) + "\r\n\r\n";
     return header;
 }
 

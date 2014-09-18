@@ -74,6 +74,9 @@ public:
     Connection *boshSecondConnection() const;
     void setBoshSecondConnection(Connection *boshSecondConnection);
 
+    bool crossDomainBosh() const;
+    void setCrossDomainBosh(bool crossDomainBosh);
+
 signals:
     void sigCloseBoshSession(QString sid);
 
@@ -110,6 +113,7 @@ private:
     QTimer *m_keepAliveTimer;
     QByteArray m_xmlPaquet;
     bool m_saslNegotiated;
+    bool m_crossDomainBosh;
     int m_nbRequest;
     QList<QByteArray> m_xmppServerResponseList;
     QQueue<QDomDocument> m_xmppServerRequestQueue;

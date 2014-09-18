@@ -1,10 +1,6 @@
 QT       += core xml network sql
-QT       -= gui
 
 TARGET = QJabberd
-CONFIG   += qt console
-
-TEMPLATE = app
 
 SOURCES += \
     EntityTimeManager.cpp \
@@ -52,7 +48,8 @@ SOURCES += \
     BoshSessionManager.cpp \
     PubsubManager.cpp \
     PubsubItem.cpp \
-    NodeSubscriber.cpp
+    NodeSubscriber.cpp \
+    InterestedPep.cpp
 
 HEADERS += \
     EntityTimeManager.h \
@@ -99,7 +96,8 @@ HEADERS += \
     BoshSessionManager.h \
     PubsubManager.h \
     PubsubItem.h \
-    NodeSubscriber.h
+    NodeSubscriber.h \
+    InterestedPep.h
 
 RESOURCES += \
     resources.qrc

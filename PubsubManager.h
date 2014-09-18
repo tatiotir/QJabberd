@@ -9,6 +9,7 @@
 #include "PubsubItem.h"
 #include "NodeSubscriber.h"
 #include "DataFormManager.h"
+#include "InterestedPep.h"
 
 class PubsubManager : public QObject
 {
@@ -16,15 +17,17 @@ class PubsubManager : public QObject
 public:
     explicit PubsubManager(RosterManager *rosterManager = 0, StorageManager *storageManager = 0);
     QByteArray pubsubManagerReply(QDomDocument document, QString iqFrom);
+    QList<PubsubItem> getNodeItems(QString pubsubService, QString node);
+
+    void updateInterestedPepMap(QString jid1, InterestedPep pep);
+    void deleteInterestedPepMap(QString jid);
 
 signals:
     void sigPubsubNotification(QString to, QByteArray notification);
 
-public slots:
-
 private:
     QByteArray pubsubSubscribeNotification(QString from, QString to, QString id, QString node, QString jid,
-                                           QString subscription, QDomElement child);
+                                           QString subscription, QDomElement child) ;
     QByteArray pubsubUnconfiguredNotification(QString from, QString to, QString id, QString node, QString jid, bool required);
     QByteArray pubsubItemsPush(QString from, QString to, QString id, QString node, QList<PubsubItem> items);
     QByteArray pubsubItemPublishResult(QString from, QString to, QString id, QString node, QString itemId);
@@ -34,7 +37,25 @@ private:
     QByteArray pubsubNodeConfigurationNotification(QString from, QString to, QString id, QString node, QDomElement xElement);
     QByteArray pubsubNodeDeleteNotification(QString from, QString to, QString id, QString node, QString redirectUri);
     QByteArray pubsubNodePurgeNotification(QString from, QString to, QString id, QString node);
+    QByteArray pubsubNodeSubscriptionList(QString from, QString to, QString id, QString node,
+                                          QList<NodeSubscriber> subscriptionList, bool owner);
+    QByteArray pubsubAllNodeSubscriptionList(QString from, QString to, QString id,
+                                          QMultiHash<QString, QList<NodeSubscriber> > nodeMapSubscriptionList);
+    QByteArray pubsubNodeAffiliationList(QString from, QString to, QString id, QString node,
+                                          QList<NodeSubscriber> affiliationList, bool owner);
+    QByteArray pubsubAllNodeAffiliationList(QString from, QString to, QString id,
+                                          QMultiHash<QString, QList<NodeSubscriber> > nodeMapAffiliationList);
+    QByteArray pubsubChangeSubscriptionError(QString from, QString to, QString id, QString node,
+                                             QList<QDomElement> subscriptionErrorList);
+    QByteArray pubsubChangeSubscriptionNotification(QString from, QString to, QString node, QString jid,
+                                                    QString subscription);
 
+    QByteArray pubsubChangeAffiliationError(QString from, QString to, QString id, QString node,
+                                             QList<QDomElement> affiliationErrorList);
+    QByteArray pubsubChangeAffiliationNotification(QString from, QString to, QString node, QString jid,
+                                                    QString affiliation);
+
+    QStringList pubsubNodeList(QString pubsubService);
     bool subscribeToNode(QString pubsubService, QString node, NodeSubscriber subscriber);
     bool unsubscribeToNode(QString pubsubService, QString node, QString jid);
     QString nodeAccessModel(QString pubsubService, QString node);
@@ -51,7 +72,6 @@ private:
     bool hasSubscription(QString pubsubService, QString node, QString jid);
     QMultiMap<QString, QVariant> nodeSubscriptionOptionForm(QString pubsubService, QString node, QString jid);
     bool processSubscriptionOptionForm(QString pubsubService, QString node, QString jid, QMultiMap<QString, QVariant> dataFormValues);
-    QList<PubsubItem> getNodeItems(QString pubsubService, QString node);
     QList<PubsubItem> getNodeItems(QString pubsubService, QString node, int max_items);
     PubsubItem getNodeItem(QString pubsubService, QString node, QString itemId);
     bool publishItem(QString pubsubService, QString node, PubsubItem item);
@@ -66,10 +86,14 @@ private:
     bool purgeNodeItems(QString pubsubService, QString node);
     bool notifyWhenItemRemove(QString pubsubService, QString node);
     bool nodePersistItems(QString pubsubService, QString node);
+    QList<NodeSubscriber> nodeSubscriptionList(QString pubsubService, QString node);
+    QList<NodeSubscriber> nodeAffiliationList(QString pubsubService, QString node);
+    bool changeAffiliation(QString pubsubService, QString node, QString jid, QString affiliation);
+    bool changeSubscription(QString pubsubService, QString node, QString jid, QString subscription);
 
     RosterManager *m_rosterManager;
     StorageManager *m_storageManager;
-
+    QMultiHash<QString, InterestedPep> m_interestedPepMap;
 };
 
 #endif // PUBSUBMANAGER_H

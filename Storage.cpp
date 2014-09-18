@@ -1589,6 +1589,12 @@ QStringList Storage::getBannedList(QString roomName)
     return bannedList;
 }
 
+QStringList Storage::pubsubNodeList(QString pubsubService)
+{
+    QDir dir(pubsubService);
+    return dir.entryList(QDir::Dirs | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+}
+
 bool Storage::subscribeToNode(QString pubsubService, QString node, NodeSubscriber subscriber)
 {
     QDir dir(pubsubService + "/" + node + "/");
@@ -1847,6 +1853,12 @@ PubsubItem Storage::getNodeItem(QString pubsubService, QString node, QString ite
 
 bool Storage::publishItem(QString pubsubService, QString node, PubsubItem item)
 {
+    if (!QDir(pubsubService + "/" + node + "/").exists())
+    {
+        QDir dir;
+        dir.mkpath(pubsubService + "/" + node + "/");
+    }
+
     QDir dir(pubsubService + "/" + node + "/");
     dir.mkdir("items");
 
@@ -1908,13 +1920,31 @@ bool Storage::deleteItemToNode(QString pubsubService, QString node, QString item
 bool Storage::createNode(QString pubsubService, QString node, QString owner,
                          QMultiMap<QString, QVariant> dataFormValue)
 {
-    QDir dir;
-    dir.mkdir(pubsubService);
+    QString filename;
+    if (!pubsubService.isEmpty())
+    {
+        QDir dir;
+        dir.mkdir(pubsubService);
 
-    dir.setPath(pubsubService);
-    dir.mkdir(node);
+        dir.setPath(pubsubService);
+        dir.mkdir(node);
 
-    QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
+        filename = pubsubService + "/" + node + "/" + node + ".qjn";
+    }
+    else
+    {
+        QDir dir;
+        dir.mkdir("PEP");
+
+        dir.setPath("PEP");
+        dir.mkdir(owner);
+
+        dir.setPath(owner);
+        dir.mkdir(node);
+
+        filename = "PEP/" + owner + "/" + node + ".qjn";
+    }
+
     QFile nodeFile(filename);
 
     if (!nodeFile.open(QIODevice::WriteOnly))
@@ -1983,7 +2013,7 @@ bool Storage::processNodeConfigurationForm(QString pubsubService, QString node, 
     QString filename = pubsubService + "/" + node + "/" + node + ".qjn";
     QFile nodeFile(filename);
 
-    if (!nodeFile.open(QIODevice::WriteOnly))
+    if (!nodeFile.open(QIODevice::ReadWrite))
         return false;
 
     QJsonDocument document = QJsonDocument::fromJson(nodeFile.readAll());
@@ -2047,4 +2077,62 @@ bool Storage::nodePersistItems(QString pubsubService, QString node)
 
     nodeFile.close();
     return persistItem;
+}
+
+QList<NodeSubscriber> Storage::nodeSubscriptionList(QString pubsubService, QString node)
+{
+    QDir dir(pubsubService + "/" + node + "/subscribers/");
+    QStringList subscribersFilesnames = dir.entryList(QDir::Files | QDir::NoDot | QDir::NoDotAndDotDot | QDir::NoDotDot);
+
+    QList<NodeSubscriber> subscriptionList;
+    foreach (QString  subscriberFilename, subscribersFilesnames)
+    {
+        QFile subscriberFile(pubsubService + "/" + node + "/subscribers/" + subscriberFilename);
+        subscriberFile.open(QIODevice::ReadOnly);
+
+        QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+        subscriptionList << NodeSubscriber::fromJsonObject(document.object());
+    }
+    return subscriptionList;
+}
+
+QList<NodeSubscriber> Storage::nodeAffiliationList(QString pubsubService, QString node)
+{
+    return nodeSubscriptionList(pubsubService, node);
+}
+
+bool Storage::changeAffiliation(QString pubsubService, QString node, QString jid, QString affiliation)
+{
+    QFile subscriberFile(pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs");
+
+    if (!subscriberFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+    QJsonObject subscriberObject = document.object();
+    subscriberObject.insert("affiliation", affiliation);
+    document.setObject(subscriberObject);
+
+    subscriberFile.resize(0);
+    qint64 ok = subscriberFile.write(document.toJson());
+    subscriberFile.close();
+    return (false ? (ok == -1) : true);
+}
+
+bool Storage::changeSubscription(QString pubsubService, QString node, QString jid, QString subscription)
+{
+    QFile subscriberFile(pubsubService + "/" + node + "/subscribers/" + jid.replace("@", "_") + ".qjs");
+
+    if (!subscriberFile.open(QIODevice::ReadWrite))
+        return false;
+
+    QJsonDocument document = QJsonDocument::fromJson(subscriberFile.readAll());
+    QJsonObject subscriberObject = document.object();
+    subscriberObject.insert("subscription", subscription);
+    document.setObject(subscriberObject);
+
+    subscriberFile.resize(0);
+    qint64 ok = subscriberFile.write(document.toJson());
+    subscriberFile.close();
+    return (false ? (ok == -1) : true);
 }

@@ -16,13 +16,13 @@ MySqlStorage::MySqlStorage(QString host, int port, QString username, QString pas
 
 QString MySqlStorage::getStorageType()
 {
-    return "MySql";
+    return "PgSql";
 }
 
 int MySqlStorage::getUserId(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT id FROM users WHERE jid = :jid");
+    query.prepare("SELECT id FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
     if (query.first())
@@ -38,7 +38,7 @@ int MySqlStorage::getUserId(QString jid)
 QString MySqlStorage::getPassword(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT password FROM users WHERE jid = :jid");
+    query.prepare("SELECT password FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -49,7 +49,7 @@ QString MySqlStorage::getPassword(QString jid)
 bool MySqlStorage::changePassword(QString jid, QString newPassword)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET password = :password WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET password = :password WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":password", newPassword);
     return query.exec();
@@ -58,7 +58,7 @@ bool MySqlStorage::changePassword(QString jid, QString newPassword)
 bool MySqlStorage::createUser(QString jid, QString password)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO users(jid, password) VALUES(:jid, :password)");
+    query.prepare("INSERT INTO qjabberd_users(jid, password) VALUES(:jid, :password)");
     query.bindValue(":jid", jid);
     query.bindValue(":password", password);
     return query.exec();
@@ -67,7 +67,7 @@ bool MySqlStorage::createUser(QString jid, QString password)
 bool MySqlStorage::deleteUser(QString jid)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM users WHERE jid = :jid");
+    query.prepare("DELETE FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     return query.exec();
 }
@@ -77,7 +77,7 @@ QList<Contact> MySqlStorage::getContactsList(QString jid)
     QList<Contact> contactList;
     QSqlQuery query;
     query.prepare("SELECT version, approved, ask, jid, name, subscription, groups"
-                  " FROM contact WHERE user_id = :user_id");
+                  " FROM qjabberd_contact WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
     while (query.next())
@@ -99,6 +99,7 @@ bool MySqlStorage::addContactToRoster(QString jid, Contact contact)
     }
     else
     {
+        //qDebug() << "Je suis juste ici : " << getUserId(jid);
         QJsonDocument document;
         QJsonObject object;
         object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
@@ -109,7 +110,7 @@ bool MySqlStorage::addContactToRoster(QString jid, Contact contact)
                       " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":version", contact.getVersion());
-        query.bindValue(":approved", contact.getApproved());
+        query.bindValue(":approved", (int)contact.getApproved());
         query.bindValue(":ask", contact.getAsk());
         query.bindValue(":jid", contact.getJid());
         query.bindValue(":name", contact.getName());
@@ -123,7 +124,7 @@ bool MySqlStorage::addContactToRoster(QString jid, Contact contact)
 bool MySqlStorage::deleteContactToRoster(QString jid, QString contactJid)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("DELETE FROM qjabberd_contact WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     return query.exec();
@@ -138,7 +139,7 @@ bool MySqlStorage::updateGroupToContact(QString jid, QString contactJid,
     document.setObject(object);
 
     QSqlQuery query;
-    query.prepare("UPDATE contact SET groups = :groups WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("UPDATE qjabberd_contact SET groups = :groups WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.bindValue(":groups", document.toJson());
@@ -157,7 +158,7 @@ bool MySqlStorage::updateSubscriptionToContact(QString jid, QString contactJid,
     QString contactSubscription = getContact(jid, contactJid).getSubscription();
 
     QSqlQuery query;
-    query.prepare("UPDATE contact SET subscription = :subscription WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("UPDATE qjabberd_contact SET subscription = :subscription WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
 
@@ -179,7 +180,7 @@ bool MySqlStorage::updateAskAttributeToContact(QString jid, QString contactJid,
     Contact contact = getContact(jid, contactJid);
 
     QSqlQuery query;
-    query.prepare("UPDATE contact SET ask = :ask WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("UPDATE qjabberd_contact SET ask = :ask WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
 
@@ -194,7 +195,7 @@ bool MySqlStorage::updateNameToContact(QString jid, QString contactJid,
                                          QString name)
 {
     QSqlQuery query;
-    query.prepare("UPDATE contact SET name = :name WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("UPDATE qjabberd_contact SET name = :name WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.bindValue(":name", name);
@@ -204,7 +205,7 @@ bool MySqlStorage::updateNameToContact(QString jid, QString contactJid,
 bool MySqlStorage::updateApprovedToContact(QString jid, QString contactJid, bool approved)
 {
     QSqlQuery query;
-    query.prepare("UPDATE contact SET approved = :approved WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("UPDATE qjabberd_contact SET approved = :approved WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.bindValue(":approved", approved);
@@ -224,7 +225,7 @@ bool MySqlStorage::contactExists(QString jid, QString contactJid)
         return false;
 
     QSqlQuery query;
-    query.prepare("SELECT id FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("SELECT id FROM qjabberd_contact WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.exec();
@@ -234,7 +235,7 @@ bool MySqlStorage::contactExists(QString jid, QString contactJid)
 Contact MySqlStorage::getContact(QString jid, QString contactJid)
 {
     QSqlQuery query;
-    query.prepare("SELECT version, approved, ask, jid, name, subscription, groups FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("SELECT version, approved, ask, jid, name, subscription, groups FROM qjabberd_contact WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.exec();
@@ -258,7 +259,7 @@ Contact MySqlStorage::getContact(QString jid, QString contactJid)
 QString MySqlStorage::getContactSubscription(QString jid, QString contactJid)
 {
     QSqlQuery query;
-    query.prepare("SELECT subscription FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("SELECT subscription FROM qjabberd_contact WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.exec();
@@ -271,7 +272,7 @@ QString MySqlStorage::getContactSubscription(QString jid, QString contactJid)
 QSet<QString> MySqlStorage::getContactGroups(QString jid, QString contactJid)
 {
     QSqlQuery query;
-    query.prepare("SELECT groups FROM contact WHERE user_id = :user_id AND jid = :jid");
+    query.prepare("SELECT group FROM qjabberd_contact WHERE user_id = :user_id AND jid = :jid");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":jid", contactJid);
     query.exec();
@@ -284,7 +285,7 @@ QSet<QString> MySqlStorage::getContactGroups(QString jid, QString contactJid)
 QSet<QString> MySqlStorage::getGroups(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT groups FROM contact WHERE user_id = :user_id");
+    query.prepare("SELECT groups FROM qjabberd_contact WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -300,9 +301,9 @@ QSet<QString> MySqlStorage::getGroups(QString jid)
 QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, iorder, child FROM privacylist WHERE user_id = :user_id AND privacylistname = :privacylistname");
+    query.prepare("SELECT type, value, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacylistname", privacyListName);
+    query.bindValue(":privacyListName", privacyListName);
     query.exec();
 
     QList<PrivacyListItem> itemList;
@@ -321,6 +322,8 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacy
 
 bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, QList<PrivacyListItem> items)
 {
+    int user_id = getUserId(jid);
+
     m_database.transaction();
 
     QJsonDocument document;
@@ -331,15 +334,15 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
         document.setObject(object);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO privacylist(user_id, type, value, action, iorder, child, privacylistname)"
-                      " VALUES(:user_id, :type, :value, :action, :iorder, :child, :privacylistname)");
-        query.bindValue(":user_id", getUserId(jid));
+        query.prepare("INSERT INTO qjabberd_privacylist(user_id, type, value, action, iorder, child, privacyListName)"
+                      " VALUES(:user_id, :type, :value, :action, :iorder, :child, :privacyListName)");
+        query.bindValue(":user_id", user_id);
         query.bindValue(":type", item.getType());
-        query.bindValue(":action", item.getAction());
         query.bindValue(":value", item.getValue());
+        query.bindValue(":action", item.getAction());
         query.bindValue(":iorder", item.getOrder());
         query.bindValue(":child", document.toJson());
-        query.bindValue(":privacylistname", privacyListName);
+        query.bindValue(":privacyListName", privacyListName);
         query.exec();
     }
     return m_database.commit();
@@ -348,16 +351,16 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
 bool MySqlStorage::deletePrivacyList(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM privacylist WHERE user_id = :user_id AND privacylistname = :privacylistname");
+    query.prepare("DELETE FROM qjabberd_privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacylistname", privacyListName);
+    query.bindValue(":privacyListName", privacyListName);
     return query.exec();
 }
 
 bool MySqlStorage::privacyListExist(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("SELECT privacylistname FROM privacylist WHERE user_id = :user_id");
+    query.prepare("SELECT privacyListName FROM qjabberd_privacylist WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -372,7 +375,7 @@ bool MySqlStorage::privacyListExist(QString jid, QString privacyListName)
 QStringList MySqlStorage::getPrivacyListNames(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT privacylistname FROM privacylist WHERE user_id = :user_id");
+    query.prepare("SELECT privacyListName FROM qjabberd_privacylist WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -387,7 +390,7 @@ QStringList MySqlStorage::getPrivacyListNames(QString jid)
 QString MySqlStorage::getDefaultPrivacyList(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT defaultprivacylist FROM users WHERE jid = :jid");
+    query.prepare("SELECT defaultPrivacyList FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -398,7 +401,7 @@ QString MySqlStorage::getDefaultPrivacyList(QString jid)
 QString MySqlStorage::getActivePrivacyList(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT activeprivacylist FROM users WHERE jid = :jid");
+    query.prepare("SELECT activePrivacyList FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -409,7 +412,7 @@ QString MySqlStorage::getActivePrivacyList(QString jid)
 bool MySqlStorage::setDefaultPrivacyList(QString jid, QString defaultList)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET defaultprivacylist = :default WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET defaultPrivacyList = :default WHERE jid = :jid");
     query.bindValue(":default", defaultList);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -418,7 +421,7 @@ bool MySqlStorage::setDefaultPrivacyList(QString jid, QString defaultList)
 bool MySqlStorage::setActivePrivacyList(QString jid, QString activeList)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET activeprivacylist = :active WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET activePrivacyList = :active WHERE jid = :jid");
     query.bindValue(":active", activeList);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -428,10 +431,10 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyListItems(QString jid, QString pr
                                                          QString stanzaType, QString action)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, iorder, child FROM privacylist WHERE user_id = :user_id"
-                  " AND privacylistname = :privacylistname AND action = :action");
+    query.prepare("SELECT type, value, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id"
+                  " AND privacyListName = :privacyListName AND action = :action");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":privacylistname", privacyListName);
+    query.bindValue(":privacyListName", privacyListName);
     query.bindValue(":action", action);
     query.exec();
 
@@ -453,7 +456,7 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyListItems(QString jid, QString pr
 QString MySqlStorage::getVCard(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -467,7 +470,7 @@ QString MySqlStorage::getVCard(QString jid)
 bool MySqlStorage::updateVCard(QString jid, QString vCardInfos)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET vcard = :vcard WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET vcard = :vcard WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.bindValue(":vcard", vCardInfos);
     return query.exec();
@@ -480,7 +483,7 @@ bool MySqlStorage::vCardExist(QString jid)
         return false;
 
     QSqlQuery query;
-    query.prepare("SELECT vcard FROM users WHERE jid = :jid");
+    query.prepare("SELECT vcard FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -493,7 +496,7 @@ bool MySqlStorage::vCardExist(QString jid)
 QString MySqlStorage::getLastLogoutTime(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT lastLogoutTime FROM users WHERE jid = :jid");
+    query.prepare("SELECT lastLogoutTime FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -506,9 +509,9 @@ QString MySqlStorage::getLastLogoutTime(QString jid)
 
 bool MySqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 {
-    qDebug() << "logout time : " << lastLogoutTime;
+    //qDebug() << "logout time : " << lastLogoutTime;
     QSqlQuery query;
-    query.prepare("UPDATE users SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET lastLogoutTime = :lastLogoutTime WHERE jid = :jid");
     query.bindValue(":lastLogoutTime", lastLogoutTime);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -517,7 +520,7 @@ bool MySqlStorage::setLastLogoutTime(QString jid, QString lastLogoutTime)
 QString MySqlStorage::getLastStatus(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT lastStatus FROM users WHERE jid = :jid");
+    query.prepare("SELECT lastStatus FROM qjabberd_users WHERE jid = :jid");
     query.bindValue(":jid", jid);
     query.exec();
 
@@ -531,7 +534,7 @@ QString MySqlStorage::getLastStatus(QString jid)
 bool MySqlStorage::setLastStatus(QString jid, QString status)
 {
     QSqlQuery query;
-    query.prepare("UPDATE users SET lastStatus = :lastStatus WHERE jid = :jid");
+    query.prepare("UPDATE qjabberd_users SET lastStatus = :lastStatus WHERE jid = :jid");
     query.bindValue(":lastStatus", status);
     query.bindValue(":jid", jid);
     return query.exec();
@@ -543,10 +546,10 @@ bool MySqlStorage::storePrivateData(QString jid, QMultiHash<QString, QString> no
     foreach (QString key, nodeMap.keys())
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO privatedata(user_id, nodename, nodeValue)"
-                      " VALUES(:user_id, :nodename, :nodeValue)");
+        query.prepare("INSERT INTO qjabberd_privatestorage(user_id, nodeName, nodeValue)"
+                      " VALUES(:user_id, :nodeName, :nodeValue)");
         query.bindValue(":user_id", getUserId(jid));
-        query.bindValue(":nodename", key);
+        query.bindValue(":nodeName", key);
         query.bindValue(":nodeValue", nodeMap.value(key));
         query.exec();
     }
@@ -559,7 +562,7 @@ bool MySqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     foreach (MetaContact metacontact, metaContactList)
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO metacontact(user_id, jid, tag, order) VALUES(:user_id, :jid, :tag, :order)");
+        query.prepare("INSERT INTO qjabberd_metacontact(user_id, jid, tag, order) VALUES(:user_id, :jid, :tag, :order)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":jid", metacontact.getJid());
         query.bindValue(":tag", metacontact.getTag());
@@ -572,9 +575,9 @@ bool MySqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
 QByteArray MySqlStorage::getPrivateData(QString jid, QString node)
 {
     QSqlQuery query;
-    query.prepare("SELECT nodeValue FROM privatedata WHERE user_id = :user_id AND nodename = :nodename");
+    query.prepare("SELECT nodeValue FROM qjabberd_privatestorage WHERE user_id = :user_id AND nodeName = :nodeName");
     query.bindValue(":user_id", getUserId(jid));
-    query.bindValue(":nodename", node);
+    query.bindValue(":nodeName", node);
     query.exec();
 
     if (query.first())
@@ -587,7 +590,7 @@ QByteArray MySqlStorage::getPrivateData(QString jid, QString node)
 QList<MetaContact> MySqlStorage::getPrivateData(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT jid, tag, order FROM metacontact WHERE user_id = :user_id");
+    query.prepare("SELECT jid, tag, order FROM qjabberd_metacontact WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -618,7 +621,7 @@ bool MySqlStorage::saveOfflineMessage(QString from, QString to, QString type,
     document.setObject(object);
 
     QSqlQuery query;
-    query.prepare("INSERT INTO offlinemessage(user_id, ufrom, stamp, type, body)"
+    query.prepare("INSERT INTO qjabberd_offlinemessage(user_id, ufrom, stamp, type, body)"
                   " VALUES(:user_id, :ufrom, :stamp, :type, :body)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
@@ -631,7 +634,7 @@ bool MySqlStorage::saveOfflineMessage(QString from, QString to, QString type,
 int MySqlStorage::getOfflineMessagesNumber(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM offlineMessage WHERE user_id = :user_id");
+    query.prepare("SELECT COUNT(*) FROM qjabberd_offlinemessage WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -643,7 +646,7 @@ int MySqlStorage::getOfflineMessagesNumber(QString jid)
 QByteArray MySqlStorage::getOfflineMessage(QString jid, QString stamp)
 {
     QSqlQuery query;
-    query.prepare("SELECT ufrom, type, body FROM offlineMessage WHERE user_id = :user_id AND stamp = :stamp");
+    query.prepare("SELECT ufrom, type, body FROM qjabberd_offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":stamp", stamp);
     query.exec();
@@ -675,7 +678,7 @@ QByteArray MySqlStorage::getOfflineMessage(QString jid, QString stamp)
 QMultiHash<QString, QByteArray> MySqlStorage::getOfflineMessageFrom(QString jid, QString from)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, body, stamp FROM offlineMessage WHERE user_id = :user_id AND ufrom = :ufrom");
+    query.prepare("SELECT type, body, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":ufrom", from);
     query.exec();
@@ -708,7 +711,7 @@ QMultiHash<QString, QByteArray> MySqlStorage::getOfflineMessageFrom(QString jid,
 QMultiHash<QString, QByteArray> MySqlStorage::getAllOfflineMessage(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT ufrom, type, body, stamp FROM offlineMessage WHERE user_id = :user_id ORDER BY stamp ASC");
+    query.prepare("SELECT ufrom, type, body, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id ORDER BY stamp ASC");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -742,7 +745,7 @@ bool MySqlStorage::deleteOfflineMessage(QString jid, QString key)
     if (key.contains("@"))
     {
         QSqlQuery query;
-        query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
+        query.prepare("DELETE FROM qjabberd_offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":ufrom", key);
         return query.exec();
@@ -750,7 +753,7 @@ bool MySqlStorage::deleteOfflineMessage(QString jid, QString key)
     else
     {
         QSqlQuery query;
-        query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
+        query.prepare("DELETE FROM qjabberd_offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":stamp", key);
         return query.exec();
@@ -760,7 +763,7 @@ bool MySqlStorage::deleteOfflineMessage(QString jid, QString key)
 bool MySqlStorage::deleteAllOfflineMessage(QString jid)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM offlinemessage WHERE user_id = :user_id");
+    query.prepare("DELETE FROM qjabberd_offlinemessage WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     return query.exec();
 }
@@ -768,7 +771,7 @@ bool MySqlStorage::deleteAllOfflineMessage(QString jid)
 QMultiHash<QString, QString> MySqlStorage::getOfflineMessageHeaders(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT stamp, ufrom FROM offlinemessage WHERE user_id = :user_id");
+    query.prepare("SELECT stamp, ufrom FROM qjabberd_offlinemessage WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -784,7 +787,7 @@ bool MySqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
                                                    QString presenceType)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
+    query.prepare("INSERT INTO qjabberd_offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
                   " VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
@@ -798,7 +801,7 @@ QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
 {
     int user_id = getUserId(jid);
     QSqlQuery query;
-    query.prepare("SELECT presenceStanza FROM offlinepresencesubscription WHERE user_id = :user_id");
+    query.prepare("SELECT presenceStanza FROM qjabberd_offlinepresencesubscription WHERE user_id = :user_id");
     query.bindValue(":user_id", user_id);
     query.exec();
 
@@ -808,7 +811,7 @@ QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
         subscriptionList << query.value(0);
     }
 
-    query.prepare("DELETE FROM offlinepresencesubscription WHERE user_id = :user_id"
+    query.prepare("DELETE FROM qjabberd_offlinepresencesubscription WHERE user_id = :user_id"
                   " AND (type = 'subscribed' OR type = 'unsubscribed' OR type = 'unsubscribe'");
     query.bindValue(":user_id", user_id);
     query.exec();
@@ -819,7 +822,7 @@ QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
 bool MySqlStorage::deleteOfflinePresenceSubscribe(QString from, QString to)
 {
     QSqlQuery query;
-    query.prepare("DELETE FROM offlinepresencesubscription WHERE ufrom = :ufrom AND uto = :uto");
+    query.prepare("DELETE FROM qjabberd_offlinepresencesubscription WHERE ufrom = :ufrom AND uto = :uto");
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
     return query.exec();
@@ -830,7 +833,7 @@ QList<QString> MySqlStorage::getUserBlockList(QString jid)
     int user_id = getUserId(jid);
 
     QSqlQuery query;
-    query.prepare("SELECT jid FROM blocklist WHERE user_id = :user_id");
+    query.prepare("SELECT jid FROM qjabberd_blocklist WHERE user_id = :user_id");
     query.bindValue(":user_id", user_id);
     query.exec();
 
@@ -857,7 +860,7 @@ bool MySqlStorage::addUserBlockListItems(QString jid, QList<QString> items)
     foreach (QString item, items)
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO blocklist(user_id, jid) VALUES(:user_id, :jid)");
+        query.prepare("INSERT INTO qjabberd_blocklist(user_id, jid) VALUES(:user_id, :jid)");
         query.bindValue(":user_id", user_id);
         query.bindValue(":jid", item);
         query.exec();
@@ -873,7 +876,7 @@ bool MySqlStorage::deleteUserBlockListItems(QString jid, QList<QString> items)
     foreach (QString item, items)
     {
         QSqlQuery query;
-        query.prepare("DELETE FROM blocklist WHERE user_id = :user_id AND jid = :jid");
+        query.prepare("DELETE FROM qjabberd_blocklist WHERE user_id = :user_id AND jid = :jid");
         query.bindValue(":user_id", user_id);
         query.bindValue(":jid", item);
         query.exec();
@@ -886,7 +889,7 @@ bool MySqlStorage::emptyUserBlockList(QString jid)
     int user_id = getUserId(jid);
 
     QSqlQuery query;
-    query.prepare("DELETE FROM blocklist WHERE user_id = :user_id");
+    query.prepare("DELETE FROM qjabberd_blocklist WHERE user_id = :user_id");
     query.bindValue(":user_id", user_id);
     return query.exec();
 }

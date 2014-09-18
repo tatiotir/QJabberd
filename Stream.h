@@ -27,9 +27,9 @@ private slots:
     void sslError(QList<QSslError> errors);
     void streamEncrypted();
     void sendUnavailablePresence();
-    void sendPing();
-    void pingError();
-    void sendWhiteSpace();
+//    void sendPing();
+//    void pingError();
+//    void sendWhiteSpace();
 
 public slots:
     void closeStream();
@@ -70,8 +70,8 @@ private:
     QString m_fullJid;
     QString m_host;
     QString m_streamId;
-    QTimer *m_pingTimer;
-    QTimer *m_pongTimer;
+//    QTimer *m_pingTimer;
+//    QTimer *m_pongTimer;
     bool m_supportPing;
     int m_pingErrorCount;
     int m_pingId;

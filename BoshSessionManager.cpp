@@ -1,10 +1,11 @@
 #include "BoshSessionManager.h"
 
-BoshSessionManager::BoshSessionManager(QObject *parent, int boshPort, int xmppServerPort) : QTcpServer(parent)
+BoshSessionManager::BoshSessionManager(QObject *parent, int boshPort, int xmppServerPort, bool crossDomainBosh) : QTcpServer(parent)
 {
     m_sessionMap = new QMap<QString, BoshSession* >();
     m_boshPort = boshPort;
     m_xmppServerPort = xmppServerPort;
+    m_crossDomainBosh = crossDomainBosh;
 }
 
 void BoshSessionManager::incomingConnection(qintptr socketDescriptor)
@@ -83,21 +84,23 @@ void BoshSessionManager::dataReceived()
             }
         }
     }
-//    else
-//    {
-//        Connection *xmppServerConnection = new Connection(0);
-//        BoshSession *session = new BoshSession(this, xmppServerConnection, QString(), QString(), 1, 1,
-//                                               requestValues.value("Host"), QString(), 20, -1, QString(),
-//                                               Utils::generateId());
+    else
+    {
+        // Cross domain request
+        // If user enable cross domain in server config
+        if (m_crossDomainBosh)
+        {
+            QDomDocument document;
+            document.appendChild(document.createElement("crossDomain"));
 
-//        session->setBoshFirstConnection(boshConnection);
-
-//        connect(session, SIGNAL(sigCloseBoshSession(QString)), this, SLOT(closeBoshSession(QString)));
-//        m_sessionMap->insert(session->sid(), session);
-//        //session->start();
-
-//        xmppServerConnection->connectToHost(QHostInfo::fromName(session->host()).addresses().value(0), m_xmppServerPort);
-//    }
+            boshConnection->write(Utils::generateHttpResponseHeader(document.toByteArray(-1).count()) + document.toByteArray(-1));
+            boshConnection->flush();
+        }
+        else
+        {
+            boshConnection->close();
+        }
+    }
 }
 
 void BoshSessionManager::closeBoshSession(QString sid)

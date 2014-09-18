@@ -101,6 +101,8 @@ void BoshSession::xmppServerDataReceived()
                    ++j;
             m_xmlPaquet.remove(indexTls, j - indexTls + 1);
 
+            qDebug() << "Stream : " << m_xmlPaquet;
+
             QDomDocument document;
             if (document.setContent(m_xmlPaquet))
             {
@@ -146,6 +148,7 @@ void BoshSession::requestReply(QByteArray reply)
 {
     if (m_boshFirstConnection->isOpen() && (m_boshFirstConnection->openMode() != QIODevice::NotOpen))
     {
+        qDebug() << "Reply : " << reply;
         m_boshFirstConnection->write(reply);
         m_boshFirstConnection->flush();
     }
@@ -318,7 +321,7 @@ void BoshSession::sessionRequest(QDomDocument request, Connection *connection)
                 bodyElement.setAttribute("xmlns", "http://jabber.org/protocol/httpbind");
 
                 document.appendChild(bodyElement);
-                requestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count()) + document.toByteArray(-1));
+                requestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count(), m_crossDomainBosh) + document.toByteArray(-1));
             }
             else
             {
@@ -351,7 +354,7 @@ void BoshSession::boshSessionInitiationReply(QDomDocument document)
     bodyElement.appendChild(document.documentElement());
     doc.appendChild(bodyElement);
 
-    requestReply(Utils::generateHttpResponseHeader(doc.toByteArray(-1).count()) + doc.toByteArray(-1));
+    requestReply(Utils::generateHttpResponseHeader(doc.toByteArray(-1).count(), m_crossDomainBosh) + doc.toByteArray(-1));
 }
 
 void BoshSession::boshSessionRestartReply(QDomDocument document)
@@ -367,7 +370,7 @@ void BoshSession::boshSessionRestartReply(QDomDocument document)
     bodyElement.appendChild(document.documentElement());
     doc.appendChild(bodyElement);
 
-    requestReply(Utils::generateHttpResponseHeader(doc.toByteArray(-1).count()) + doc.toByteArray(-1));
+    requestReply(Utils::generateHttpResponseHeader(doc.toByteArray(-1).count(), m_crossDomainBosh) + doc.toByteArray(-1));
 }
 
 void BoshSession::boshSessionRequestReply()
@@ -399,7 +402,7 @@ void BoshSession::boshSessionRequestReply()
         bodyElement.appendChild(responseDocument.documentElement());
     }
     replyDocument.appendChild(bodyElement);
-    requestReply(Utils::generateHttpResponseHeader(replyDocument.toByteArray(-1).count()) + replyDocument.toByteArray(-1));
+    requestReply(Utils::generateHttpResponseHeader(replyDocument.toByteArray(-1).count(), m_crossDomainBosh) + replyDocument.toByteArray(-1));
 }
 
 void BoshSession::boshSessionReply()
@@ -418,7 +421,7 @@ void BoshSession::boshSessionReply()
         bodyElement.appendChild(responseDocument.documentElement());
     }
     replyDocument.appendChild(bodyElement);
-    emptyRequestReply(Utils::generateHttpResponseHeader(replyDocument.toByteArray(-1).count()) + replyDocument.toByteArray(-1));
+    emptyRequestReply(Utils::generateHttpResponseHeader(replyDocument.toByteArray(-1).count(), m_crossDomainBosh) + replyDocument.toByteArray(-1));
 }
 
 void BoshSession::sendKeepAlive()
@@ -430,7 +433,7 @@ void BoshSession::sendKeepAlive()
     bodyElement.setAttribute("xmlns", "http://jabber.org/protocol/httpbind");
 
     document.appendChild(bodyElement);
-    emptyRequestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count()) + document.toByteArray(-1));
+    emptyRequestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count(), m_crossDomainBosh) + document.toByteArray(-1));
     //sendRequest();
 }
 
@@ -444,7 +447,8 @@ void BoshSession::close()
     bodyElement.setAttribute("type", "terminate");
 
     document.appendChild(bodyElement);
-    requestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count()) + document.toByteArray(-1));
+    requestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count(), m_crossDomainBosh) + document.toByteArray(-1));
+    emptyRequestReply(Utils::generateHttpResponseHeader(document.toByteArray(-1).count(), m_crossDomainBosh) + document.toByteArray(-1));
 
     qDebug() << "Info : BOSH client " << Utils::getBareJid(m_fullJid) << " disconnected.";
     m_xmppServerConnection->write("</stream:stream>");
@@ -460,6 +464,16 @@ void BoshSession::deleteBoshSession()
 {
     emit sigCloseBoshSession(m_sid);
 }
+bool BoshSession::crossDomainBosh() const
+{
+    return m_crossDomainBosh;
+}
+
+void BoshSession::setCrossDomainBosh(bool crossDomainBosh)
+{
+    m_crossDomainBosh = crossDomainBosh;
+}
+
 
 BoshSession::~BoshSession()
 {

@@ -16,7 +16,7 @@ class Utils
 public:
     Utils();
 
-    static QByteArray generateHttpResponseHeader(int contentLength);
+    static QByteArray generateHttpResponseHeader(int contentLength, bool crossDomainBosh);
     static QMap<QByteArray, QByteArray> parseHttpRequest(QByteArray postData);
     static QByteArray digestCalculator(QString id, QString password);
     static QString generateResource();

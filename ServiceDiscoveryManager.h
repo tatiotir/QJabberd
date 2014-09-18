@@ -10,13 +10,15 @@
 #include "StreamNegotiationManager.h"
 #include "MucManager.h"
 #include "DataFormManager.h"
+#include "PubsubManager.h"
 
 class ServiceDiscoveryManager : public QObject
 {
     Q_OBJECT
 public:
     explicit ServiceDiscoveryManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0,
-                                     UserManager *userManager = 0, MucManager *mucManager = 0);
+                                     UserManager *userManager = 0, MucManager *mucManager = 0,
+                                     PubsubManager *pubsubManager = 0);
 
     QByteArray serviceDiscoveryManagerReply(QDomDocument document, QString iqFrom);
 
@@ -40,6 +42,7 @@ private:
 
     UserManager *m_userManager;
     MucManager *m_mucManager;
+    PubsubManager *m_pubsubManager;
     QJsonObject *m_serverConfiguration;
 };
 

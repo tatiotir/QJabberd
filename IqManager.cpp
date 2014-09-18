@@ -844,10 +844,10 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             emit sigApplicationRequest(iqTo, document);
             return QByteArray();
         }
-//        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
-//        {
-//            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
-//        }
+        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
+        {
+            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
+        }
         else if (firstChildTagName == "jingle")
         {
             emit sigApplicationRequest(iqTo, document);
@@ -1011,7 +1011,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
                     }
                 }
             }
-            else if ((xmlns == "jabber:iq:avatar"))
+            else if (xmlns == "jabber:iq:avatar")
             {
                 document.firstChildElement().setAttribute("from", iqFrom);
                 emit sigIqAvatarQuery(iqTo, document);
@@ -1063,10 +1063,10 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
             return QByteArray();
         }
-//        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
-//        {
-//            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
-//        }
+        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
+        {
+            return m_pubsubManager->pubsubManagerReply(document, iqFrom);
+        }
         else
         {
             return Error::generateError("", "iq", "cancel", "service-unavailable",
@@ -1075,6 +1075,10 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
     }
     else if (iq.attribute("type") == "result")
     {
+        if (document.firstChildElement().attribute("xmlns") == "http://jabber.org/protocol/disco#info")
+        {
+            return m_serviceDiscoveryManager->serviceDiscoveryManagerReply(document, iqFrom);
+        }
         document.firstChildElement().setAttribute("from", iqFrom);
         emit sigApplicationReply(iqTo, document);
         return QByteArray();

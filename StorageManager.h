@@ -4,7 +4,7 @@
 #include <QString>
 #include <QMap>
 #include "LocalStorage.h"
-#include "MysqlStorage.h"
+#include "MySqlStorage.h"
 #include "PgSqlStorage.h"
 //#include "MongoDBStorage.h"
 

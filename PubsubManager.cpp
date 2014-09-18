@@ -11,11 +11,13 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
     QString from = document.documentElement().attribute("from", iqFrom);
     QString to = document.documentElement().attribute("to");
     QString id = document.documentElement().attribute("id", Utils::generateId());
+    QString xmlns = document.documentElement().firstChildElement().attribute("xmlns");
 
     QString pubsubService = to;
 
     QString type = document.documentElement().attribute("type");
     QDomElement pubsubChild = document.documentElement().firstChildElement().firstChildElement();
+
     if (type == "set")
     {
         QString node = pubsubChild.attribute("node");
@@ -59,8 +61,8 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
                     return Error::generateError("", "iq", "cancel", "not-allowed", "closed-node", "http://jabber.org/protocol/pubsub#errors", "", to, from, id);
             }
 
-//            if (!nodeCustomerDatabase(pubsubService, node).contains(Utils::getBareJid(from)))
-//                return Error::generateError("", "iq", "auth", "payment-required", to, from, id, QDomElement());
+            //            if (!nodeCustomerDatabase(pubsubService, node).contains(Utils::getBareJid(from)))
+            //                return Error::generateError("", "iq", "auth", "payment-required", to, from, id, QDomElement());
 
             if (nodeUserSubscription(pubsubService, node, Utils::getBareJid(from)) == "pending")
                 return Error::generateError("", "iq", "auth", "not-authorized", "pending-subscription", "http://jabber.org/protocol/pubsub#errors", "", to, from, id);
@@ -125,6 +127,33 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
         }
         else if (pubsubChild.tagName() == "publish")
         {
+
+            // Geolocalisation node
+            if ((node == "http://jabber.org/protocol/geoloc") || (node == "http://jabber.org/protocol/tune")
+                    || (node == "http://jabber.org/protocol/physloc")
+                    || (node == "http://jabber.org/protocol/mood"))
+            {
+                QString itemId = pubsubChild.firstChildElement().attribute("id", Utils::generateId());
+                QByteArray itemData;
+
+                QTextStream stream(&itemData);
+                pubsubChild.firstChildElement().firstChildElement().save(stream, 0);
+
+                QList<InterestedPep> listInterestedUser = m_interestedPepMap.values(Utils::getBareJid(from));
+                foreach (InterestedPep subscriber, listInterestedUser)
+                {
+                    if (((node == "http://jabber.org/protocol/geoloc") && subscriber.geoloc()) ||
+                            ((node == "http://jabber.org/protocol/physloc") && subscriber.physloc()) ||
+                            ((node == "http://jabber.org/protocol/mood") && subscriber.mood()) ||
+                            ((node == "http://jabber.org/protocol/tune") && subscriber.tune()))
+                    {
+                        QByteArray notification = pubsubItemPublishNotification(Utils::getBareJid(from), subscriber.jid(), id, node, PubsubItem(itemId, itemData));
+                        emit sigPubsubNotification(subscriber.jid(), notification);
+                    }
+                }
+                return QByteArray();
+            }
+
             QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
             if ((affiliation == "outcast") || (affiliation == "member") || (affiliation == "none"))
                 return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
@@ -145,23 +174,26 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
             QByteArray itemData;
 
             QTextStream stream(&itemData);
-            pubsubChild.firstChildElement().save(stream, 0);
+            pubsubChild.firstChildElement().firstChildElement().save(stream, 0);
+
+            qDebug() << "Pubsub id : " << itemId;
+            qDebug() << "Pubsub data : " << itemData;
 
             if (publishItem(pubsubService, node, PubsubItem(itemId, itemData)))
             {
                 QStringList subscribers = getSubscriberList(pubsubService, node);
-                QByteArray notification;
+
+                bool notifyWithPayload = false;
                 if (notificationWithPayload(pubsubService, node))
                 {
-                    notification = pubsubItemPublishNotification(to, from, id, node, PubsubItem(node, itemData));
-                }
-                else
-                {
-                    notification = pubsubItemPublishNotification(to, from, id, node, itemId);
+                    notifyWithPayload = true;
                 }
 
                 foreach (QString subscriber, subscribers)
                 {
+                    QByteArray notification = pubsubItemPublishNotification(to, subscriber, id, node, itemId);
+                    if (notifyWithPayload)
+                        notification = pubsubItemPublishNotification(to, subscriber, id, node, PubsubItem(itemId, itemData));
                     emit sigPubsubNotification(subscriber, notification);
                 }
 
@@ -204,18 +236,20 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
             if (nodeExist(pubsubService, node))
                 return Error::generateError("", "iq", "cancel", "conflict", to, from, id, QDomElement());
 
-            QMultiMap<QString, QVariant> dataFormValues = DataFormManager::parseDataForm(pubsubChild.firstChildElement().firstChildElement());
-
+            QMultiMap<QString, QVariant> dataFormValues = DataFormManager::parseDataForm(document.documentElement().firstChildElement().elementsByTagName("configure").item(0).firstChildElement());
             if (!dataFormValues.isEmpty())
             {
                 QString accessModel = dataFormValues.value("pubsub#access_model").toString();
-                if ((accessModel != "authorize") || (accessModel != "open") || (accessModel != "presence")
-                        || (accessModel != "roster") || (accessModel != "whitelist"))
+                if ((accessModel != "authorize") && (accessModel != "open") && (accessModel != "presence")
+                        && (accessModel != "roster") && (accessModel != "whitelist"))
                     return Error::generateError("", "iq", "modify", "not-acceptable", "unsupported-access-model", "http://jabber.org/protocol/pubsub#errors", "", to, from, id);
             }
 
             if (createNode(pubsubService, node, Utils::getBareJid(from), dataFormValues))
+            {
+                subscribeToNode(pubsubService, node, NodeSubscriber(Utils::getBareJid(from), "owner", "subscribed"));
                 return Utils::generateIQResult(to, from, id);
+            }
         }
         else if (pubsubChild.tagName() == "configure")
         {
@@ -293,6 +327,84 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
                 }
             }
         }
+        else if (pubsubChild.tagName() == "subscriptions")
+        {
+            QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
+            if ((affiliation != "owner"))
+                return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
+
+            if (!nodeExist(pubsubService, node))
+                return Error::generateError("", "iq", "cancel", "item-not-found", to, from, id, QDomElement());
+
+            QDomNodeList subscriptionNodeList = pubsubChild.childNodes();
+            QList<QDomElement> errorList;
+            for (int i = 0; i < subscriptionNodeList.count(); ++i)
+            {
+                QString jid = subscriptionNodeList.item(i).toElement().attribute("jid");
+                QString subscription = subscriptionNodeList.item(i).toElement().attribute("subscription");
+                if (!jid.isEmpty() && !subscription.isEmpty())
+                {
+                    if (!changeSubscription(pubsubService, node, jid, subscription))
+                    {
+                        errorList << subscriptionNodeList.item(i).toElement();
+                    }
+                    else
+                    {
+                        if (subscription == "none")
+                        {
+                            emit sigPubsubNotification(from, pubsubChangeSubscriptionNotification(to, from, node, jid, subscription));
+                        }
+                    }
+                }
+            }
+            if (!errorList.isEmpty())
+            {
+                return pubsubChangeSubscriptionError(to, from, id, node, errorList);
+            }
+            else
+            {
+                return Utils::generateIQResult(to, from, id);
+            }
+        }
+        else if (pubsubChild.tagName() == "affiliations")
+        {
+            QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
+            if ((affiliation != "owner"))
+                return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
+
+            if (!nodeExist(pubsubService, node))
+                return Error::generateError("", "iq", "cancel", "item-not-found", to, from, id, QDomElement());
+
+            QDomNodeList affiliationNodeList = pubsubChild.childNodes();
+            QList<QDomElement> errorList;
+            for (int i = 0; i < affiliationNodeList.count(); ++i)
+            {
+                QString jid = affiliationNodeList.item(i).toElement().attribute("jid");
+                QString newAffiliation = affiliationNodeList.item(i).toElement().attribute("subscription");
+                if (!jid.isEmpty() && !newAffiliation.isEmpty())
+                {
+                    if (!changeAffiliation(pubsubService, node, jid, newAffiliation))
+                    {
+                        errorList << affiliationNodeList.item(i).toElement();
+                    }
+                    else
+                    {
+                        if (newAffiliation == "none")
+                        {
+                            emit sigPubsubNotification(from, pubsubChangeAffiliationNotification(to, from, node, jid, newAffiliation));
+                        }
+                    }
+                }
+            }
+            if (!errorList.isEmpty())
+            {
+                return pubsubChangeAffiliationError(to, from, id, node, errorList);
+            }
+            else
+            {
+                return Utils::generateIQResult(to, from, id);
+            }
+        }
     }
     else if (type == "get")
     {
@@ -360,8 +472,8 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
                     return Error::generateError("", "iq", "cancel", "not-allowed", "closed-node", "http://jabber.org/protocol/pubsub#errors", "", to, from, id);
             }
 
-//            if (!nodeCustomerDatabase(pubsubService, node).contains(Utils::getBareJid(from)))
-//                return Error::generateError("", "iq", "auth", "payment-required", to, from, id, QDomElement());
+            //            if (!nodeCustomerDatabase(pubsubService, node).contains(Utils::getBareJid(from)))
+            //                return Error::generateError("", "iq", "auth", "payment-required", to, from, id, QDomElement());
 
             QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
             if ((affiliation == "outcast") || (affiliation == "member") || (affiliation == "none"))
@@ -402,6 +514,62 @@ QByteArray PubsubManager::pubsubManagerReply(QDomDocument document, QString iqFr
 
             return DataFormManager::getNodeConfigurationForm("result", to, from, id, node, getNodeConfiguration(pubsubService, node), m_rosterManager->getGroups(Utils::getBareJid(from))).toByteArray();
         }
+        else if (pubsubChild.tagName() == "subscriptions")
+        {
+            if (!node.isEmpty())
+            {
+                bool owner = false;
+                if (xmlns == "http://jabber.org/protocol/pubsub#owner")
+                    owner = true;
+                QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
+                if ((affiliation != "owner"))
+                    return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
+
+                if (!nodeExist(pubsubService, node))
+                    return Error::generateError("", "iq", "cancel", "item-not-found", to, from, id, QDomElement());
+
+                QList<NodeSubscriber> subscriptionList = nodeSubscriptionList(pubsubService, node);
+                return pubsubNodeSubscriptionList(to, from, id, node, subscriptionList, owner);
+            }
+            else
+            {
+                QMultiHash<QString, QList<NodeSubscriber> > nodeMapSubscriptionList;
+                QStringList nodeList = pubsubNodeList(pubsubService);
+                foreach (QString node, nodeList)
+                {
+                    nodeMapSubscriptionList.insert(node, nodeSubscriptionList(pubsubService, node));
+                }
+                return pubsubAllNodeSubscriptionList(to, from, id, nodeMapSubscriptionList);
+            }
+        }
+        else if (pubsubChild.tagName() == "affiliations")
+        {
+            if (!node.isEmpty())
+            {
+                bool owner = false;
+                if (xmlns == "http://jabber.org/protocol/pubsub#owner")
+                    owner = true;
+                QString affiliation = nodeUserAffiliation(pubsubService, node, Utils::getBareJid(from));
+                if ((affiliation != "owner"))
+                    return Error::generateError("", "iq", "auth", "forbidden", to, from, id, QDomElement());
+
+                if (!nodeExist(pubsubService, node))
+                    return Error::generateError("", "iq", "cancel", "item-not-found", to, from, id, QDomElement());
+
+                QList<NodeSubscriber> affiliationList = nodeAffiliationList(pubsubService, node);
+                return pubsubNodeAffiliationList(to, from, id, node, affiliationList, owner);
+            }
+            else
+            {
+                QMultiHash<QString, QList<NodeSubscriber> > nodeMapAffiliationList;
+                QStringList nodeList = pubsubNodeList(pubsubService);
+                foreach (QString node, nodeList)
+                {
+                    nodeMapAffiliationList.insert(node, nodeAffiliationList(pubsubService, node));
+                }
+                return pubsubAllNodeAffiliationList(to, from, id, nodeMapAffiliationList);
+            }
+        }
     }
     return QByteArray();
 }
@@ -433,6 +601,233 @@ QByteArray PubsubManager::pubsubSubscribeNotification(QString from, QString to, 
     document.appendChild(iq);
 
     return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubNodeSubscriptionList(QString from, QString to, QString id,
+                                                     QString node,
+                                                     QList<NodeSubscriber> subscriptionList,
+                                                     bool owner)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#owner");
+
+    QDomElement subscriptionsElement = document.createElement("subscriptions");
+    subscriptionsElement.setAttribute("node", node);
+
+    foreach (NodeSubscriber nodesubscriber, subscriptionList)
+    {
+        QDomElement subscriptionElement = document.createElement("subscription");
+        if (!owner)
+            subscriptionElement.setAttribute("node", node);
+        subscriptionElement.setAttribute("jid", nodesubscriber.jid());
+        subscriptionElement.setAttribute("subscription", nodesubscriber.subscription());
+
+        subscriptionsElement.appendChild(subscriptionElement);
+    }
+
+    pubsub.appendChild(subscriptionsElement);
+    iq.appendChild(pubsub);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubAllNodeSubscriptionList(QString from, QString to, QString id,
+                                                        QMultiHash<QString, QList<NodeSubscriber> >
+                                                        nodeMapSubscriptionList)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub");
+
+    QDomElement subscriptionsElement = document.createElement("subscriptions");
+    foreach (QString node, nodeMapSubscriptionList.keys())
+    {
+        foreach (NodeSubscriber nodesubscriber, nodeMapSubscriptionList.value(node))
+        {
+            QDomElement subscriptionElement = document.createElement("subscription");
+            subscriptionElement.setAttribute("node", node);
+            subscriptionElement.setAttribute("jid", nodesubscriber.jid());
+            subscriptionElement.setAttribute("subscription", nodesubscriber.subscription());
+            subscriptionsElement.appendChild(subscriptionElement);
+        }
+    }
+
+    pubsub.appendChild(subscriptionsElement);
+    iq.appendChild(pubsub);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubNodeAffiliationList(QString from, QString to, QString id, QString node,
+                                                    QList<NodeSubscriber> affiliationList,
+                                                    bool owner)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#owner");
+
+    QDomElement affiliationsElement = document.createElement("affiliations");
+    affiliationsElement.setAttribute("node", node);
+
+    foreach (NodeSubscriber nodesubscriber, affiliationList)
+    {
+        QDomElement affiliationElement = document.createElement("subscription");
+        if (!owner)
+            affiliationElement.setAttribute("node", node);
+        affiliationElement.setAttribute("jid", nodesubscriber.jid());
+        affiliationElement.setAttribute("affiliation", nodesubscriber.affiliation());
+
+        affiliationsElement.appendChild(affiliationElement);
+    }
+
+    pubsub.appendChild(affiliationsElement);
+    iq.appendChild(pubsub);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubAllNodeAffiliationList(QString from, QString to, QString id,
+                                                       QMultiHash<QString, QList<NodeSubscriber> > nodeMapAffiliationList)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub");
+
+    QDomElement affiliationsElement = document.createElement("subscriptions");
+    foreach (QString node, nodeMapAffiliationList.keys())
+    {
+        foreach (NodeSubscriber nodesubscriber, nodeMapAffiliationList.value(node))
+        {
+            QDomElement affiliationElement = document.createElement("subscription");
+            affiliationElement.setAttribute("node", node);
+            affiliationElement.setAttribute("jid", nodesubscriber.jid());
+            affiliationElement.setAttribute("affiliation", nodesubscriber.affiliation());
+            affiliationsElement.appendChild(affiliationElement);
+        }
+    }
+
+    pubsub.appendChild(affiliationsElement);
+    iq.appendChild(pubsub);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubChangeSubscriptionError(QString from, QString to, QString id,
+                                                        QString node, QList<QDomElement> subscriptionErrorList)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#owner");
+
+    QDomElement subscriptionsElement = document.createElement("subscriptions");
+    subscriptionsElement.setAttribute("node", node);
+
+    foreach (QDomElement element, subscriptionErrorList)
+    {
+        QDomElement subscriptionElement = document.createElement("subscription");
+        subscriptionElement.setAttribute("jid", element.attribute("jid"));
+        subscriptionElement.setAttribute("subscription", element.attribute("subscription"));
+        subscriptionsElement.appendChild(subscriptionElement);
+    }
+
+    QDomElement errorElement = document.createElement("error");
+    errorElement.setAttribute("type", "modify");
+
+    QDomElement errorCause = document.createElement("not-acceptable");
+    errorCause.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas");
+    errorElement.appendChild(errorCause);
+
+    pubsub.appendChild(subscriptionsElement);
+    iq.appendChild(pubsub);
+    iq.appendChild(errorElement);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubChangeAffiliationError(QString from, QString to, QString id,
+                                                       QString node, QList<QDomElement> affiliationErrorList)
+{
+    QDomDocument document;
+    QDomElement iq = document.createElement("iq");
+
+    iq.setAttribute("from", from);
+    iq.setAttribute("to", to);
+    iq.setAttribute("id", id);
+    iq.setAttribute("type", "result");
+
+    QDomElement pubsub = document.createElement("pubsub");
+    pubsub.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#owner");
+
+    QDomElement affiliationsElement = document.createElement("subscriptions");
+    affiliationsElement.setAttribute("node", node);
+
+    foreach (QDomElement element, affiliationErrorList)
+    {
+        QDomElement affiliationElement = document.createElement("affiliation");
+        affiliationElement.setAttribute("jid", element.attribute("jid"));
+        affiliationElement.setAttribute("affiliation", element.attribute("affiliation"));
+        affiliationsElement.appendChild(affiliationElement);
+    }
+
+    QDomElement errorElement = document.createElement("error");
+    errorElement.setAttribute("type", "modify");
+
+    QDomElement errorCause = document.createElement("not-acceptable");
+    errorCause.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas");
+    errorElement.appendChild(errorCause);
+
+    pubsub.appendChild(affiliationsElement);
+    iq.appendChild(pubsub);
+    iq.appendChild(errorElement);
+    document.appendChild(iq);
+
+    return document.toByteArray();
+}
+
+QStringList PubsubManager::pubsubNodeList(QString pubsubService)
+{
+    return m_storageManager->getStorage()->pubsubNodeList(pubsubService);
 }
 
 QByteArray PubsubManager::pubsubUnconfiguredNotification(QString from, QString to, QString id, QString node,
@@ -503,7 +898,8 @@ QByteArray PubsubManager::pubsubItemsPush(QString from, QString to, QString id, 
     return document.toByteArray();
 }
 
-QByteArray PubsubManager::pubsubItemPublishNotification(QString from, QString to, QString id, QString node, PubsubItem item)
+QByteArray PubsubManager::pubsubItemPublishNotification(QString from, QString to, QString id, QString node,
+                                                        PubsubItem item)
 {
     QDomDocument document;
     QDomElement message = document.createElement("iq");
@@ -511,7 +907,6 @@ QByteArray PubsubManager::pubsubItemPublishNotification(QString from, QString to
     message.setAttribute("from", from);
     message.setAttribute("to", to);
     message.setAttribute("id", id);
-    message.setAttribute("type", "result");
 
     QDomElement eventElement = document.createElement("pubsub");
     eventElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#event");
@@ -525,7 +920,7 @@ QByteArray PubsubManager::pubsubItemPublishNotification(QString from, QString to
     QDomDocument doc;
     doc.setContent(item.data());
 
-    itemElement.appendChild(document.importNode(document.documentElement(), true));
+    itemElement.appendChild(document.importNode(doc.documentElement(), true));
     itemsElement.appendChild(itemElement);
 
     eventElement.appendChild(itemsElement);
@@ -617,7 +1012,7 @@ QByteArray PubsubManager::pubsubNodeConfigurationNotification(QString from, QStr
 QByteArray PubsubManager::pubsubItemPublishResult(QString from, QString to, QString id, QString node, QString itemId)
 {
     QDomDocument document;
-    QDomElement iq = document.createElement("message");
+    QDomElement iq = document.createElement("iq");
 
     iq.setAttribute("from", from);
     iq.setAttribute("to", to);
@@ -667,6 +1062,53 @@ QByteArray PubsubManager::pubsubNodeDeleteNotification(QString from, QString to,
     return document.toByteArray();
 }
 
+QByteArray PubsubManager::pubsubChangeSubscriptionNotification(QString from, QString to, QString node,
+                                                               QString jid, QString subscription)
+{
+    QDomDocument document;
+    QDomElement message = document.createElement("iq");
+
+    message.setAttribute("from", from);
+    message.setAttribute("to", to);
+
+    QDomElement eventElement = document.createElement("pubsub");
+    eventElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#event");
+
+    QDomElement subscriptionElement = document.createElement("subscription");
+    subscriptionElement.setAttribute("node", node);
+    subscriptionElement.setAttribute("jid", jid);
+    subscriptionElement.setAttribute("subscription", subscription);
+
+    eventElement.appendChild(subscriptionElement);
+    message.appendChild(eventElement);
+    document.appendChild(message);
+
+    return document.toByteArray();
+}
+
+QByteArray PubsubManager::pubsubChangeAffiliationNotification(QString from, QString to, QString node, QString jid, QString affiliation)
+{
+    QDomDocument document;
+    QDomElement message = document.createElement("iq");
+
+    message.setAttribute("from", from);
+    message.setAttribute("to", to);
+
+    QDomElement eventElement = document.createElement("pubsub");
+    eventElement.setAttribute("xmlns", "http://jabber.org/protocol/pubsub#event");
+
+    QDomElement affiliationElement = document.createElement("affiliation");
+    affiliationElement.setAttribute("node", node);
+    affiliationElement.setAttribute("jid", jid);
+    affiliationElement.setAttribute("affiliation", affiliation);
+
+    eventElement.appendChild(affiliationElement);
+    message.appendChild(eventElement);
+    document.appendChild(message);
+
+    return document.toByteArray();
+}
+
 QByteArray PubsubManager::pubsubNodePurgeNotification(QString from, QString to, QString id, QString node)
 {
     QDomDocument document;
@@ -687,6 +1129,11 @@ QByteArray PubsubManager::pubsubNodePurgeNotification(QString from, QString to, 
     document.appendChild(message);
 
     return document.toByteArray();
+}
+
+void PubsubManager::updateInterestedPepMap(QString jid1, InterestedPep pep)
+{
+    m_interestedPepMap.insert(jid1, pep);
 }
 
 bool PubsubManager::subscribeToNode(QString pubsubService, QString node, NodeSubscriber subscriber)
@@ -837,4 +1284,24 @@ bool PubsubManager::notifyWhenItemRemove(QString pubsubService, QString node)
 bool PubsubManager::nodePersistItems(QString pubsubService, QString node)
 {
     return m_storageManager->getStorage()->nodePersistItems(pubsubService, node);
+}
+
+QList<NodeSubscriber> PubsubManager::nodeSubscriptionList(QString pubsubService, QString node)
+{
+    return m_storageManager->getStorage()->nodeSubscriptionList(pubsubService, node);
+}
+
+QList<NodeSubscriber> PubsubManager::nodeAffiliationList(QString pubsubService, QString node)
+{
+    return m_storageManager->getStorage()->nodeAffiliationList(pubsubService, node);
+}
+
+bool PubsubManager::changeAffiliation(QString pubsubService, QString node, QString jid, QString affiliation)
+{
+    return m_storageManager->getStorage()->changeAffiliation(pubsubService, node, jid, affiliation);
+}
+
+bool PubsubManager::changeSubscription(QString pubsubService, QString node, QString jid, QString subscription)
+{
+    return m_storageManager->getStorage()->changeSubscription(pubsubService, node, jid, subscription);
 }
