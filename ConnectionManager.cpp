@@ -197,6 +197,9 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
     connect(m_blockingCmdManager, SIGNAL(sigPresenceBroadCastFromContact(QString,QString)), m_streamManager,
             SLOT(presenceBroadCastFromContact(QString,QString)));
 
+    connect(m_pubsubManager, SIGNAL(sigPubsubNotification(QString,QByteArray)), m_streamManager,
+            SLOT(pubsubNotification(QString,QByteArray)));
+
 }
 
 /*!

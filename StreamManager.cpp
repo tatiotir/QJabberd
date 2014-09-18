@@ -59,6 +59,15 @@ void StreamManager::closeStream(QString fullJid)
     m_userMap->remove(fullJid);
 }
 
+void StreamManager::pubsubNotification(QString to, QByteArray notification)
+{
+    if (m_userMap->keys().contains(to))
+    {
+        m_userMap->value(to, new User())->getStream()->getConnection()->write(notification);
+        m_userMap->value(to, new User())->getStream()->getConnection()->flush();
+    }
+}
+
 void StreamManager::requestRedirection(QString to, QDomDocument document)
 {
     if (m_userMap->keys().contains(to) && to.contains("/"))

@@ -278,7 +278,7 @@ QDomDocument DataFormManager::getRoomConfigForm(QString type, QString from, QStr
     QDomDocument document;
 
     QDomElement iqNode = document.createElement("iq");
-    iqNode.setAttribute("type", type);
+    iqNode.setAttribute("type", "result");
     iqNode.setAttribute("from", from);
     iqNode.setAttribute("to", to);
     iqNode.setAttribute("id", id);
@@ -287,7 +287,7 @@ QDomDocument DataFormManager::getRoomConfigForm(QString type, QString from, QStr
     query.setAttribute("xmlns", "http://jabber.org/protocol/muc#owner");
 
     // Generate data form
-    QString formType = "form";
+    QString formType = type;
     QString formTitle = "Configuration for " + Utils::getUsername(from) + " Room";
     QString formInstruction = "Use this form to configure the room.";
 

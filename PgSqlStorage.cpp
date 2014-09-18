@@ -106,7 +106,7 @@ bool PgSqlStorage::addContactToRoster(QString jid, Contact contact)
         document.setObject(object);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO contact(user_id, approved, ask, groups, jid, name, subscription, version)"
+        query.prepare("INSERT INTO qjabberd_contact(user_id, approved, ask, groups, jid, name, subscription, version)"
                       " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":version", contact.getVersion());

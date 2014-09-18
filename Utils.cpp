@@ -6,7 +6,6 @@ Utils::Utils()
 
 QMap<QByteArray, QByteArray> Utils::parseHttpRequest(QByteArray postData)
 {
-    qDebug() << "POST Request : " << postData;
     QList<QByteArray> lines = postData.split('\n');
 
     QMap<QByteArray, QByteArray> values;

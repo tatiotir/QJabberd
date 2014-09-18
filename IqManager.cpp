@@ -844,7 +844,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             emit sigApplicationRequest(iqTo, document);
             return QByteArray();
         }
-        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("blockingcmd").toBool())
+        else if ((firstChildTagName == "pubsub") && m_serverConfiguration->value("modules").toObject().value("pubsub").toBool())
         {
             return m_pubsubManager->pubsubManagerReply(document, iqFrom);
         }

@@ -148,7 +148,6 @@ void BoshSession::requestReply(QByteArray reply)
 {
     if (m_boshFirstConnection->isOpen() && (m_boshFirstConnection->openMode() != QIODevice::NotOpen))
     {
-        qDebug() << "Reply : " << reply;
         m_boshFirstConnection->write(reply);
         m_boshFirstConnection->flush();
     }

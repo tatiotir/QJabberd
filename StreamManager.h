@@ -63,6 +63,7 @@ public slots:
     void roomSubject(QString to, QByteArray subjectMessage);
     void groupchatMessage(QString to, QDomDocument document);
     void directMucInvitation(QString to, QDomDocument document);
+    void pubsubNotification(QString to, QByteArray notification);
 
 signals:
     void sigPresenceSubscribedSended();

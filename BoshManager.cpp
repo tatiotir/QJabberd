@@ -2,7 +2,7 @@
 
 BoshManager::BoshManager(QObject *parent, int boshPort, int xmppServerPort, bool crossDomainBosh) : QObject(parent)
 {
-    m_boshSessionManager = new BoshSessionManager(this, boshPort, xmppServerPort);
+    m_boshSessionManager = new BoshSessionManager(this, boshPort, xmppServerPort, crossDomainBosh);
 
     connect(m_boshSessionManager, SIGNAL(sigBoshSessionInitiation(QString,QString)), this,
             SIGNAL(sigBoshSessionInitiation(QString,QString)));

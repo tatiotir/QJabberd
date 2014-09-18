@@ -16,7 +16,7 @@ Server::Server()
 
     m_conManager = new ConnectionManager(this, 5222, m_configuration);
 
-    if (m_configuration->value("modules").toVariant().toMap().value("bosh").toBool())
+    if (m_configuration->value("modules").toObject().value("bosh").toBool())
         m_boshManager = new BoshManager(this, 5280, 5222, m_configuration->value("crossDomainBosh").toBool());
 }
 
@@ -25,7 +25,7 @@ void Server::start()
     qDebug() << "Hello welcome to QJabberd XMPP server version 0.1";
     m_conManager->startManage();
 
-    if (m_configuration->value("modules").toVariant().toMap().value("bosh").toBool())
+    if (m_configuration->value("modules").toObject().value("bosh").toBool())
         m_boshManager->start();
 }
 
