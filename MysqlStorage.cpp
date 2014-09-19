@@ -12,6 +12,24 @@ MySqlStorage::MySqlStorage(QString host, int port, QString username, QString pas
     {
         qDebug() << "Database not open check database configuration";
     }
+    else
+    {
+        if (m_database.tables().isEmpty())
+        {
+            QFile mysqlTable(":/bd/qjabberd_mysql.sql");
+            mysqlTable.open(QIODevice::ReadOnly);
+
+            while (!mysqlTable.atEnd())
+            {
+                QString query = mysqlTable.readLine();
+                QSqlQuery sqlQuery;
+                if (sqlQuery.exec(query))
+                    qDebug() << "OK";
+                else
+                    qDebug() << "NOT OK";
+            }
+        }
+    }
 }
 
 QString MySqlStorage::getStorageType()
@@ -301,7 +319,7 @@ QSet<QString> MySqlStorage::getGroups(QString jid)
 QList<PrivacyListItem> MySqlStorage::getPrivacyList(QString jid, QString privacyListName)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
+    query.prepare("SELECT ptype, pvalue, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id AND privacyListName = :privacyListName");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":privacyListName", privacyListName);
     query.exec();
@@ -334,11 +352,11 @@ bool MySqlStorage::addItemsToPrivacyList(QString jid, QString privacyListName, Q
         document.setObject(object);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO qjabberd_privacylist(user_id, type, value, action, iorder, child, privacyListName)"
-                      " VALUES(:user_id, :type, :value, :action, :iorder, :child, :privacyListName)");
+        query.prepare("INSERT INTO qjabberd_privacylist(user_id, ptype, pvalue, action, iorder, child, privacyListName)"
+                      " VALUES(:user_id, :ptype, :pvalue, :action, :iorder, :child, :privacyListName)");
         query.bindValue(":user_id", user_id);
-        query.bindValue(":type", item.getType());
-        query.bindValue(":value", item.getValue());
+        query.bindValue(":ptype", item.getType());
+        query.bindValue(":pvalue", item.getValue());
         query.bindValue(":action", item.getAction());
         query.bindValue(":iorder", item.getOrder());
         query.bindValue(":child", document.toJson());
@@ -431,7 +449,7 @@ QList<PrivacyListItem> MySqlStorage::getPrivacyListItems(QString jid, QString pr
                                                          QString stanzaType, QString action)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, value, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id"
+    query.prepare("SELECT ptype, pvalue, action, iorder, child FROM qjabberd_privacylist WHERE user_id = :user_id"
                   " AND privacyListName = :privacyListName AND action = :action");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":privacyListName", privacyListName);
@@ -562,11 +580,11 @@ bool MySqlStorage::storePrivateData(QString jid, QList<MetaContact> metaContactL
     foreach (MetaContact metacontact, metaContactList)
     {
         QSqlQuery query;
-        query.prepare("INSERT INTO qjabberd_metacontact(user_id, jid, tag, order) VALUES(:user_id, :jid, :tag, :order)");
+        query.prepare("INSERT INTO qjabberd_metacontact(user_id, jid, tag, morder) VALUES(:user_id, :jid, :tag, :order)");
         query.bindValue(":user_id", getUserId(jid));
         query.bindValue(":jid", metacontact.getJid());
         query.bindValue(":tag", metacontact.getTag());
-        query.bindValue(":order", metacontact.getOrder());
+        query.bindValue(":morder", metacontact.getOrder());
         query.exec();
     }
     return m_database.commit();
@@ -590,7 +608,7 @@ QByteArray MySqlStorage::getPrivateData(QString jid, QString node)
 QList<MetaContact> MySqlStorage::getPrivateData(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT jid, tag, order FROM qjabberd_metacontact WHERE user_id = :user_id");
+    query.prepare("SELECT jid, tag, morder FROM qjabberd_metacontact WHERE user_id = :user_id");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -621,13 +639,13 @@ bool MySqlStorage::saveOfflineMessage(QString from, QString to, QString type,
     document.setObject(object);
 
     QSqlQuery query;
-    query.prepare("INSERT INTO qjabberd_offlinemessage(user_id, ufrom, stamp, type, body)"
-                  " VALUES(:user_id, :ufrom, :stamp, :type, :body)");
+    query.prepare("INSERT INTO qjabberd_offlinemessage(user_id, ufrom, stamp, otype, obody)"
+                  " VALUES(:user_id, :ufrom, :stamp, :otype, :obody)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":stamp", stamp);
-    query.bindValue(":type", type);
-    query.bindValue(":body", document.toJson());
+    query.bindValue(":otype", type);
+    query.bindValue(":obody", document.toJson());
     return query.exec();
 }
 
@@ -646,7 +664,7 @@ int MySqlStorage::getOfflineMessagesNumber(QString jid)
 QByteArray MySqlStorage::getOfflineMessage(QString jid, QString stamp)
 {
     QSqlQuery query;
-    query.prepare("SELECT ufrom, type, body FROM qjabberd_offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
+    query.prepare("SELECT ufrom, otype, obody FROM qjabberd_offlinemessage WHERE user_id = :user_id AND stamp = :stamp");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":stamp", stamp);
     query.exec();
@@ -657,7 +675,7 @@ QByteArray MySqlStorage::getOfflineMessage(QString jid, QString stamp)
         QDomElement messageElement = document.createElement("message");
         messageElement.setAttribute("from", query.value(0).toString());
         messageElement.setAttribute("to", jid);
-        messageElement.setAttribute("type", query.value(1).toString());
+        messageElement.setAttribute("otype", query.value(1).toString());
 
         QJsonArray bodyArray = QJsonDocument::fromJson(query.value(2).toByteArray()).object().value("body").toArray();
         for (int i = 0; i < bodyArray.count(); ++i)
@@ -678,7 +696,7 @@ QByteArray MySqlStorage::getOfflineMessage(QString jid, QString stamp)
 QMultiHash<QString, QByteArray> MySqlStorage::getOfflineMessageFrom(QString jid, QString from)
 {
     QSqlQuery query;
-    query.prepare("SELECT type, body, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
+    query.prepare("SELECT otype, obody, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id AND ufrom = :ufrom");
     query.bindValue(":user_id", getUserId(jid));
     query.bindValue(":ufrom", from);
     query.exec();
@@ -711,7 +729,7 @@ QMultiHash<QString, QByteArray> MySqlStorage::getOfflineMessageFrom(QString jid,
 QMultiHash<QString, QByteArray> MySqlStorage::getAllOfflineMessage(QString jid)
 {
     QSqlQuery query;
-    query.prepare("SELECT ufrom, type, body, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id ORDER BY stamp ASC");
+    query.prepare("SELECT ufrom, otype, obody, stamp FROM qjabberd_offlinemessage WHERE user_id = :user_id ORDER BY stamp ASC");
     query.bindValue(":user_id", getUserId(jid));
     query.exec();
 
@@ -787,12 +805,12 @@ bool MySqlStorage::saveOfflinePresenceSubscription(QString from, QString to, QBy
                                                    QString presenceType)
 {
     QSqlQuery query;
-    query.prepare("INSERT INTO qjabberd_offlinepresencesubscription(user_id, type, ufrom, uto, presenceStanza)"
-                  " VALUES(:user_id, :type, :ufrom, :uto, :presenceStanza)");
+    query.prepare("INSERT INTO qjabberd_offlinepresencesubscription(user_id, stype, ufrom, uto, presenceStanza)"
+                  " VALUES(:user_id, :stype, :ufrom, :uto, :presenceStanza)");
     query.bindValue(":user_id", getUserId(to));
     query.bindValue(":ufrom", from);
     query.bindValue(":uto", to);
-    query.bindValue(":type", presenceType);
+    query.bindValue(":stype", presenceType);
     query.bindValue(":presenceStanza", presence);
     return query.exec();
 }
@@ -812,7 +830,7 @@ QList<QVariant> MySqlStorage::getOfflinePresenceSubscription(QString jid)
     }
 
     query.prepare("DELETE FROM qjabberd_offlinepresencesubscription WHERE user_id = :user_id"
-                  " AND (type = 'subscribed' OR type = 'unsubscribed' OR type = 'unsubscribe'");
+                  " AND (stype = 'subscribed' OR stype = 'unsubscribed' OR stype = 'unsubscribe'");
     query.bindValue(":user_id", user_id);
     query.exec();
 

@@ -100,7 +100,7 @@ HEADERS += \
     InterestedPep.h
 
 RESOURCES += \
-    resources.qrc
+    qjabberd_resources.qrc
 
 RC_FILE += \
     ressource.rc
