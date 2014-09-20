@@ -16,12 +16,11 @@ ALTER TABLE public.contact_id_seq OWNER TO :table_user;
 
 CREATE SEQUENCE metacontact_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
 
-
 ALTER TABLE public.metacontact_id_seq OWNER TO :table_user;
 
 CREATE SEQUENCE offlinemessage_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
 
-ALTER TABLE public.offlinemessage_id_seq OWNER TO table_user;
+ALTER TABLE public.offlinemessage_id_seq OWNER TO :table_user;
 
 CREATE SEQUENCE offlinepresencesubscription_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
 
@@ -32,7 +31,6 @@ CREATE SEQUENCE privacylist_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MA
 ALTER TABLE public.privacylist_id_seq OWNER TO :table_user;
 
 CREATE SEQUENCE privatestorage_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
-
 
 ALTER TABLE public.privatestorage_id_seq OWNER TO :table_user;
 
@@ -48,49 +46,23 @@ CREATE TABLE qjabberd_contact(id integer DEFAULT nextval('contact_id_seq'::regcl
 
 ALTER TABLE public.qjabberd_contact OWNER TO :table_user;
 
-CREATE TABLE qjabberd_metacontact (
-    id integer DEFAULT nextval('metacontact_id_seq'::regclass) NOT NULL,
-    user_id integer NOT NULL,
-    jid character varying(510) NOT NULL,
-    tag character varying(510) DEFAULT NULL::character varying,
-    "order" integer
-);
-
+CREATE TABLE qjabberd_metacontact(id integer DEFAULT nextval('metacontact_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, jid character varying(510) NOT NULL, tag character varying(510) DEFAULT NULL::character varying, morder integer);
 
 ALTER TABLE public.qjabberd_metacontact OWNER TO :table_user;
 
---
--- Name: qjabberd_offlinemessage; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE qjabberd_offlinemessage (
-    id integer DEFAULT nextval('offlinemessage_id_seq'::regclass) NOT NULL,
-    user_id integer NOT NULL,
-    ufrom character varying(510) NOT NULL,
-    stamp character varying(510) NOT NULL,
-    otype character varying(510) NOT NULL,
-    obody text NOT NULL
-);
-
+CREATE TABLE qjabberd_offlinemessage(id integer DEFAULT nextval('offlinemessage_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, ufrom character varying(510) NOT NULL, stamp character varying(510) NOT NULL, otype character varying(510) NOT NULL, obody text NOT NULL);
 
 ALTER TABLE public.qjabberd_offlinemessage OWNER TO :table_user;
 
---
--- Name: qjabberd_offlinepresencesubscription; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
---
-
 CREATE TABLE qjabberd_offlinepresencesubscription(id integer DEFAULT nextval('offlinepresencesubscription_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, stype character varying(24) NOT NULL, ufrom character varying(510) NOT NULL, uto character varying(510) NOT NULL, "presenceStanza" text NOT NULL);
-
 
 ALTER TABLE public.qjabberd_offlinepresencesubscription OWNER TO :table_user;
 
-CREATE TABLE qjabberd_privacylist(id integer DEFAULT nextval('privacylist_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, ptype character varying(510) DEFAULT NULL::character varying, pvalue character varying(510) DEFAULT NULL::character varying, action character varying(510) DEFAULT NULL::character varying, iorder integer, child text, privacylistname character varying(510) DEFAULT NULL::character varying);
-
+CREATE TABLE qjabberd_privacylist(id integer DEFAULT nextval('privacylist_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, ptype character varying(510) DEFAULT NULL::character varying, pvalue character varying(510) DEFAULT NULL::character varying, action character varying(510) DEFAULT NULL::character varying, iorder integer, child text, privacyListName character varying(510) DEFAULT NULL::character varying);
 
 ALTER TABLE public.qjabberd_privacylist OWNER TO :table_user;
 
 CREATE TABLE qjabberd_privatestorage(id integer DEFAULT nextval('privatestorage_id_seq'::regclass) NOT NULL, user_id integer NOT NULL, nodename character varying(510) NOT NULL, nodevalue text);
-
 
 ALTER TABLE public.qjabberd_privatestorage OWNER TO :table_user;
 
@@ -98,8 +70,7 @@ CREATE SEQUENCE users_id_seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE
 
 ALTER TABLE public.users_id_seq OWNER TO :table_user;
 
-CREATE TABLE qjabberd_users(id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL, jid character varying(510) NOT NULL, password character varying(510) NOT NULL, "lastLogoutTime" timestamp with time zone, "lastStatus" character varying(510) DEFAULT NULL::character varying, vcard text, defaultprivacylist character varying(510) DEFAULT NULL::character varying, activeprivacylist character varying(510) DEFAULT NULL::character varying);
-
+CREATE TABLE qjabberd_users(id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL, jid character varying(510) NOT NULL, password character varying(510) NOT NULL, "lastLogoutTime" timestamp with time zone, "lastStatus" character varying(510) DEFAULT NULL::character varying, vcard text, defaultPrivacyList character varying(510) DEFAULT NULL::character varying, activePrivacyList character varying(510) DEFAULT NULL::character varying);
 
 ALTER TABLE public.qjabberd_users OWNER TO :table_user;
 
@@ -147,11 +118,9 @@ CREATE INDEX uto ON qjabberd_offlinepresencesubscription USING btree (uto);
 
 ALTER TABLE ONLY qjabberd_blocklist ADD CONSTRAINT "FKblocklist612322" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
 
-ALTER TABLE ONLY qjabberd_contact
-    ADD CONSTRAINT "FKcontact976421" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE ONLY qjabberd_contact ADD CONSTRAINT "FKcontact976421" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
 
-ALTER TABLE ONLY qjabberd_contact
-    ADD CONSTRAINT "FKcontact996988" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE ONLY qjabberd_contact ADD CONSTRAINT "FKcontact996988" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
 
 ALTER TABLE ONLY qjabberd_metacontact ADD CONSTRAINT "FKmetaContac957875" FOREIGN KEY (user_id) REFERENCES qjabberd_users(id) DEFERRABLE INITIALLY DEFERRED;
 

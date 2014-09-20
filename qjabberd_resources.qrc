@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/bd">
         <file>qjabberd_mysql.sql</file>
+        <file>qjabberd_postgresql.sql</file>
     </qresource>
 </RCC>

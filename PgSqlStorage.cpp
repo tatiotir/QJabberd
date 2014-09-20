@@ -14,7 +14,37 @@ PgSqlStorage::PgSqlStorage(QString host, int port, QString username, QString pas
     }
     else
     {
+        if (!m_database.tables().contains("qjabberd_blocklist") &&
+                !m_database.tables().contains("qjabberd_contact") &&
+                !m_database.tables().contains("qjabberd_metacontact") &&
+                !m_database.tables().contains("qjabberd_offlinemessage") &&
+                !m_database.tables().contains("qjabberd_offlinepresencesubscription") &&
+                !m_database.tables().contains("qjabberd_privacylist") &&
+                !m_database.tables().contains("qjabberd_privatestorage") &&
+                !m_database.tables().contains("qjabberd_users"))
+        {
+            QFile mysqlTable(":/bd/qjabberd_postgresql.sql");
+            mysqlTable.open(QIODevice::ReadOnly);
 
+            while (!mysqlTable.atEnd())
+            {
+                QString query = mysqlTable.readLine();
+                if (!query.isEmpty())
+                {
+                    if (query.contains(":table_user"))
+                    {
+                        QSqlQuery sqlQuery;
+                        sqlQuery.prepare(query);
+                        sqlQuery.bindValue(":table_user", username);
+                    }
+                    else
+                    {
+                        QSqlQuery sqlQuery;
+                        sqlQuery.exec(query);
+                    }
+                }
+            }
+        }
     }
 }
 

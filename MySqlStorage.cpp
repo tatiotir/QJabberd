@@ -14,7 +14,14 @@ MySqlStorage::MySqlStorage(QString host, int port, QString username, QString pas
     }
     else
     {
-        if (m_database.tables().isEmpty())
+        if (!m_database.tables().contains("qjabberd_blocklist") &&
+                !m_database.tables().contains("qjabberd_contact") &&
+                !m_database.tables().contains("qjabberd_metacontact") &&
+                !m_database.tables().contains("qjabberd_offlinemessage") &&
+                !m_database.tables().contains("qjabberd_offlinepresencesubscription") &&
+                !m_database.tables().contains("qjabberd_privacylist") &&
+                !m_database.tables().contains("qjabberd_privatestorage") &&
+                !m_database.tables().contains("qjabberd_users"))
         {
             QFile mysqlTable(":/bd/qjabberd_mysql.sql");
             mysqlTable.open(QIODevice::ReadOnly);
@@ -23,10 +30,8 @@ MySqlStorage::MySqlStorage(QString host, int port, QString username, QString pas
             {
                 QString query = mysqlTable.readLine();
                 QSqlQuery sqlQuery;
-                if (sqlQuery.exec(query))
-                    qDebug() << "OK";
-                else
-                    qDebug() << "NOT OK";
+                if (!query.isEmpty())
+                    sqlQuery.exec(query);
             }
         }
     }
