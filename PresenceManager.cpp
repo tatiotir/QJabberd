@@ -65,8 +65,11 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
 
     if (presenceType == "subscribe")
     {
-        if ((m_rosterManager->contactExists(from, to)))
-        {
+        if (!m_rosterManager->contactExists(from, to))
+            m_rosterManager->addContactToRoster(from, Contact("", false, "", to, Utils::getUsername(to), "none", QSet<QString>()));
+
+//        if ((m_rosterManager->contactExists(from, to)))
+//        {
             Contact userContact = m_rosterManager->getContact(from, to);
             if ((userContact.getSubscription() != "both") && (userContact.getSubscription() != "to"))
             {
@@ -88,7 +91,7 @@ QByteArray PresenceManager::parsePresence(QDomDocument document, QString presenc
                                                                    userContact.getAsk(),
                                                                    userContact.getApproved(),
                                                                    userContact.getGroups()));
-            }
+            //}
         }
     }
     else if (presenceType == "unsubscribe")

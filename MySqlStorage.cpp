@@ -122,24 +122,26 @@ bool MySqlStorage::addContactToRoster(QString jid, Contact contact)
     }
     else
     {
-        //qDebug() << "Je suis juste ici : " << getUserId(jid);
-        QJsonDocument document;
-        QJsonObject object;
-        object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
-        document.setObject(object);
+        if (userExists(contact.getJid()))
+        {
+            QJsonDocument document;
+            QJsonObject object;
+            object.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
+            document.setObject(object);
 
-        QSqlQuery query;
-        query.prepare("INSERT INTO qjabberd_contact(user_id, approved, ask, groups, jid, name, subscription, version)"
-                      " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
-        query.bindValue(":user_id", getUserId(jid));
-        query.bindValue(":version", contact.getVersion());
-        query.bindValue(":approved", (int)contact.getApproved());
-        query.bindValue(":ask", contact.getAsk());
-        query.bindValue(":jid", contact.getJid());
-        query.bindValue(":name", contact.getName());
-        query.bindValue(":subscription", contact.getSubscription());
-        query.bindValue(":groups", document.toJson());
-        return query.exec();
+            QSqlQuery query;
+            query.prepare("INSERT INTO qjabberd_contact(user_id, approved, ask, groups, jid, name, subscription, version)"
+                          " VALUES(:user_id, :approved, :ask, :groups, :jid, :name, :subscription, :version)");
+            query.bindValue(":user_id", getUserId(jid));
+            query.bindValue(":version", contact.getVersion());
+            query.bindValue(":approved", (int)contact.getApproved());
+            query.bindValue(":ask", contact.getAsk());
+            query.bindValue(":jid", contact.getJid());
+            query.bindValue(":name", contact.getName());
+            query.bindValue(":subscription", contact.getSubscription());
+            query.bindValue(":groups", document.toJson());
+            return query.exec();
+        }
     }
     return false;
 }

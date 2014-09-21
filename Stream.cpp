@@ -8,12 +8,13 @@
 
 #include "Stream.h"
 
-Stream::Stream(QString streamId, Connection *connection,
+Stream::Stream(QString streamId, QJsonObject *serverConfiguration, Connection *connection,
                IqManager *iqManager, PresenceManager *presenceManager,
                MessageManager *messageManager, RosterManager *rosterManager,
                StreamNegotiationManager *streamNegotiationManager, BlockingCommandManager *blockingCmdManager)
 {
     m_streamId = streamId;
+    m_serverConfiguration = serverConfiguration;
     m_connection = connection;
     m_iqManager = iqManager;
     m_presenceManager = presenceManager;
@@ -191,8 +192,8 @@ void Stream::requestTreatment(QDomDocument document)
             streamReply(answerList.value(0));
 
             // We begin handshake
-            m_connection->setLocalCertificate(answerList.value(1));
-            m_connection->setPrivateKey(answerList.value(2));
+            m_connection->setLocalCertificate(m_serverConfiguration->value("ssl").toObject().value("certificate").toString());
+            m_connection->setPrivateKey( m_serverConfiguration->value("ssl").toObject().value("key").toString());
             m_connection->startServerEncryption();
         }
         else

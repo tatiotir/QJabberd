@@ -14,6 +14,7 @@ class Stream : public QObject
     Q_OBJECT
 public:
     explicit Stream(QString streamId = QString(),
+                    QJsonObject *serverConfiguration = 0,
                     Connection *connection = 0,
                     IqManager *iqManager = 0, PresenceManager *presenceManager = 0,
                     MessageManager *messageManager = 0,
@@ -58,6 +59,7 @@ protected:
 private:
     void requestTreatment(QDomDocument document);
 
+    QJsonObject *m_serverConfiguration;
     IqManager *m_iqManager;
     PresenceManager *m_presenceManager;
     MessageManager *m_messageManager;

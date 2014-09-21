@@ -12,6 +12,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
 {
     // Create network proxy
     createNetworkProxy(serverConfiguration);
+    m_serverConfiguration = serverConfiguration;
     m_listConnection = new QList<Connection *>();
 
     m_storageManager = new StorageManager(serverConfiguration->value("storageType").toString(),
@@ -42,7 +43,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
     m_presenceManager = new PresenceManager(this, m_userManager, m_rosterManager, m_lastActivityManager,
                                             m_privacyListManager, m_mucManager, m_blockingCmdManager);
 
-    m_streamManager = new StreamManager(this, m_storageManager, m_userManager, m_rosterManager,
+    m_streamManager = new StreamManager(this, m_serverConfiguration, m_storageManager, m_userManager, m_rosterManager,
                                         m_lastActivityManager);
     //m_streamManager->start();
 
@@ -50,8 +51,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
     connect(this, SIGNAL(sigNewConnection(Connection*,IqManager*,PresenceManager*,MessageManager*,
                                           RosterManager*,StreamNegotiationManager*,BlockingCommandManager*)),
             m_streamManager, SLOT(newConnection(Connection*,IqManager*,PresenceManager*,MessageManager*,
-                                                RosterManager*,StreamNegotiationManager*,
-                                                BlockingCommandManager*)));
+                                                RosterManager*,StreamNegotiationManager*,BlockingCommandManager*)));
 
     connect(m_streamManager, SIGNAL(sigResourceBind(QString)), m_streamNegotiationManager,
             SLOT(resourceBind(QString)));
@@ -287,58 +287,4 @@ void ConnectionManager::deconnection()
 int ConnectionManager::getPort()
 {
     return m_port;
-}
-
-void ConnectionManager::boshSessionInitiation(QString sid, QString host)
-{
-    StreamNegotiationData *strData = new StreamNegotiationData();
-    strData->setHost(host);
-    m_streamNegotiationManager->setStreamNegotiationData(sid, strData);
-
-    QDomDocument document;
-    document.setContent(m_streamNegotiationManager->secondFeatures());
-    emit sigConnectionManagerBoshSessionInitiationReply(sid, document);
-}
-
-void ConnectionManager::boshSessionRequest(QString sid, QString fullJid, QString host,
-                                           QList<QDomDocument> requests)
-{
-    QList<QDomDocument> listResponse;
-    foreach (QDomDocument document, requests)
-    {
-        //qDebug() << "Connection manager request from Bosh Server : " << document.toString();
-        if (document.documentElement().tagName() == "iq")
-        {
-            QByteArray answer = m_iqManager->parseIQ(document, fullJid, host, sid);
-
-            QDomDocument replyDocument;
-            replyDocument.setContent(answer);
-            listResponse << replyDocument;
-        }
-        else if (document.documentElement().tagName() == "presence")
-        {
-            QByteArray answer = m_presenceManager->parsePresence(document, fullJid);
-
-            QDomDocument replyDocument;
-            replyDocument.setContent(answer);
-            listResponse << replyDocument;
-        }
-        else if (document.documentElement().tagName() == "message")
-        {
-            QByteArray answer = m_messageManager->parseMessage(document, fullJid);
-
-            QDomDocument replyDocument;
-            replyDocument.setContent(answer);
-            listResponse << replyDocument;
-        }
-        else
-        {
-            QByteArray answer = m_streamNegotiationManager->reply(document, sid);
-
-            QDomDocument replyDocument;
-            replyDocument.setContent(answer);
-            listResponse << replyDocument;
-        }
-    }
-    emit sigConnectionManagerBoshRequestReply(sid, listResponse);
 }

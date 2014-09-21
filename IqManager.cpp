@@ -204,6 +204,7 @@ QByteArray IqManager::parseIQ(QDomDocument document, QString from, QString host,
             }
             if ((xmlns == "jabber:iq:roster") && m_serverConfiguration->value("modules").toObject().value("roster").toBool())
             {
+                qDebug() << "Roster : " << document.toString();
                 // We check if there are errors.
                 QDomNodeList groupNodes = firstChild.firstChild().toElement().elementsByTagName("group");
                 for (int i = 0; i < groupNodes.count(); ++i)

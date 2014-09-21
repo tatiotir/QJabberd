@@ -8,7 +8,7 @@ class StreamManager : public QObject
 {
     Q_OBJECT
 public:
-    StreamManager(QObject *parent = 0, StorageManager *storageManager = 0,
+    StreamManager(QObject *parent = 0, QJsonObject *serverConfiguration = 0, StorageManager *storageManager = 0,
                   UserManager *userManager = 0, RosterManager *rosterManager = 0,
                   LastActivityManager *lastActivityManager = 0);
 
@@ -81,6 +81,7 @@ private:
     bool saveStreamPresenceStanza(QString smId, QByteArray presenceData);
     QList<QByteArray> getClientUnhandleStanza(QString smId);
 
+    QJsonObject *m_serverConfiguration;
     QTime m_serverTime;
     StorageManager *m_storageManager;
     UserManager *m_userManager;

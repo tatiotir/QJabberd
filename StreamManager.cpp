@@ -1,9 +1,10 @@
 #include "StreamManager.h"
 
-StreamManager::StreamManager(QObject *parent, StorageManager *storageManager, UserManager *userManager,
+StreamManager::StreamManager(QObject *parent, QJsonObject *serverConfiguration, StorageManager *storageManager, UserManager *userManager,
                              RosterManager *rosterManager, LastActivityManager *lastActivityManager) :
     QObject(parent)
 {
+    m_serverConfiguration = serverConfiguration;
     m_userMap = new QMultiHash<QString, User* >();
     m_notNegotiatedStream = new QMultiHash<QString, Stream* >();
     m_storageManager = storageManager;
@@ -20,7 +21,7 @@ void StreamManager::newConnection(Connection *connection, IqManager *iqManager,
                                   BlockingCommandManager *blockingCmdManager)
 {
     QString streamId = Utils::generateId();
-    Stream *stream = new Stream(streamId, connection, iqManager, presenceManager, messageManager,
+    Stream *stream = new Stream(streamId, m_serverConfiguration, connection, iqManager, presenceManager, messageManager,
                                 rosterManager, streamNegotiationManager, blockingCmdManager);
 
     m_notNegotiatedStream->insert(streamId, stream);
@@ -316,13 +317,13 @@ void StreamManager::saveStream(QString fullJid, Stream *stream)
     if (m_userMap->value(fullJid) == NULL)
     {
         qDebug() << "Info : New Client connected." << " Authenticated as " << Utils::getBareJid(fullJid) << endl;
-        sendOfflineMessage(fullJid);
     }
     else
     {
         qDebug() << "Info : Session resume : " << Utils::getBareJid(fullJid);
     }
     m_userMap->insert(fullJid, new User(stream, "", 0, 0, QByteArray()));
+    sendOfflineMessage(fullJid);
     sendUndeliveredPresence(fullJid);
 }
 
@@ -812,7 +813,7 @@ void StreamManager::sendMessage(QString to, QDomDocument document)
         }
     }
 
-    if (offlineUser)
+    if (offlineUser && m_serverConfiguration->value("modules").toObject().value("msgoffline").toBool())
     {
         if (document.documentElement().elementsByTagName("body").count() != 0)
         {
