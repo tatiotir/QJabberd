@@ -101,8 +101,6 @@ void BoshSession::xmppServerDataReceived()
                    ++j;
             m_xmlPaquet.remove(indexTls, j - indexTls + 1);
 
-            qDebug() << "Stream : " << m_xmlPaquet;
-
             QDomDocument document;
             if (document.setContent(m_xmlPaquet))
             {

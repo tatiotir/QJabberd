@@ -352,10 +352,7 @@ QByteArray StreamNegotiationManager::generateStartTlsReply()
     proceed.setAttribute("xmlns", "urn:ietf:params:xml:ns:xmpp-tls");
     document.appendChild(proceed);
 
-    QByteArray reply = document.toByteArray() + QByteArray("#") +
-            m_serverConfiguration->value("ssl").toObject().value("certificate").toVariant().toByteArray() + QByteArray("#") +
-            m_serverConfiguration->value("ssl").toObject().value("key").toVariant().toByteArray();
-    return reply;
+    return document.toByteArray();
 }
 
 QByteArray StreamNegotiationManager::generateSaslSuccessReply(QString streamId)

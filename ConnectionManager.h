@@ -17,10 +17,6 @@ public slots:
     void stopManage();
     void deconnection();
 
-    void boshSessionInitiation(QString sid, QString host);
-    void boshSessionRequest(QString sid, QString fullJid, QString host, QList<QDomDocument> requests);
-
-
 signals:
     void sigNewConnection(Connection *connection, IqManager *iqManager,
                           PresenceManager *presenceManager, MessageManager *messageManager,
@@ -34,6 +30,7 @@ protected:
 
 private:
     void createNetworkProxy(QJsonObject *serverConfiguration);
+    QJsonObject *m_serverConfiguration;
     QList<QNetworkProxy> m_networkProxyList;
     int m_port;
     QList<Connection *> *m_listConnection;

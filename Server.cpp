@@ -14,15 +14,17 @@ Server::Server()
         configFile.close();
     }
 
-    m_conManager = new ConnectionManager(this, 5222, m_configuration);
+    m_conManager = new ConnectionManager(this, m_configuration->value("xmppServerPort").toInt(),
+                                         m_configuration);
 
     if (m_configuration->value("modules").toObject().value("bosh").toBool())
-        m_boshManager = new BoshManager(this, 5280, 5222, m_configuration->value("crossDomainBosh").toBool());
+        m_boshManager = new BoshManager(this, m_configuration->value("Bosh").toObject().value("port").toInt(),
+                                        m_conManager->getPort(), m_configuration->value("Bosh").toObject().value("crossDomainBosh").toBool());
 }
 
 void Server::start()
 {
-    qDebug() << "Hello welcome to QJabberd XMPP server version 0.1";
+    qDebug() << "Hello welcome to QJabberd XMPP server version 1.0";
     m_conManager->startManage();
 
     if (m_configuration->value("modules").toObject().value("bosh").toBool())

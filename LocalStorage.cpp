@@ -117,25 +117,29 @@ bool LocalStorage::addContactToRoster(QString jid, Contact contact)
     QJsonDocument document = QJsonDocument::fromBinaryData(contactFile.readAll());
     QJsonObject contactObject = document.object();
 
-    // First contact
-    if (contactObject.isEmpty())
+    if (userExists(contact.getJid()))
     {
-        contactObject = contact.toJsonObject();
-    }
-    else
-    {
-        if (!contact.getName().isEmpty())
-            contactObject.insert("name", contact.getName());
+        // First contact
+        if (contactObject.isEmpty())
+        {
+            contactObject = contact.toJsonObject();
+        }
+        else
+        {
+            if (!contact.getName().isEmpty())
+                contactObject.insert("name", contact.getName());
 
-        if (!contact.getGroups().isEmpty())
-            contactObject.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
-    }
-    document.setObject(contactObject);
+            if (!contact.getGroups().isEmpty())
+                contactObject.insert("groups", QJsonArray::fromStringList(QStringList::fromSet(contact.getGroups())));
+        }
+        document.setObject(contactObject);
 
-    contactFile.resize(0);
-    qint64 ok = contactFile.write(document.toBinaryData());
-    contactFile.close();
-    return (false ? (ok == -1) : true);
+        contactFile.resize(0);
+        qint64 ok = contactFile.write(document.toBinaryData());
+        contactFile.close();
+        return (false ? (ok == -1) : true);
+    }
+
 }
 
 bool LocalStorage::deleteContactToRoster(QString jid, QString contactJid)

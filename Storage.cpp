@@ -125,7 +125,7 @@ bool Storage::createRoom(QString roomName, QString ownerJid)
     QJsonDocument document;
     QJsonObject roomObject;
     roomObject.insert("roomName", roomName.replace("_", "@"));
-    roomObject.insert("locked", true);
+    roomObject.insert("locked", false);
 
     QJsonArray ownerArray;
     ownerArray.append(ownerJid);
