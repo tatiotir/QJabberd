@@ -2,16 +2,16 @@
 
 Server::Server()
 {
-    QFile configFile("qjabberd.config");
-    if (!configFile.open(QIODevice::ReadOnly))
+    QFile *configFile = new QFile("qjabberd.config");
+    if (!configFile->open(QIODevice::ReadOnly))
     {
         qDebug() << "Error in the server configuration file";
     }
     else
     {
-        QJsonDocument configDocument = QJsonDocument::fromJson(configFile.readAll());
+        QJsonDocument configDocument = QJsonDocument::fromJson(configFile->readAll());
         m_configuration = new QJsonObject(configDocument.object());
-        configFile.close();
+        configFile->close();
     }
 
     m_conManager = new ConnectionManager(this, m_configuration->value("xmppServerPort").toInt(),
