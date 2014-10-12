@@ -11,11 +11,7 @@ ConnectionManager::ConnectionManager(QObject *parent, int port, QJsonObject *ser
     QTcpServer(parent), m_port(port)
 {
     // Create network proxy
-<<<<<<< HEAD
     //createNetworkProxy(serverConfiguration);
-=======
-    createNetworkProxy(serverConfiguration);
->>>>>>> a71edf3e9c5dcc14a827a418014810e1efd7c57d
     m_serverConfiguration = serverConfiguration;
     m_listConnection = new QList<Connection *>();
 
